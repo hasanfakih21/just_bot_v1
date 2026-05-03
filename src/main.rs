@@ -1,5 +1,7 @@
 use macroquad::prelude::*;
 
+pub mod board;
+
 #[macroquad::main("MyGame")]
 async fn main() {
     let board_texture = load_texture("assets/board.png").await.unwrap();
