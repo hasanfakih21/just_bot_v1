@@ -21,8 +21,10 @@ async fn main() {
     let rw_texture = load_texture("assets/rw.png").await.unwrap();
     build_textures_atlas();
 
-    let bit_board = BitBoard::new();
-    print_board(&bit_board.white_bishops);
+    let mut bit_board = BitBoard::new();
+    bit_board.set_bit(board::Piece::WhitePawns, board::Square::A5);
+
+    print_board(&bit_board.black_bishops);
 
     loop {
         request_new_screen_size(768.0, 768.0);

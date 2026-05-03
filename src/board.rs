@@ -9,6 +9,22 @@ pub enum Square {
     A8, B8, C8, D8, E8, F8, G8, H8
 }
 
+pub enum Piece {
+    WhitePawns,
+    WhiteKnights,
+    WhiteBishopsu,
+    WhiteRooks,
+    WhiteQueens,
+    WhiteKing,
+
+    BlackPawns,
+    BlackKnights,
+    BlackBishops,
+    BlackRooks,
+    BlackQueens,
+    BlackKing,
+}
+
 #[derive(Default)]
 pub struct BitBoard {
     pub white_pawns: u64,
@@ -43,6 +59,25 @@ impl BitBoard {
             black_rooks:   0x8100_0000_0000_0000,
             black_queens:  0x0800_0000_0000_0000,
             black_king:    0x1000_0000_0000_0000,
+        }
+    }
+
+    pub fn set_bit(&mut self, piece: Piece, position: Square) {
+        let b = 1u64 << position as u64;
+        match piece {
+            Piece::WhitePawns => self.white_pawns |= b,
+            Piece::WhiteKnights => self.white_knights |= b,
+            Piece::WhiteBishopsu => self.white_bishops |= b,
+            Piece::WhiteRooks => self.white_rooks |= b,
+            Piece::WhiteQueens => self.white_queens |= b,
+            Piece::WhiteKing => self.white_king |= b,
+
+            Piece::BlackPawns => self.black_pawns |= b,
+            Piece::BlackKnights => self.black_knights |= b,
+            Piece::BlackBishops => self.black_bishops |= b,
+            Piece::BlackRooks => self.black_rooks |= b,
+            Piece::BlackQueens => self.black_queens |= b,
+            Piece::BlackKing => self.black_king |= b,
         }
     }
 }
