@@ -22,8 +22,7 @@ async fn main() {
     build_textures_atlas();
 
     let mut bit_board = BitBoard::new();
-    bit_board.set_bit(board::Piece::WhitePawns, board::Square::A5);
-    bit_board.clear_bit(board::Piece::WhitePawns, board::Square::A2);
+    bit_board.set_bit(board::Piece::WhitePawns, board::Square::A4);
     bit_board.clear_bit(board::Piece::WhitePawns, board::Square::A2);
 
     print_board(&bit_board.black_bishops);

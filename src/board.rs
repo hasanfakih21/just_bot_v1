@@ -1,3 +1,4 @@
+#[derive(Copy, Clone)]
 pub enum Square {
     A1, B1, C1, D1, E1, F1, G1, H1,
     A2, B2, C2, D2, E2, F2, G2, H2,
@@ -84,19 +85,38 @@ impl BitBoard {
     pub fn clear_bit(&mut self, piece: Piece, position: Square) {
         let b = 1u64 << position as u64;
         match piece {
-            Piece::WhitePawns => self.white_pawns ^= b,
-            Piece::WhiteKnights => self.white_knights ^= b,
-            Piece::WhiteBishops => self.white_bishops ^= b,
-            Piece::WhiteRooks => self.white_rooks ^= b,
-            Piece::WhiteQueens => self.white_queens ^= b,
-            Piece::WhiteKing => self.white_king ^= b,
+            Piece::WhitePawns => if self.get_bit(piece, position) { self.white_pawns ^= b },
+            Piece::WhiteKnights => if self.get_bit(piece, position) { self.white_knights ^= b },
+            Piece::WhiteBishops => if self.get_bit(piece, position) { self.white_bishops ^= b },
+            Piece::WhiteRooks => if self.get_bit(piece, position) { self.white_rooks ^= b },
+            Piece::WhiteQueens => if self.get_bit(piece, position) { self.white_queens ^= b },
+            Piece::WhiteKing => if self.get_bit(piece, position) { self.white_king ^= b },
 
-            Piece::BlackPawns => self.black_pawns ^= b,
-            Piece::BlackKnights => self.black_knights ^= b,
-            Piece::BlackBishops => self.black_bishops ^= b,
-            Piece::BlackRooks => self.black_rooks ^= b,
-            Piece::BlackQueens => self.black_queens ^= b,
-            Piece::BlackKing => self.black_king ^= b,
+            Piece::BlackPawns => if self.get_bit(piece, position) { self.black_pawns ^= b },
+            Piece::BlackKnights => if self.get_bit(piece, position) { self.black_knights ^= b },
+            Piece::BlackBishops => if self.get_bit(piece, position) { self.black_bishops ^= b },
+            Piece::BlackRooks => if self.get_bit(piece, position) { self.black_rooks ^= b },
+            Piece::BlackQueens => if self.get_bit(piece, position) { self.black_queens ^= b },
+            Piece::BlackKing => if self.get_bit(piece, position) { self.black_king ^= b },
+        }
+    }
+
+    pub fn get_bit(&self, piece: Piece, position: Square) -> bool {
+        let b = 1u64 << position as u64;
+        match piece {
+            Piece::WhitePawns => (self.white_pawns & b) != 0,
+            Piece::WhiteKnights => (self.white_knights & b) != 0,
+            Piece::WhiteBishops => (self.white_bishops & b) != 0,
+            Piece::WhiteRooks => (self.white_rooks & b) != 0,
+            Piece::WhiteQueens => (self.white_queens & b) != 0,
+            Piece::WhiteKing => (self.white_king & b) != 0,
+
+            Piece::BlackPawns => (self.black_pawns & b) != 0,
+            Piece::BlackKnights => (self.black_knights & b) != 0,
+            Piece::BlackBishops => (self.black_bishops & b) != 0,
+            Piece::BlackRooks => (self.black_rooks & b) != 0,
+            Piece::BlackQueens => (self.black_queens & b) != 0,
+            Piece::BlackKing => (self.black_king & b) != 0,
         }
     }
 }
