@@ -1,23 +1,23 @@
 #[derive(Default)]
 pub struct BitBoard {
-    white_pawns: u64,
-    white_knights: u64,
-    white_bishops: u64,
-    white_rooks: u64,
-    white_queens: u64,
-    white_king: u64,
+    pub white_pawns: u64,
+    pub white_knights: u64,
+    pub white_bishops: u64,
+    pub white_rooks: u64,
+    pub white_queens: u64,
+    pub white_king: u64,
 
-    black_pawns: u64,
-    black_knights: u64,
-    black_bishops: u64,
-    black_rooks: u64,
-    black_queens: u64,
-    black_king: u64,
+    pub black_pawns: u64,
+    pub black_knights: u64,
+    pub black_bishops: u64,
+    pub black_rooks: u64,
+    pub black_queens: u64,
+    pub black_king: u64,
 }
 
 //Little-Endian Rank-File Mapping
 impl BitBoard {
-    pub fn new() -> BitBoard {
+    pub fn new() -> Self {
         BitBoard {
             white_pawns:   0x0000_0000_0000_FF00,
             white_knights: 0x0000_0000_0000_0042,
@@ -36,3 +36,17 @@ impl BitBoard {
     }
 }
 
+pub fn print_board(bit_board: &u64) {
+    println!();
+
+    for rank in (0..8).rev() {
+        for file in 0..8 {
+            let board_index = (rank * 8) + file; 
+            let bit_state = bit_board & (1u64 << board_index);
+
+            print!("{} ", if bit_state != 0 {1} else {0});
+        }
+
+        println!();
+    }
+}
