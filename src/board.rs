@@ -1,3 +1,4 @@
+#[derive(Default)]
 pub struct BitBoard {
     white_pawns: u64,
     white_knights: u64,
@@ -16,7 +17,7 @@ pub struct BitBoard {
 
 //Little-Endian Rank-File Mapping
 impl BitBoard {
-    fn new() -> BitBoard {
+    pub fn new() -> BitBoard {
         BitBoard {
             white_pawns:   0x0000_0000_0000_FF00,
             white_knights: 0x0000_0000_0000_0042,
@@ -34,3 +35,4 @@ impl BitBoard {
         }
     }
 }
+
