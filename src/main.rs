@@ -1,34 +1,24 @@
 use macroquad::prelude::*;
-use crate::board::{BitBoard, print_board};
+use crate::board::{BitBoard, Side, Piece, Square, print_board};
 
 pub mod board;
 
 #[macroquad::main("MyGame")]
 async fn main() {
+    //Setting up textures
     let board_texture = load_texture("assets/board.png").await.unwrap();
+    let piece_textures = generate_piece_texture_arrays().await;
 
-    let bb_texture = load_texture("assets/bb.png").await.unwrap();
-    let bw_texture = load_texture("assets/bw.png").await.unwrap();
-    let kb_texture = load_texture("assets/kb.png").await.unwrap();
-    let kw_texture = load_texture("assets/kw.png").await.unwrap();
-    let nb_texture = load_texture("assets/nb.png").await.unwrap();
-    let nw_texture = load_texture("assets/nw.png").await.unwrap();
-    let pb_texture = load_texture("assets/pb.png").await.unwrap();
-    let pw_texture = load_texture("assets/pw.png").await.unwrap();
-    let qb_texture = load_texture("assets/qb.png").await.unwrap();
-    let qw_texture = load_texture("assets/qw.png").await.unwrap();
-    let rb_texture = load_texture("assets/rb.png").await.unwrap();
-    let rw_texture = load_texture("assets/rw.png").await.unwrap();
-    build_textures_atlas();
-
+    //Initialilze BitBoard class
     let mut bit_board = BitBoard::new();
-    bit_board.set_bit(board::Piece::WhitePawns, board::Square::A4);
-    bit_board.clear_bit(board::Piece::WhitePawns, board::Square::A2);
 
-    print_board(&bit_board.black_bishops);
+    let mut selected_piece: Option<(Side, Piece, Square)> = None;
+
+    print_board(&bit_board.pawn_attacks[Side::Black as usize][Square::A3 as usize]);
 
     loop {
         request_new_screen_size(768.0, 768.0);
+        let mouse_pos = mouse_position();
 
         draw_texture_ex(
             &board_texture,
@@ -41,28 +31,47 @@ async fn main() {
             }
         );
 
-        draw_board(&bit_board.white_bishops, &bw_texture);
-        draw_board(&bit_board.black_bishops, &bb_texture);
-        draw_board(&bit_board.white_king, &kw_texture);
-        draw_board(&bit_board.black_king, &kb_texture);
-        draw_board(&bit_board.white_queens, &qw_texture);
-        draw_board(&bit_board.black_queens, &qb_texture);
-        draw_board(&bit_board.white_pawns, &pw_texture);
-        draw_board(&bit_board.black_pawns, &pb_texture);
-        draw_board(&bit_board.white_knights, &nw_texture);
-        draw_board(&bit_board.black_knights, &nb_texture);
-        draw_board(&bit_board.white_rooks, &rw_texture);
-        draw_board(&bit_board.black_rooks, &rb_texture);
+        piece_textures
+            .iter()
+            .enumerate()
+            .for_each(|(side_index, pieces)| {
+                pieces
+                    .iter()
+                    .enumerate()
+                    .for_each(|(piece_index, texture)| {
+                        draw_board(&bit_board.bit_board_pieces[side_index][piece_index], texture);
+                    });
+            });
 
-        if is_mouse_button_down(MouseButton::Left) {
-            let mouse_pos = mouse_position();
-            let file = (mouse_pos.0 / 96.0).floor() as usize;
-            let rank = 7 - (mouse_pos.1 / 96.0).floor() as usize;
-            let square_index = rank * 8 + file;
+        if is_mouse_button_pressed(MouseButton::Left) && selected_piece.is_none() {
+            let square = get_square_from_mouse_position(mouse_pos);
+
+            let piece_present = bit_board.get_piece_at_square(Side::White, square);
+
+            if let Some(piece) = piece_present {
+                selected_piece = Some((Side::White, piece, square));
+                bit_board.clear_bit(Side::White, piece, square);
+            }
+        }
+
+        if is_mouse_button_down(MouseButton::Left) && let Some((side, piece, _)) = selected_piece {
+            draw_piece(mouse_pos.0 - 48.0, mouse_pos.1 - 48.0, &piece_textures[side as usize][piece as usize]);
+        } else if let Some((side, piece, _)) = selected_piece {
+            let new_square = get_square_from_mouse_position(mouse_pos);
+
+            bit_board.set_bit(side, piece, new_square);
+            selected_piece = None;
+
         }
 
         next_frame().await
     }
+}
+
+fn get_square_from_mouse_position(mouse_pos: (f32, f32)) -> Square {
+    let file = (mouse_pos.0 / 96.0).floor() as usize;
+    let rank = 7 - (mouse_pos.1 / 96.0).floor() as usize;
+    Square::try_from(rank * 8 + file).unwrap()
 }
 
 
@@ -88,4 +97,27 @@ fn draw_board(bit_board: &u64, texture: &Texture2D) {
             }
         }
     }
+}
+
+async fn generate_piece_texture_arrays() -> [[Texture2D; 6]; 2] {
+    let pw_texture = load_texture("assets/pw.png").await.unwrap();
+    let nw_texture = load_texture("assets/nw.png").await.unwrap();
+    let bw_texture = load_texture("assets/bw.png").await.unwrap();
+    let rw_texture = load_texture("assets/rw.png").await.unwrap();
+    let qw_texture = load_texture("assets/qw.png").await.unwrap();
+    let kw_texture = load_texture("assets/kw.png").await.unwrap();
+
+    let pb_texture = load_texture("assets/pb.png").await.unwrap();
+    let nb_texture = load_texture("assets/nb.png").await.unwrap();
+    let bb_texture = load_texture("assets/bb.png").await.unwrap();
+    let rb_texture = load_texture("assets/rb.png").await.unwrap();
+    let qb_texture = load_texture("assets/qb.png").await.unwrap();
+    let kb_texture = load_texture("assets/kb.png").await.unwrap();
+    
+    build_textures_atlas();
+
+    [
+        [pw_texture, nw_texture, bw_texture, rw_texture, qw_texture, kw_texture],
+        [pb_texture, nb_texture, bb_texture, rb_texture, qb_texture, kb_texture]
+    ]
 }

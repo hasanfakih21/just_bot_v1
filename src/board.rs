@@ -1,4 +1,13 @@
-#[derive(Copy, Clone)]
+pub const A_FILE: u64 = 0x0101010101010101;
+pub const H_FILE: u64 = 0x8080808080808080;
+
+#[derive(Debug)]
+pub struct InvalidSquare;
+#[derive(Debug)]
+pub struct InvalidPiece;
+
+#[derive(Copy, Clone, Debug)]
+#[repr(u8)]
 pub enum Square {
     A1, B1, C1, D1, E1, F1, G1, H1,
     A2, B2, C2, D2, E2, F2, G2, H2,
@@ -10,113 +19,148 @@ pub enum Square {
     A8, B8, C8, D8, E8, F8, G8, H8
 }
 
-pub enum Piece {
-    WhitePawns,
-    WhiteKnights,
-    WhiteBishops,
-    WhiteRooks,
-    WhiteQueens,
-    WhiteKing,
-
-    BlackPawns,
-    BlackKnights,
-    BlackBishops,
-    BlackRooks,
-    BlackQueens,
-    BlackKing,
+impl TryFrom<usize> for Square {
+    type Error = InvalidSquare;
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        if value <= 63 {
+            Ok(unsafe { std::mem::transmute::<u8, Square>(value as u8) })
+        } else {
+            Err(InvalidSquare)
+        }
+    }
 }
 
-#[derive(Default)]
-pub struct BitBoard {
-    pub white_pawns: u64,
-    pub white_knights: u64,
-    pub white_bishops: u64,
-    pub white_rooks: u64,
-    pub white_queens: u64,
-    pub white_king: u64,
+#[derive(Copy, Clone, Debug)]
+#[repr(u8)]
+pub enum Piece {
+    Pawns,
+    Knights,
+    Bishops,
+    Rooks,
+    Queens,
+    King,
+}
 
-    pub black_pawns: u64,
-    pub black_knights: u64,
-    pub black_bishops: u64,
-    pub black_rooks: u64,
-    pub black_queens: u64,
-    pub black_king: u64,
+impl TryFrom<usize> for Piece {
+    type Error = InvalidPiece;
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        if value <= 5 {
+            Ok(unsafe { std::mem::transmute::<u8, Piece>(value as u8) })
+        } else {
+            Err(InvalidPiece)
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum Side {
+    White,
+    Black,
+}
+
+pub struct BitBoard {
+    pub bit_board_pieces: [[u64; 6]; 2],
+    pub pawn_attacks: [[u64; 64]; 2],
+}
+
+impl Default for BitBoard {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 //Little-Endian Rank-File Mapping
 impl BitBoard {
     pub fn new() -> Self {
-        BitBoard {
-            white_pawns:   0x0000_0000_0000_FF00,
-            white_knights: 0x0000_0000_0000_0042,
-            white_bishops: 0x0000_0000_0000_0024,
-            white_rooks:   0x0000_0000_0000_0081,
-            white_queens:  0x0000_0000_0000_0008,
-            white_king:    0x0000_0000_0000_0010,
+        let mut b = BitBoard {
+            bit_board_pieces: [
+                [0x0000_0000_0000_FF00,
+                 0x0000_0000_0000_0042,
+                 0x0000_0000_0000_0024,
+                 0x0000_0000_0000_0081,
+                 0x0000_0000_0000_0008,
+                 0x0000_0000_0000_0010],
 
-            black_pawns:   0x00FF_0000_0000_0000,
-            black_knights: 0x4200_0000_0000_0000,
-            black_bishops: 0x2400_0000_0000_0000,
-            black_rooks:   0x8100_0000_0000_0000,
-            black_queens:  0x0800_0000_0000_0000,
-            black_king:    0x1000_0000_0000_0000,
+                [0x00FF_0000_0000_0000,
+                 0x4200_0000_0000_0000,
+                 0x2400_0000_0000_0000,
+                 0x8100_0000_0000_0000,
+                 0x0800_0000_0000_0000,
+                 0x1000_0000_0000_0000]
+            ],
+            pawn_attacks: [[0; 64]; 2]
+        };
+
+        b.init_pawn_attack_table();
+        b
+    }
+    
+
+    pub fn set_bit(&mut self, side: Side, piece: Piece, position: Square) {
+        let b = 1u64 << position as u64;
+        self.bit_board_pieces[side as usize][piece as usize] |= b;
+    }
+
+    pub fn clear_bit(&mut self, side: Side, piece: Piece, position: Square) {
+        let b = 1u64 << position as u64;
+        if self.get_bit(side, piece, position) {
+            self.bit_board_pieces[side as usize][piece as usize] ^= b;
         }
     }
 
-    pub fn set_bit(&mut self, piece: Piece, position: Square) {
+    pub fn get_bit(&self, side: Side, piece: Piece, position: Square) -> bool {
         let b = 1u64 << position as u64;
-        match piece {
-            Piece::WhitePawns => self.white_pawns |= b,
-            Piece::WhiteKnights => self.white_knights |= b,
-            Piece::WhiteBishops => self.white_bishops |= b,
-            Piece::WhiteRooks => self.white_rooks |= b,
-            Piece::WhiteQueens => self.white_queens |= b,
-            Piece::WhiteKing => self.white_king |= b,
-
-            Piece::BlackPawns => self.black_pawns |= b,
-            Piece::BlackKnights => self.black_knights |= b,
-            Piece::BlackBishops => self.black_bishops |= b,
-            Piece::BlackRooks => self.black_rooks |= b,
-            Piece::BlackQueens => self.black_queens |= b,
-            Piece::BlackKing => self.black_king |= b,
-        }
+        (self.bit_board_pieces[side as usize][piece as usize] & b) != 0
     }
 
-    pub fn clear_bit(&mut self, piece: Piece, position: Square) {
-        let b = 1u64 << position as u64;
-        match piece {
-            Piece::WhitePawns => if self.get_bit(piece, position) { self.white_pawns ^= b },
-            Piece::WhiteKnights => if self.get_bit(piece, position) { self.white_knights ^= b },
-            Piece::WhiteBishops => if self.get_bit(piece, position) { self.white_bishops ^= b },
-            Piece::WhiteRooks => if self.get_bit(piece, position) { self.white_rooks ^= b },
-            Piece::WhiteQueens => if self.get_bit(piece, position) { self.white_queens ^= b },
-            Piece::WhiteKing => if self.get_bit(piece, position) { self.white_king ^= b },
-
-            Piece::BlackPawns => if self.get_bit(piece, position) { self.black_pawns ^= b },
-            Piece::BlackKnights => if self.get_bit(piece, position) { self.black_knights ^= b },
-            Piece::BlackBishops => if self.get_bit(piece, position) { self.black_bishops ^= b },
-            Piece::BlackRooks => if self.get_bit(piece, position) { self.black_rooks ^= b },
-            Piece::BlackQueens => if self.get_bit(piece, position) { self.black_queens ^= b },
-            Piece::BlackKing => if self.get_bit(piece, position) { self.black_king ^= b },
+    pub fn get_piece_at_square(&self, side: Side, position: Square) -> Option<Piece> {
+        for piece_index in 0..6 {
+            if self.get_bit(side, Piece::try_from(piece_index).unwrap(), position) {
+                return Some(Piece::try_from(piece_index).unwrap());
+            }
         }
+        None
     }
 
-    pub fn get_bit(&self, piece: Piece, position: Square) -> bool {
-        let b = 1u64 << position as u64;
-        match piece {
-            Piece::WhitePawns => (self.white_pawns & b) != 0,
-            Piece::WhiteKnights => (self.white_knights & b) != 0,
-            Piece::WhiteBishops => (self.white_bishops & b) != 0,
-            Piece::WhiteRooks => (self.white_rooks & b) != 0,
-            Piece::WhiteQueens => (self.white_queens & b) != 0,
-            Piece::WhiteKing => (self.white_king & b) != 0,
+    pub fn init_pawn_attack_table(&mut self) {
+        //Initialize for white
+        for (i, bit_board) in self.pawn_attacks[Side::White as usize]
+            .iter_mut()
+            .enumerate()
+        {
+            let current = 1u64 << i;
+            let mut top_left = 0u64; 
+            let mut top_right = 0u64;
 
-            Piece::BlackPawns => (self.black_pawns & b) != 0,
-            Piece::BlackKnights => (self.black_knights & b) != 0,
-            Piece::BlackBishops => (self.black_bishops & b) != 0,
-            Piece::BlackRooks => (self.black_rooks & b) != 0,
-            Piece::BlackQueens => (self.black_queens & b) != 0,
-            Piece::BlackKing => (self.black_king & b) != 0,
+            if current & A_FILE == 0 {
+                top_left = current << 7;
+            }
+
+            if current & H_FILE == 0 {
+                top_right = current << 9;
+            } 
+
+            *bit_board = top_left | top_right;
+        }
+
+        //Initialize for black
+        for (i, bit_board) in self.pawn_attacks[Side::Black as usize]
+            .iter_mut()
+            .enumerate()
+        {
+            let current = 1u64 << i;
+            let mut top_left = 0u64; 
+            let mut top_right = 0u64;
+
+            if current & H_FILE == 0 {
+                top_left = current >> 7;
+            }
+
+            if current & A_FILE == 0 {
+                top_right = current >> 9;
+            } 
+
+            *bit_board = top_left | top_right;
         }
     }
 }
