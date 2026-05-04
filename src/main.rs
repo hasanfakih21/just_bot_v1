@@ -54,6 +54,13 @@ async fn main() {
         draw_board(&bit_board.white_rooks, &rw_texture);
         draw_board(&bit_board.black_rooks, &rb_texture);
 
+        if is_mouse_button_down(MouseButton::Left) {
+            let mouse_pos = mouse_position();
+            let file = (mouse_pos.0 / 96.0).floor() as usize;
+            let rank = 7 - (mouse_pos.1 / 96.0).floor() as usize;
+            let square_index = rank * 8 + file;
+        }
+
         next_frame().await
     }
 }
