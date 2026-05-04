@@ -1,3 +1,11 @@
+pub const A_FILE: u64 = 0x0101010101010101;
+pub const H_FILE: u64 = 0x8080808080808080;
+
+#[derive(Debug)]
+pub struct InvalidSquare;
+#[derive(Debug)]
+pub struct InvalidPiece;
+
 #[derive(Copy, Clone, Debug)]
 #[repr(u8)]
 pub enum Square {
@@ -12,12 +20,12 @@ pub enum Square {
 }
 
 impl TryFrom<usize> for Square {
-    type Error = String;
+    type Error = InvalidSquare;
     fn try_from(value: usize) -> Result<Self, Self::Error> {
         if value <= 63 {
             Ok(unsafe { std::mem::transmute::<u8, Square>(value as u8) })
         } else {
-            Err("Invalid value for Square".to_string())
+            Err(InvalidSquare)
         }
     }
 }
@@ -34,12 +42,12 @@ pub enum Piece {
 }
 
 impl TryFrom<usize> for Piece {
-    type Error = String;
+    type Error = InvalidPiece;
     fn try_from(value: usize) -> Result<Self, Self::Error> {
         if value <= 5 {
             Ok(unsafe { std::mem::transmute::<u8, Piece>(value as u8) })
         } else {
-            Err("Invalid value for Piece".to_string())
+            Err(InvalidPiece)
         }
     }
 }
@@ -50,15 +58,21 @@ pub enum Side {
     Black,
 }
 
-#[derive(Default)]
 pub struct BitBoard {
     pub bit_board_pieces: [[u64; 6]; 2],
+    pub pawn_attacks: [[u64; 64]; 2],
+}
+
+impl Default for BitBoard {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 //Little-Endian Rank-File Mapping
 impl BitBoard {
     pub fn new() -> Self {
-        BitBoard {
+        let mut b = BitBoard {
             bit_board_pieces: [
                 [0x0000_0000_0000_FF00,
                  0x0000_0000_0000_0042,
@@ -74,7 +88,11 @@ impl BitBoard {
                  0x0800_0000_0000_0000,
                  0x1000_0000_0000_0000]
             ],
-        }
+            pawn_attacks: [[0; 64]; 2]
+        };
+
+        b.init_pawn_attack_table();
+        b
     }
     
 
@@ -102,6 +120,48 @@ impl BitBoard {
             }
         }
         None
+    }
+
+    pub fn init_pawn_attack_table(&mut self) {
+        //Initialize for white
+        for (i, bit_board) in self.pawn_attacks[Side::White as usize]
+            .iter_mut()
+            .enumerate()
+        {
+            let current = 1u64 << i;
+            let mut top_left = 0u64; 
+            let mut top_right = 0u64;
+
+            if current & A_FILE == 0 {
+                top_left = current << 7;
+            }
+
+            if current & H_FILE == 0 {
+                top_right = current << 9;
+            } 
+
+            *bit_board = top_left | top_right;
+        }
+
+        //Initialize for black
+        for (i, bit_board) in self.pawn_attacks[Side::Black as usize]
+            .iter_mut()
+            .enumerate()
+        {
+            let current = 1u64 << i;
+            let mut top_left = 0u64; 
+            let mut top_right = 0u64;
+
+            if current & H_FILE == 0 {
+                top_left = current >> 7;
+            }
+
+            if current & A_FILE == 0 {
+                top_right = current >> 9;
+            } 
+
+            *bit_board = top_left | top_right;
+        }
     }
 }
 

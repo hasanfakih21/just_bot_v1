@@ -5,15 +5,16 @@ pub mod board;
 
 #[macroquad::main("MyGame")]
 async fn main() {
+    //Setting up textures
     let board_texture = load_texture("assets/board.png").await.unwrap();
     let piece_textures = generate_piece_texture_arrays().await;
+
+    //Initialilze BitBoard class
     let mut bit_board = BitBoard::new();
 
-    bit_board.set_bit(Side::Black, Piece::Pawns, Square::D5);
-    bit_board.clear_bit(Side::Black, Piece::Pawns, Square::D7);
-    print_board(&bit_board.bit_board_pieces[Side::White as usize][Piece::Pawns as usize]);
-
     let mut selected_piece: Option<(Side, Piece, Square)> = None;
+
+    print_board(&bit_board.pawn_attacks[Side::Black as usize][Square::A3 as usize]);
 
     loop {
         request_new_screen_size(768.0, 768.0);
