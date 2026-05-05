@@ -15,7 +15,8 @@ async fn main() {
     let mut selected_piece: Option<(Side, Piece, Square)> = None;
     let mut turn_to_play = Side::White;
 
-    print_board(&bit_board.knight_attacks[Square::H1 as usize]);
+    //print_board(&bit_board.knight_attacks[Square::B1 as usize]);
+    print_board(&bit_board.pawn_attacks[Side::White as usize][Square::D4 as usize]);
 
     loop {
         request_new_screen_size(768.0, 768.0);

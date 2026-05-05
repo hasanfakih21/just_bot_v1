@@ -74,6 +74,7 @@ pub struct BitBoard {
     pub bit_board_pieces: [[u64; 6]; 2],
     pub pawn_attacks: [[u64; 64]; 2],
     pub knight_attacks: [u64; 64],
+    pub king_attacks: [u64; 64],
 }
 
 impl Default for BitBoard {
@@ -102,11 +103,11 @@ impl BitBoard {
                  0x1000_0000_0000_0000]
             ],
             pawn_attacks: [[0; 64]; 2],
-            knight_attacks: [0; 64]
+            knight_attacks: [0; 64],
+            king_attacks: [0; 64],
         };
 
-        b.init_pawn_attack_table();
-        b.init_knight_attack_table();
+        b.init_leaping_attacks();
         b
     }
     
@@ -137,69 +138,64 @@ impl BitBoard {
         None
     }
 
-    pub fn init_pawn_attack_table(&mut self) {
-        //Initialize for white
-        for (i, bit_board) in self.pawn_attacks[Side::White as usize]
-            .iter_mut()
-            .enumerate()
-        {
-            let current = 1u64 << i;
-            let mut top_left = 0u64; 
-            let mut top_right = 0u64;
-
-            if current & A_FILE == 0 {
-                top_left = current << 7;
-            }
-
-            if current & H_FILE == 0 {
-                top_right = current << 9;
-            } 
-
-            *bit_board = top_left | top_right;
-        }
-
-        //Initialize for black
-        for (i, bit_board) in self.pawn_attacks[Side::Black as usize]
-            .iter_mut()
-            .enumerate()
-        {
-            let current = 1u64 << i;
-            let mut top_left = 0u64; 
-            let mut top_right = 0u64;
-
-            if current & H_FILE == 0 {
-                top_left = current >> 7;
-            }
-
-            if current & A_FILE == 0 {
-                top_right = current >> 9;
-            } 
-
-            *bit_board = top_left | top_right;
+    pub fn init_leaping_attacks(&mut self) {
+        for i in 0..64 {
+            let square = Square::try_from(i).unwrap();
+            self.pawn_attacks[Side::White as usize][i] = self.mask_pawn_attacks(Side::White, square);
+            self.pawn_attacks[Side::Black as usize][i] = self.mask_pawn_attacks(Side::Black, square);
+            self.knight_attacks[i] = self.mask_knight_attacks(square);
         }
     }
 
-    pub fn init_knight_attack_table(&mut self) {
-        for (i, bit_board) in self.knight_attacks
-            .iter_mut()
-            .enumerate()
-        {
-            let current = 1u64 << i;
+    pub fn mask_pawn_attacks(&self, side: Side, square: Square) -> u64 {
+        let current = 1u64 << square as u64;
+        let mut top_left = 0u64; 
+        let mut top_right = 0u64;
 
-            let tl1 = if (current & A_FILE) == 0 {current << 15} else {0};
-            let tl2 = if (current & (A_FILE | B_FILE)) == 0 {current << 6} else {0};
+        match side {
+            Side::White => {
+                if current & A_FILE == 0 {
+                    top_left = current << 7;
+                }
 
-            let bl1 = if (current & (A_FILE | B_FILE)) == 0 {current >> 10} else {0};
-            let bl2 = if (current & A_FILE) == 0 {current >> 17} else {0};
+                if current & H_FILE == 0 {
+                    top_right = current << 9;
+                } 
+            },
+            Side::Black => {
+                if current & H_FILE == 0 {
+                    top_left = current >> 7;
+                }
 
-            let tr1 = if (current & H_FILE) == 0 {current << 17} else {0};
-            let tr2 = if (current & (H_FILE | G_FILE)) == 0 {current << 10} else {0};
-
-            let br1 = if (current & (H_FILE | G_FILE)) == 0 {current >> 6} else {0};
-            let br2 = if (current & H_FILE) == 0 {current >> 15} else {0};
-
-            *bit_board = tl1 | tl2 | bl1 | bl2 | tr1 | tr2 | br1 | br2;
+                if current & A_FILE == 0 {
+                    top_right = current >> 9;
+                }
+            }
         }
+
+        top_left | top_right
+    }
+
+    pub fn mask_knight_attacks(&self, square: Square) -> u64 {
+        let current = 1u64 << square as u64;
+
+        let tl1 = if (current & A_FILE) == 0 {current << 15} else {0};
+        let tl2 = if (current & (A_FILE | B_FILE)) == 0 {current << 6} else {0};
+
+        let bl1 = if (current & (A_FILE | B_FILE)) == 0 {current >> 10} else {0};
+        let bl2 = if (current & A_FILE) == 0 {current >> 17} else {0};
+
+        let tr1 = if (current & H_FILE) == 0 {current << 17} else {0};
+        let tr2 = if (current & (H_FILE | G_FILE)) == 0 {current << 10} else {0};
+
+        let br1 = if (current & (H_FILE | G_FILE)) == 0 {current >> 6} else {0};
+        let br2 = if (current & H_FILE) == 0 {current >> 15} else {0};
+
+        tl1 | tl2 | bl1 | bl2 | tr1 | tr2 | br1 | br2
+    }
+
+    pub fn mask_king_attacks(square: Square) -> u64 {
+        4
     }
 }
 
