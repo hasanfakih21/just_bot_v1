@@ -1,5 +1,8 @@
 pub const A_FILE: u64 = 0x0101010101010101;
+pub const B_FILE: u64 = 0x0202020202020202;
+pub const G_FILE: u64 = 0x4040404040404040;
 pub const H_FILE: u64 = 0x8080808080808080;
+
 
 #[derive(Debug)]
 pub struct InvalidSquare;
@@ -70,6 +73,7 @@ impl Side {
 pub struct BitBoard {
     pub bit_board_pieces: [[u64; 6]; 2],
     pub pawn_attacks: [[u64; 64]; 2],
+    pub knight_attacks: [u64; 64],
 }
 
 impl Default for BitBoard {
@@ -97,10 +101,12 @@ impl BitBoard {
                  0x0800_0000_0000_0000,
                  0x1000_0000_0000_0000]
             ],
-            pawn_attacks: [[0; 64]; 2]
+            pawn_attacks: [[0; 64]; 2],
+            knight_attacks: [0; 64]
         };
 
         b.init_pawn_attack_table();
+        b.init_knight_attack_table();
         b
     }
     
@@ -170,6 +176,29 @@ impl BitBoard {
             } 
 
             *bit_board = top_left | top_right;
+        }
+    }
+
+    pub fn init_knight_attack_table(&mut self) {
+        for (i, bit_board) in self.knight_attacks
+            .iter_mut()
+            .enumerate()
+        {
+            let current = 1u64 << i;
+
+            let tl1 = if (current & A_FILE) == 0 {current << 15} else {0};
+            let tl2 = if (current & (A_FILE | B_FILE)) == 0 {current << 6} else {0};
+
+            let bl1 = if (current & (A_FILE | B_FILE)) == 0 {current >> 10} else {0};
+            let bl2 = if (current & A_FILE) == 0 {current >> 17} else {0};
+
+            let tr1 = if (current & H_FILE) == 0 {current << 17} else {0};
+            let tr2 = if (current & (H_FILE | G_FILE)) == 0 {current << 10} else {0};
+
+            let br1 = if (current & (H_FILE | G_FILE)) == 0 {current >> 6} else {0};
+            let br2 = if (current & H_FILE) == 0 {current >> 15} else {0};
+
+            *bit_board = tl1 | tl2 | bl1 | bl2 | tr1 | tr2 | br1 | br2;
         }
     }
 }
