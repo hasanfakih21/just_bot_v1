@@ -6,7 +6,7 @@ pub struct InvalidSquare;
 #[derive(Debug)]
 pub struct InvalidPiece;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum Square {
     A1, B1, C1, D1, E1, F1, G1, H1,
@@ -30,7 +30,7 @@ impl TryFrom<usize> for Square {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum Piece {
     Pawns,
@@ -52,10 +52,19 @@ impl TryFrom<usize> for Piece {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Side {
     White,
     Black,
+}
+
+impl Side {
+    pub fn other(&self) -> Self {
+        match self {
+            Self::White => Self::Black,
+            Self::Black => Self::White
+        }
+    }
 }
 
 pub struct BitBoard {

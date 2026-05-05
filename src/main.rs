@@ -13,6 +13,7 @@ async fn main() {
     let mut bit_board = BitBoard::new();
 
     let mut selected_piece: Option<(Side, Piece, Square)> = None;
+    let mut turn_to_play = Side::White;
 
     print_board(&bit_board.pawn_attacks[Side::Black as usize][Square::A3 as usize]);
 
@@ -46,22 +47,22 @@ async fn main() {
         if is_mouse_button_pressed(MouseButton::Left) && selected_piece.is_none() {
             let square = get_square_from_mouse_position(mouse_pos);
 
-            let piece_present = bit_board.get_piece_at_square(Side::White, square);
+            let piece_present = bit_board.get_piece_at_square(turn_to_play, square);
 
             if let Some(piece) = piece_present {
-                selected_piece = Some((Side::White, piece, square));
-                bit_board.clear_bit(Side::White, piece, square);
+                selected_piece = Some((turn_to_play, piece, square));
+                bit_board.clear_bit(turn_to_play, piece, square);
             }
         }
 
         if is_mouse_button_down(MouseButton::Left) && let Some((side, piece, _)) = selected_piece {
             draw_piece(mouse_pos.0 - 48.0, mouse_pos.1 - 48.0, &piece_textures[side as usize][piece as usize]);
-        } else if let Some((side, piece, _)) = selected_piece {
+        } else if let Some((side, piece, original_square)) = selected_piece {
             let new_square = get_square_from_mouse_position(mouse_pos);
 
             bit_board.set_bit(side, piece, new_square);
+            if new_square != original_square {turn_to_play = turn_to_play.other();}
             selected_piece = None;
-
         }
 
         next_frame().await
