@@ -33,11 +33,11 @@ impl TryFrom<usize> for Square {
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum Piece {
-    Pawns,
-    Knights,
-    Bishops,
-    Rooks,
-    Queens,
+    Pawn,
+    Knight,
+    Bishop,
+    Rook,
+    Queen,
     King,
 }
 
