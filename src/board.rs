@@ -144,6 +144,7 @@ impl BitBoard {
             self.pawn_attacks[Side::White as usize][i] = self.mask_pawn_attacks(Side::White, square);
             self.pawn_attacks[Side::Black as usize][i] = self.mask_pawn_attacks(Side::Black, square);
             self.knight_attacks[i] = self.mask_knight_attacks(square);
+            self.king_attacks[i] = self.mask_king_attacks(square);
         }
     }
 
@@ -194,8 +195,18 @@ impl BitBoard {
         tl1 | tl2 | bl1 | bl2 | tr1 | tr2 | br1 | br2
     }
 
-    pub fn mask_king_attacks(square: Square) -> u64 {
-        4
+    pub fn mask_king_attacks(&self, square: Square) -> u64 {
+        let current = 1u64 << square as u64;
+        let n = current << 8;
+        let nw = if current & A_FILE == 0 {current << 7} else {0};
+        let w = if current & A_FILE == 0 {current >> 1} else {0};
+        let sw = if current & A_FILE == 0 {current >> 9} else {0};
+        let s = current >> 8;
+        let se = if current & H_FILE == 0 {current >> 7} else {0};
+        let e = if current & H_FILE == 0 {current << 1} else {0};
+        let ne = if current & H_FILE == 0 {current << 9} else {0};
+
+        n | nw | w | sw | s | se | e | ne
     }
 }
 
