@@ -3,6 +3,9 @@ pub const B_FILE: u64 = 0x0202020202020202;
 pub const G_FILE: u64 = 0x4040404040404040;
 pub const H_FILE: u64 = 0x8080808080808080;
 
+pub const NUM_OF_PIECES: usize = 6;
+pub const NUM_OF_SQUARES: usize = 64;
+
 
 #[derive(Debug)]
 pub struct InvalidSquare;
@@ -35,7 +38,7 @@ impl TryFrom<usize> for Square {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-pub enum Piece {
+pub enum Piece { //Num 0 to 5
     Pawn,
     Knight,
     Bishop,
@@ -110,7 +113,6 @@ impl BitBoard {
         b.init_leaping_attacks();
         b
     }
-    
 
     pub fn set_bit(&mut self, side: Side, piece: Piece, position: Square) {
         let b = 1u64 << position as u64;
@@ -208,6 +210,49 @@ impl BitBoard {
 
         n | nw | w | sw | s | se | e | ne
     }
+
+    pub fn mask_bishop_attacks(&self, square: Square) -> u64 {
+        let mut attacks = 0u64;
+        let (rank, file) = to_rank_and_file(square);
+
+        let (mut r, mut f) = (rank, file);
+        while r < 6 && f < 6 {
+            r += 1;
+            f += 1;
+           attacks |= 1u64 << to_square(r, f).unwrap() as u64;
+        }
+
+        let (mut r, mut f) = (rank, file);
+        while r > 1 && f < 6 {
+            r -= 1;
+            f += 1;
+           attacks |= 1u64 << to_square(r, f).unwrap() as u64;
+        }
+
+        let (mut r, mut f) = (rank, file);
+        while r < 6 && f > 1 {
+            r += 1;
+            f -= 1;
+            attacks |= 1u64 << to_square(r, f).unwrap() as u64;
+        }
+
+        let (mut r, mut f) = (rank, file);
+        while r > 1 && f > 1 {
+            r -= 1;
+            f -= 1;
+            attacks |= 1u64 << to_square(r, f).unwrap() as u64;
+        }
+       
+        attacks
+    }
+}
+
+pub fn to_rank_and_file(square: Square) -> (usize, usize) {
+    (square as usize / 8, square as usize % 8)
+}
+
+pub fn to_square(rank: usize, file: usize) -> Result<Square, InvalidSquare> {
+    Square::try_from((rank * 8) + file)
 }
 
 pub fn print_board(bit_board: &u64) {
