@@ -3,9 +3,10 @@ pub mod pieces;
 pub mod sides;
 pub mod constants;
 
-pub use crate::board::squares::{Square, InvalidSquare};
-pub use crate::board::pieces::Piece;
-pub use crate::board::sides::Side;
+pub use squares::*;
+pub use pieces::*;
+pub use sides::*;
+
 pub use crate::attacks::*;
 
 pub struct BitBoard {

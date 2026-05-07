@@ -1,4 +1,3 @@
-pub use super::board;
 use crate::{Side, Square};
 use crate::board::constants::*;
 
