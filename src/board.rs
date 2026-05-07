@@ -102,4 +102,5 @@ pub fn print_board(bit_board: &u64) {
         println!();
     }
     println!("\n    A  B  C  D  E  F  G  H");
+    println!("\nBitboard: {bit_board}");
 }

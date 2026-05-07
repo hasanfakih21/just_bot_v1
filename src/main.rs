@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use crate::board::{BitBoard, Side, Piece, Square, print_board};
+use crate::board::{BitBoard, Side, Piece, Square};
 
 pub mod board;
 pub mod attacks;
@@ -15,8 +15,6 @@ async fn main() {
 
     let mut selected_piece: Option<(Side, Piece, Square)> = None;
     let mut turn_to_play = Side::White;
-
-    print_board(&attacks::mask_rook_attacks(Square::E7));
 
     loop {
         request_new_screen_size(768.0, 768.0);

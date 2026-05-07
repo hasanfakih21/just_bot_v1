@@ -127,3 +127,60 @@ pub fn mask_rook_attacks(square: Square) -> u64 {
 
     attacks  
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::board::print_board;
+    use super::*;
+
+    #[test]
+    fn test_pawn_attack_mask() {
+        let b1 = mask_pawn_attacks(Side::White, Square::C2);
+        print_board(&b1);
+        assert_eq!(b1, 655360);
+
+        let b2 = mask_pawn_attacks(Side::Black, Square::A1);
+        print_board(&b2);
+        assert_eq!(b2, 0);
+
+        let b3 = mask_pawn_attacks(Side::Black, Square::A4);
+        print_board(&b3);
+        assert_eq!(b3, 131072);
+
+        let b4 = mask_pawn_attacks(Side::White, Square::H3);
+        print_board(&b4);
+        assert_eq!(b4, 1073741824);
+    }
+
+    #[test]
+    fn test_knight_attack_mask() {
+        for i in 0..64 {
+            let b = mask_knight_attacks(Square::try_from(i).unwrap());
+            print_board(&b);
+        }
+    }
+
+    #[test]
+    fn test_king_attack_mask() {
+        for i in 0..64 {
+            let b = mask_king_attacks(Square::try_from(i).unwrap());
+            print_board(&b);
+        }
+    }
+
+    #[test]
+    fn test_bishop_attack_mask() {
+        for i in 0..64 {
+            let b = mask_bishop_attacks(Square::try_from(i).unwrap());
+            print_board(&b);
+        }
+    }
+
+    #[test]
+    fn test_rook_attack_mask() {
+        for i in 0..64 {
+            let b = mask_rook_attacks(Square::try_from(i).unwrap());
+            print_board(&b);
+        }
+    }
+}
