@@ -133,39 +133,101 @@ pub fn blocked_bishop_attacks(square: Square, block_board: u64) -> u64 {
     let (rank, file) = square.to_rank_and_file();
 
     let (mut r, mut f) = (rank, file);
-    while r < 6 && f < 6 && Square::from_rank_and_file(r, f) as u64 & block_board == 0 {
+
+    while r < 7 && f < 7 {
         r += 1;
         f += 1;
+
         attacks |= 1u64 << Square::from_rank_and_file(r, f) as u64;
+        if (1u64 << Square::from_rank_and_file(r, f) as u64) & block_board != 0 {
+            break;
+        }
     }
 
     let (mut r, mut f) = (rank, file);
-    while r > 1 && f < 6 {
+    while r > 0 && f < 7 {
         r -= 1;
         f += 1;
+
         attacks |= 1u64 << Square::from_rank_and_file(r, f) as u64;
+        if (1u64 << Square::from_rank_and_file(r, f) as u64) & block_board != 0 {
+            break;
+        }
     }
 
     let (mut r, mut f) = (rank, file);
-    while r < 6 && f > 1 {
+    while r < 7 && f > 0 {
         r += 1;
         f -= 1;
+
         attacks |= 1u64 << Square::from_rank_and_file(r, f) as u64;
+        if (1u64 << Square::from_rank_and_file(r, f) as u64) & block_board != 0 {
+            break;
+        }
     }
 
     let (mut r, mut f) = (rank, file);
-    while r > 1 && f > 1 {
+    while r > 0 && f > 0 {
         r -= 1;
         f -= 1;
+
         attacks |= 1u64 << Square::from_rank_and_file(r, f) as u64;
+        if (1u64 << Square::from_rank_and_file(r, f) as u64) & block_board != 0 {
+            break;
+        }
     }
     
     attacks
 }
 
+fn blocked_rook_attacks(square: Square, block_board: u64) -> u64 {
+    let mut attacks = 0u64;
+    let (rank, file) = square.to_rank_and_file();
+    
+    let mut r = rank;
+    while r > 0 {
+        r -= 1;
+        attacks |= 1u64 << Square::from_rank_and_file(r, file) as u64;
+        if (1u64 << Square::from_rank_and_file(r, file) as u64) & block_board != 0 {
+            break;
+        }
+    }
+
+    let mut r = rank;
+    while r < 7 {
+        r += 1;
+        attacks |= 1u64 << Square::from_rank_and_file(r, file) as u64;
+        if (1u64 << Square::from_rank_and_file(r, file) as u64) & block_board != 0 {
+            break;
+        }
+    }
+
+    let mut f = file;
+    while f < 7 {
+        f += 1;
+        attacks |= 1u64 << Square::from_rank_and_file(rank, f) as u64;
+        if (1u64 << Square::from_rank_and_file(rank, f) as u64) & block_board != 0 {
+            break;
+        }
+    }
+
+    let mut f = file;
+    while f > 0 {
+        f -= 1;
+        attacks |= 1u64 << Square::from_rank_and_file(rank, f) as u64;
+        if (1u64 << Square::from_rank_and_file(rank, f) as u64) & block_board != 0 {
+            break;
+        }
+    }      
+
+    attacks
+}
+
+
+
 #[cfg(test)]
 mod tests {
-    use crate::board::print_board;
+    use crate::board::{print_board, set_bit};
     use super::*;
 
     #[test]
@@ -221,6 +283,31 @@ mod tests {
 
     #[test]
     fn test_blocked_bishop_attacks() {
+        let mut blocked_bitboard = 0u64;
+        set_bit(&mut blocked_bitboard, Square::C5);
+        set_bit(&mut blocked_bitboard, Square::G5);
+        set_bit(&mut blocked_bitboard, Square::G1);
+        set_bit(&mut blocked_bitboard, Square::D2);
 
+        print_board(&blocked_bitboard);
+
+        let b1 = blocked_bishop_attacks(Square::A3, blocked_bitboard);
+
+        print_board(&b1);
+    }
+
+    #[test]
+    fn test_blocked_rook_attacks() {
+        let mut blocked_bitboard = 0u64;
+        set_bit(&mut blocked_bitboard, Square::C3);
+        set_bit(&mut blocked_bitboard, Square::H3);
+        set_bit(&mut blocked_bitboard, Square::E6);
+        set_bit(&mut blocked_bitboard, Square::E2);
+
+        print_board(&blocked_bitboard);
+
+        let b1 = blocked_rook_attacks(Square::E3, blocked_bitboard);
+
+        print_board(&b1);
     }
 }
