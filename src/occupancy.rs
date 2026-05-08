@@ -1,6 +1,6 @@
 use crate::board::{least_sig_bit, clear_bit};
 
-pub static BISHOP_OCCUPANCY_BITS: [usize; 64] = [
+pub static BISHOP_OCCUPANCY_BIT_COUNTS: [usize; 64] = [
     6, 5, 5, 5, 5, 5, 5, 6,
     5, 5, 5, 5, 5, 5, 5, 5,
     5, 5, 7, 7, 7, 7, 5, 5,
@@ -11,7 +11,7 @@ pub static BISHOP_OCCUPANCY_BITS: [usize; 64] = [
     6, 5, 5, 5, 5, 5, 5, 6,
 ];
 
-pub static ROOK_OCCUPANCY_BITS: [usize; 64] = [
+pub static ROOK_OCCUPANCY_BIT_COUNTS: [usize; 64] = [
     12, 11, 11, 11, 11, 11, 11, 12,
     11, 10, 10, 10, 10, 10, 10, 11,
     11, 10, 10, 10, 10, 10, 10, 11,
@@ -35,4 +35,19 @@ pub fn set_occupancy(index: usize, num_bits_in_mask: usize, mut attack_mask: u64
     }
 
     occupancy
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::board::{Square, mask_rook_attacks, print_board};
+    use super::*;
+
+    #[test]
+    fn test_set_occupancy() {
+        let attack_mask = mask_rook_attacks(Square::A1);
+        for i in 0..=4096 {
+            let occupancy_bb = set_occupancy(i, 12, attack_mask);
+            print_board(&occupancy_bb);
+        }
+    }
 }
