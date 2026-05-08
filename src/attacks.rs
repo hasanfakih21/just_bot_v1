@@ -1,6 +1,8 @@
 use crate::{Side, Square};
 use crate::board::constants::*;
 
+pub mod occupancy;
+
 pub fn mask_pawn_attacks(side: Side, square: Square) -> u64 {
     let current = 1u64 << square as u64;
     let mut top_left = 0u64; 
@@ -223,8 +225,6 @@ fn blocked_rook_attacks(square: Square, block_board: u64) -> u64 {
 
     attacks
 }
-
-
 
 #[cfg(test)]
 mod tests {

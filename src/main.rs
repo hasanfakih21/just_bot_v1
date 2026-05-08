@@ -10,7 +10,7 @@ async fn main() {
     let board_texture = load_texture("assets/board.png").await.unwrap();
     let piece_textures = generate_piece_texture_arrays().await;
 
-    //Initialilze BitBoard class
+    //Initialilze Board class
     let mut board = Board::new();
 
     let mut selected_piece: Option<(Side, Piece, Square)> = None;
