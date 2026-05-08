@@ -134,4 +134,21 @@ mod tests {
 
         assert_eq!(count_bits(&bb), 3);
     }
+
+    #[test]
+    fn test_least_sig_bit() {
+        let mut bb = 0u64;
+        set_bit(&mut bb, Square::A3);
+
+        assert_eq!(least_sig_bit(&bb), Square::A3);
+
+        set_bit(&mut bb, Square::B3);
+        set_bit(&mut bb, Square::B2);
+        set_bit(&mut bb, Square::H8);
+        set_bit(&mut bb, Square::C2);
+
+        assert_eq!(least_sig_bit(&bb), Square::B2);
+        clear_bit(&mut bb, Square::B2);
+        assert_eq!(least_sig_bit(&bb), Square::C2);
+    }
 }
