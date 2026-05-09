@@ -198,7 +198,7 @@ pub fn find_magic_number(square: Square, piece: Piece) -> u64 {
 
         let (mut index, mut fail) = (0, false);
         while !fail && (index < (1 << relevant_bits)) {
-            let magic_index = ((occupancies[index].wrapping_mul(magic_number)) >> (64 - relevant_bits)) as usize;
+            let magic_index = get_magic_index(occupancies[index], relevant_bits, magic_number);
 
             if used_attacks[magic_index] == 0 {
                 used_attacks[magic_index] = attacks[index];
@@ -217,6 +217,10 @@ pub fn find_magic_number(square: Square, piece: Piece) -> u64 {
 
     println!("Magic number generation failed");
     0
+}
+
+pub const fn get_magic_index(occ_bb: u64, relevant_bits: usize, magic_number: u64) -> usize {
+    ((occ_bb.wrapping_mul(magic_number)) >> (64 - relevant_bits)) as usize
 }
     
 #[cfg(test)]
