@@ -12,11 +12,16 @@ use crate::{magics::{BISHOP_MAGIC_NUMBERS, ROOK_MAGIC_NUMBERS, get_magic_index},
 
 pub struct Board {
     pub board_pieces: [[u64; 6]; 2],
+    pub board_occupancies: [u64; 2],
+    pub side_to_move: Side,
+    pub enpassant: Option<Square>,
+
+    pub bishop_masks: [u64; 64],
+    pub rook_masks: [u64; 64],
+
     pub pawn_attacks: [[u64; 64]; 2],
     pub knight_attacks: [u64; 64],
     pub king_attacks: [u64; 64],
-    pub bishop_masks: [u64; 64],
-    pub rook_masks: [u64; 64],
     pub bishop_attacks: Vec<u64>,
     pub rook_attacks: Vec<u64>,
 }
@@ -46,17 +51,18 @@ impl Board {
                  0x0800_0000_0000_0000,
                  0x1000_0000_0000_0000]
             ],
-            pawn_attacks: [[0; 64]; 2],
-            knight_attacks: [0; 64],
-            king_attacks: [0; 64],
+            board_occupancies: [0x0000_0000_0000_FFFF, 0xFFFF_0000_0000_0000],
+            side_to_move: Side::White,
+            enpassant: None,
+
             bishop_masks: std::array::from_fn(|i| {
                 mask_bishop_attacks(Square::from(i))
             }),
             rook_masks: std::array::from_fn(|i| {
                 mask_rook_attacks(Square::from(i))
             }), 
-            bishop_attacks: vec![0; 64 * 512],
-            rook_attacks: vec![0; 64 * 4096],
+
+            pawn_attacks: [[0; 64]; 2], knight_attacks: [0; 64], king_attacks: [0; 64], bishop_attacks: vec![0; 64 * 512], rook_attacks: vec![0; 64 * 4096],
         };
 
         b.init_leaping_attacks();
@@ -139,6 +145,10 @@ impl Board {
         let offset = (square as usize * 4096) + magic_index;
 
         self.rook_attacks[offset]
+    }
+
+    pub const fn get_all_occupancy(&self) -> u64 {
+        self.board_occupancies[Side::White as usize] | self.board_occupancies[Side::Black as usize]
     }
 }
 
@@ -240,5 +250,11 @@ mod tests {
         
         set_bit(&mut occ, Square::D6);
         print_board(&board.get_bishop_attacks(Square::G3, occ));
+    }
+
+    #[test]
+    fn test_board_occupancy() {
+        let board = Board::new();
+        print_board(&board.get_all_occupancy());
     }
 }

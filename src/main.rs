@@ -16,7 +16,6 @@ async fn main() {
     let mut board = Board::new();
 
     let mut selected_piece: Option<(Side, Piece, Square)> = None;
-    let mut turn_to_play = Side::White;
 
     loop {
         request_new_screen_size(768.0, 768.0);
@@ -48,11 +47,11 @@ async fn main() {
         if is_mouse_button_pressed(MouseButton::Left) && selected_piece.is_none() {
             let square = get_square_from_mouse_position(mouse_pos);
 
-            let piece_present = board.get_piece_at_square(turn_to_play, square);
+            let piece_present = board.get_piece_at_square(board.side_to_move, square);
 
             if let Some(piece) = piece_present {
-                selected_piece = Some((turn_to_play, piece, square));
-                board.clear_piece_bit(turn_to_play, piece, square);
+                selected_piece = Some((board.side_to_move, piece, square));
+                board.clear_piece_bit(board.side_to_move, piece, square);
             }
         }
 
@@ -62,7 +61,7 @@ async fn main() {
             let new_square = get_square_from_mouse_position(mouse_pos);
 
             board.set_piece_bit(side, piece, new_square);
-            if new_square != original_square {turn_to_play = turn_to_play.other();}
+            if new_square != original_square {board.side_to_move = board.side_to_move.other();}
             selected_piece = None;
         }
 
