@@ -15,6 +15,7 @@ pub struct Board {
     pub board_occupancies: [u64; 2],
     pub side_to_move: Side,
     pub enpassant: Option<Square>,
+    pub castling_rights: CastlingRights,
 
     pub bishop_masks: [u64; 64],
     pub rook_masks: [u64; 64],
@@ -54,6 +55,7 @@ impl Board {
             board_occupancies: [0x0000_0000_0000_FFFF, 0xFFFF_0000_0000_0000],
             side_to_move: Side::White,
             enpassant: None,
+            castling_rights: CastlingRights::new(),
 
             bishop_masks: std::array::from_fn(|i| {
                 mask_bishop_attacks(Square::from(i))
