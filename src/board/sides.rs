@@ -32,6 +32,27 @@ pub enum Castling {
     BlackQueen = 0b1000,
 }
 
+impl Castling {
+    pub fn from(c: char) -> Self {
+        match c {
+            'K' => Castling::WhiteKing,
+            'k' => Castling::BlackKing,
+            'Q' => Castling::WhiteQueen,
+            'q' => Castling::BlackQueen,
+            _ => panic!("Invalid character for castling identifier!")
+        }
+    }
+
+    pub fn to_char(&self) -> char {
+        match self {
+            Self::WhiteKing => 'K',
+            Self::BlackKing => 'k',
+            Self::WhiteQueen => 'Q',
+            Self::BlackQueen => 'q',
+        }
+    }
+}
+
 pub struct CastlingRights(u8);
 
 impl CastlingRights {
@@ -75,5 +96,18 @@ impl CastlingRights {
 impl Default for CastlingRights {
     fn default() -> Self {
         CastlingRights::new()
+    }
+}
+
+impl Display for CastlingRights {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut output_string = String::from("");
+
+        if self.can_king_side(Side::White) {output_string.push('K');}
+        if self.can_queen_side(Side::White) {output_string.push('Q');}
+        if self.can_king_side(Side::Black) {output_string.push('k');}
+        if self.can_queen_side(Side::Black) {output_string.push('q');}
+
+        write!(f, "{output_string}")
     }
 }

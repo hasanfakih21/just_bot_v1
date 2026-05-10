@@ -1,4 +1,4 @@
-use crate::board::{Board, Piece, Square, Side};
+use crate::board::{Board, Castling, Piece, Side, Square};
 
 //Starting Position: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 //[pieces] [turn to move] [castling rights] [enpassant] [halfmove clock] [fullmove clock]
@@ -32,6 +32,15 @@ impl Board {
             "w" => board.side_to_move = Side::White,
             "b" => board.side_to_move = Side::Black,
             _ => eprintln!("Invalid side to move")
+        }
+
+        let castling_rights = fen.next().unwrap();
+        for c in castling_rights.chars() {
+            if c == '-' {
+                continue;
+            }
+
+            board.castling_rights.set(Castling::from(c) as u8);
         }
 
         board
