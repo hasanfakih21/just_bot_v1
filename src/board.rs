@@ -164,8 +164,8 @@ impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut output = String::from("\n");
         for rank in (0..8).rev() {
+            output.push_str(&format!("{}   ", 1 + rank));
             for file in 0..8 {
-                if file == 0 { output.push_str(&format!("{}   ", 1 + rank));}
                 let square = Square::from_rank_and_file(rank, file);
                 let piece: Option<(Piece, Side)> = self.get_piece_at_square(square);
 
@@ -190,11 +190,11 @@ pub fn print_board(bit_board: &u64) {
     println!();
 
     for rank in (0..8).rev() {
+        print!("{}   ", 1 + rank);
         for file in 0..8 {
             let board_index = (rank * 8) + file; 
             let bit_state = bit_board & (1u64 << board_index);
 
-            if file == 0 { print!("{}   ", 1 + rank);}
             print!("{}  ", if bit_state != 0 {1} else {0});
         }
 
