@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[derive(Debug)]
 pub struct InvalidPiece;
 
@@ -27,5 +29,20 @@ impl Piece {
     pub const fn from(value: usize) -> Self {
         debug_assert!(value < 6);
         unsafe { std::mem::transmute(value as u8) }
+    }
+}
+
+impl Display for Piece {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let output = match self {
+            Piece::Pawn => "P",
+            Piece::Knight => "N",
+            Piece::Bishop => "B",
+            Piece::Rook => "R",
+            Piece::Queen => "Q",
+            Piece::King => "K",
+        };
+
+        write!(f, "{output}")
     }
 }

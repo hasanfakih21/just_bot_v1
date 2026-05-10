@@ -47,12 +47,12 @@ async fn main() {
         if is_mouse_button_pressed(MouseButton::Left) && selected_piece.is_none() {
             let square = get_square_from_mouse_position(mouse_pos);
 
-            let piece_present = board.get_piece_at_square(board.side_to_move, square);
+            let piece_present = board.get_piece_at_square(square);
 
-            if let Some(piece) = piece_present {
-                selected_piece = Some((board.side_to_move, piece, square));
-                board.clear_piece_bit(board.side_to_move, piece, square);
-            }
+            if let Some(piece) = piece_present && piece.1 == board.side_to_move {
+                    selected_piece = Some((board.side_to_move, piece.0, square));
+                    board.clear_piece_bit(board.side_to_move, piece.0, square);
+                }
         }
 
         if is_mouse_button_down(MouseButton::Left) && let Some((side, piece, _)) = selected_piece {

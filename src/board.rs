@@ -3,6 +3,8 @@ pub mod pieces;
 pub mod sides;
 pub mod constants;
 
+use std::fmt::Display;
+
 pub use squares::*;
 pub use pieces::*;
 pub use sides::*;
@@ -73,23 +75,27 @@ impl Board {
         b
     }
 
-    pub fn set_piece_bit(&mut self, side: Side, piece: Piece, position: Square) {
-        set_bit(&mut self.board_pieces[side as usize][piece as usize], position);
+    pub fn set_piece_bit(&mut self, side: Side, piece: Piece, square: Square) {
+        set_bit(&mut self.board_pieces[side as usize][piece as usize], square);
     }
 
-    pub fn clear_piece_bit(&mut self, side: Side, piece: Piece, position: Square) {
-        clear_bit(&mut self.board_pieces[side as usize][piece as usize], position);
+    pub fn clear_piece_bit(&mut self, side: Side, piece: Piece, square: Square) {
+        clear_bit(&mut self.board_pieces[side as usize][piece as usize], square);
     }
 
-    pub fn get_bit(&self, side: Side, piece: Piece, position: Square) -> bool {
-        let b = 1u64 << position as u64;
+    pub fn get_bit(&self, side: Side, piece: Piece, square: Square) -> bool {
+        let b = 1u64 << square as u64;
         (self.board_pieces[side as usize][piece as usize] & b) != 0
     }
 
-    pub fn get_piece_at_square(&self, side: Side, position: Square) -> Option<Piece> {
+    pub fn get_piece_at_square(&self, square: Square) -> Option<(Piece, Side)> {
         for piece_index in 0..6 {
-            if self.get_bit(side, Piece::try_from(piece_index).unwrap(), position) {
-                return Some(Piece::try_from(piece_index).unwrap());
+            if self.get_bit(Side::White, Piece::from(piece_index), square) {
+                return Some((Piece::from(piece_index), Side::White));
+            }
+
+            if self.get_bit(Side::Black, Piece::from(piece_index), square) {
+                return Some((Piece::from(piece_index), Side::Black))
             }
         }
         None
@@ -151,6 +157,32 @@ impl Board {
 
     pub const fn get_all_occupancy(&self) -> u64 {
         self.board_occupancies[Side::White as usize] | self.board_occupancies[Side::Black as usize]
+    }
+}
+
+impl Display for Board {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut output = String::from("\n");
+        for rank in (0..8).rev() {
+            for file in 0..8 {
+                if file == 0 { output.push_str(&format!("{}   ", 1 + rank));}
+                let square = Square::from_rank_and_file(rank, file);
+                let piece: Option<(Piece, Side)> = self.get_piece_at_square(square);
+
+                if let Some(p) = piece {
+                    let mut s = format!(" {} ", p.0);
+                    if let Side::Black = p.1 {
+                        s = s.to_lowercase();
+                    }
+                    output.push_str(&s);
+                } else {
+                    output.push_str(" . ");
+                }
+            }
+            output.push('\n');
+        }
+        output.push_str("\n     A  B  C  D  E  F  G  H\n");
+        write!(f, "{}", output)
     }
 }
 
@@ -258,5 +290,11 @@ mod tests {
     fn test_board_occupancy() {
         let board = Board::new();
         print_board(&board.get_all_occupancy());
+    }
+
+    #[test]
+    fn test_full_board_print() {
+        let board = Board::new();
+        println!("{board}");
     }
 }
