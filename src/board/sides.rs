@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Side {
     White,
@@ -10,6 +12,15 @@ impl Side {
             Self::White => Self::Black,
             Self::Black => Self::White
         }
+    }
+}
+
+impl Display for Side {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Side::White => write!(f, "White"),
+            Side::Black => write!(f, "Black"),
+        } 
     }
 }
 
