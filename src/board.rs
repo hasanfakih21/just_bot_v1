@@ -144,6 +144,10 @@ impl Board {
         self.rook_attacks[offset]
     }
 
+    pub fn get_queen_attacks(&self, square: Square, board_occupancy: u64) -> u64 {
+        self.get_bishop_attacks(square, board_occupancy) | self.get_rook_attacks(square, board_occupancy)
+    }
+
     pub const fn get_all_occupancy(&self) -> u64 {
         self.board_occupancies[Side::White as usize] | self.board_occupancies[Side::Black as usize]
     }
@@ -212,6 +216,7 @@ pub const fn least_sig_bit(bit_board: &u64) -> Square {
 
 #[cfg(test)]
 mod tests {
+    use crate::board::constants::STARTING_FEN;
     use super::*;
 
     #[test]
@@ -277,9 +282,28 @@ mod tests {
     }
 
     #[test]
-    fn test_board_occupancy() {
+    fn test_get_queen_attack() {
         let board = Board::new();
+        let mut occ = 0u64;
+
+        print_board(&board.get_queen_attacks(Square::A6, occ));
+
+        set_bit(&mut occ, Square::E3);
+        set_bit(&mut occ, Square::G5);
+        set_bit(&mut occ, Square::G3);
+        set_bit(&mut occ, Square::D6);
+
+        print_board(&board.get_queen_attacks(Square::G3, occ));
+        print_board(&board.get_queen_attacks(Square::E4, occ));
+    }
+
+    #[test]
+    fn test_board_occupancy() {
+        let mut board = Board::from_fen(STARTING_FEN);
+        board.remove_piece(Side::White, Piece::Pawn, Square::A2);
         print_board(&board.get_all_occupancy());
+        print_board(&board.board_occupancies[Side::Black as usize]);
+        print_board(&board.board_occupancies[Side::White as usize]);
     }
 
     #[test]

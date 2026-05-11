@@ -76,5 +76,8 @@ mod tests {
         
         let board5 = Board::from_fen("rnbqkbnr/pp3ppp/4p3/2pp4/3P4/2P2N2/PP2PPPP/RNBQKB1R w KQkq c6 0 4");
         println!("{board5}");
+
+        let board6 = Board::from_fen("rnb1kbnr/pp1q1pp1/4p2p/2p1N3/3Pp3/2P5/PP2BPPP/RNBQK1R1 b Qkq - 1 7");
+        println!("{board6}");
     }
 }
