@@ -25,6 +25,25 @@ impl TryFrom<usize> for Square {
     }
 }
 
+impl TryFrom<&str> for Square {
+    type Error = InvalidSquare;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let mut i = value.chars();
+        let mut file = i.next().ok_or(InvalidSquare)? as u8;
+        let mut rank = i.next().ok_or(InvalidSquare)? as u8;
+
+        if (b'a'..b'h').contains(&file) && (b'1'..b'8').contains(&rank) {
+            file -= b'a';
+            rank -= b'1';
+        }
+        else {
+            return Err(InvalidSquare);
+        }
+
+        Square::try_from(((rank * 8) + file) as usize)
+    }
+}
+
 impl Square {
     pub const fn from(value: usize) -> Self {
         debug_assert!(value < 64);

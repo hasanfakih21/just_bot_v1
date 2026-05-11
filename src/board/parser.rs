@@ -43,6 +43,11 @@ impl Board {
             board.castling_rights.set(Castling::from(c) as u8);
         }
 
+        let enpassant = fen.next().unwrap();
+        if let Ok(square) = Square::try_from(enpassant) {
+            board.enpassant = Some(square);
+        }
+
         board
     }
 }
@@ -60,13 +65,16 @@ mod tests {
         let board2 = Board::from_fen("8/8/8/8/8/8/8/8 w - - ");
         println!("{board2}");
 
-        let board3 = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ");
+        let board3 = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
         println!("{board3}");
 
         let board4 = Board::from_fen("rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQkq e6 0 1");
         println!("{board4}");
 
-        let board5 = Board::from_fen("r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9 ");
+        let board5 = Board::from_fen("r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9");
+        println!("{board5}");
+        
+        let board5 = Board::from_fen("rnbqkbnr/pp3ppp/4p3/2pp4/3P4/2P2N2/PP2PPPP/RNBQKB1R w KQkq c6 0 4");
         println!("{board5}");
     }
 }

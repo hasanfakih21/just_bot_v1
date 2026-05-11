@@ -171,7 +171,7 @@ impl Display for Board {
             output.push('\n');
         }
         output.push_str("\n     A  B  C  D  E  F  G  H\n");
-        output.push_str(&format!("\n     Side to move: {} \n     Castling: {}\n", self.side_to_move, self.castling_rights));
+        output.push_str(&format!("\n     Side to move: {} \n     Castling: {}\n     Enpassant: {:?}\n", self.side_to_move, self.castling_rights, self.enpassant));
         write!(f, "{}", output)
     }
 }
