@@ -2,6 +2,7 @@ pub mod squares;
 pub mod pieces;
 pub mod sides;
 pub mod constants;
+pub mod moves;
 pub mod parser;
 
 use std::fmt::Display;
@@ -126,6 +127,18 @@ impl Board {
                 self.bishop_attacks[(square as usize * 512) + magic_index] = blocked_bishop_attacks(square, occupancy_bb);
             }
         }
+    }
+
+    pub fn get_pawn_attacks(&self, square: Square, side: Side) -> u64 {
+        self.pawn_attacks[side as usize][square as usize]
+    }
+
+    pub fn get_knight_attacks(&self, square: Square) -> u64 {
+        self.knight_attacks[square as usize]
+    }
+
+    pub fn get_king_attacks(&self, square: Square) -> u64 {
+        self.king_attacks[square as usize]
     }
 
     pub fn get_bishop_attacks(&self, square: Square, board_occupancy: u64) -> u64 {
