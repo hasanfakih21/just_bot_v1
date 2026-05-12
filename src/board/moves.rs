@@ -1,6 +1,27 @@
+use std::slice::Iter;
+
 use crate::board::{Board, Piece, Side, Square, constants::{NORTH, RANK_4, RANK_5, SOUTH}, shift};
 
+#[derive(Default, Debug)]
+pub struct MoveList(Vec<Move>);
+
+impl MoveList {
+    pub fn new() -> Self {
+        MoveList(Vec::new())
+    }
+
+    pub fn add(&mut self, m: Move) {
+        self.0.push(m);
+    }
+
+    pub fn iter(&self) -> Iter<'_, Move> {
+        self.0.iter()
+    }
+}
+
+
 //12 bits for to and from square and 4 bits for move type
+#[derive(Debug)]
 pub struct Move(u16);
 
 impl Move {
