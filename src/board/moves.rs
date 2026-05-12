@@ -100,8 +100,6 @@ mod tests {
 
     #[test]
     fn test_is_attacked_at_by() {
-
-
         let board = Board::from_fen("8/8/8/3p4/8/8/5N2/8 w - - 0 1");
         assert!(board.is_attacked_at_by(C4, Black));
         assert!(board.is_attacked_at_by(D3, White));

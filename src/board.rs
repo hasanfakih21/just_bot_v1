@@ -227,6 +227,10 @@ pub const fn least_sig_bit(bit_board: &u64) -> Square {
     Square::from(bit_board.trailing_zeros() as usize)
 }
 
+pub const fn shift(bit_board: &mut u64, offset: i8) {
+    if offset > 0 {*bit_board <<= offset} else {*bit_board >>= -offset}
+} 
+
 #[cfg(test)]
 mod tests {
     use crate::board::constants::STARTING_FEN;

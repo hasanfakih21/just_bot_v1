@@ -4,3 +4,8 @@ pub const G_FILE: u64 = 0x4040404040404040;
 pub const H_FILE: u64 = 0x8080808080808080;
 
 pub const STARTING_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+pub const NORTH: i8 = 8;
+pub const SOUTH: i8 = -8;
+pub const WEST: i8 = -1;
+pub const EAST: i8 = 1;
