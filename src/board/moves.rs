@@ -1,4 +1,4 @@
-use crate::board::{Board, Piece, Side, Square};
+use crate::board::{Board, Piece, Side, Square, constants::{NORTH, SOUTH}, shift};
 
 //12 bits for to and from square and 4 bits for move type
 pub struct Move(u16);
@@ -87,13 +87,30 @@ impl Board {
 
     }
 
-    pub fn pawn_push(&self) {
+    pub fn pawns_with_pushes(&self, side: Side) -> u64 {
+        let mut empty = !self.get_all_occupancy();
+        let pawns = self.board_pieces[side as usize][Piece::Pawn as usize];
+        let offset = match side {
+            Side::White => SOUTH,
+            Side::Black => NORTH,
+        };
+
+        shift(&mut empty, offset);
+        empty & pawns
+    }
+
+    pub fn pawns_with_double_pushes(&self) {
+
+    }
+
+    pub fn pawn_moves(&self) {
 
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::board::print_board;
     use super::*;
     use Square::*;
     use Side::*;
@@ -123,5 +140,15 @@ mod tests {
 
         let m = Move::new(from, to, kind);
         println!("{:?}, {:?}, {:?}", m.get_from(), m.get_to(), m.get_kind());
+    }
+
+    #[test]
+    fn test_pawn_push() {
+        let board = Board::from_fen("8/1p3pp1/6N1/8/8/8/3PP3/8 w - - 0 1");
+        let w_bb= board.pawns_with_pushes(Side::White);
+        let b_bb= board.pawns_with_pushes(Side::Black);
+
+        print_board(&w_bb);
+        print_board(&b_bb);
     }
 }
