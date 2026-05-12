@@ -1,4 +1,4 @@
-use crate::board::{Board, Piece, Side, Square, constants::{NORTH, SOUTH}, shift};
+use crate::board::{Board, Piece, Side, Square, constants::{NORTH, RANK_4, RANK_5, SOUTH}, shift};
 
 //12 bits for to and from square and 4 bits for move type
 pub struct Move(u16);
@@ -99,8 +99,24 @@ impl Board {
         empty & pawns
     }
 
-    pub fn pawns_with_double_pushes(&self) {
+    pub fn pawns_with_double_pushes(&self, side: Side) -> u64 {
+        let mut empty = !self.get_all_occupancy();
+        let pawns = self.board_pieces[side as usize][Piece::Pawn as usize];
 
+        let offset = match side {
+            Side::White => SOUTH,
+            Side::Black => NORTH,
+        };
+
+        let mut second_rank = match side {
+            Side::White => empty & RANK_4,
+            Side::Black => empty & RANK_5,
+        };
+
+        shift(&mut second_rank, offset);
+        empty &= second_rank;
+        shift(&mut empty, offset);
+        empty & pawns
     }
 
     pub fn pawn_moves(&self) {
@@ -110,7 +126,7 @@ impl Board {
 
 #[cfg(test)]
 mod tests {
-    use crate::board::print_board;
+    use crate::board::{print_board, set_bit};
     use super::*;
     use Square::*;
     use Side::*;
@@ -143,12 +159,44 @@ mod tests {
     }
 
     #[test]
-    fn test_pawn_push() {
-        let board = Board::from_fen("8/1p3pp1/6N1/8/8/8/3PP3/8 w - - 0 1");
-        let w_bb= board.pawns_with_pushes(Side::White);
-        let b_bb= board.pawns_with_pushes(Side::Black);
+    fn test_source_pawn_push() {
+        let board = Board::from_fen("1K6/3pp3/4R3/7p/2n5/4b3/PPP1P1P1/8 w - - 0 1");
+        let w_bb = board.pawns_with_pushes(White);
+        let b_bb = board.pawns_with_pushes(Black);
 
         print_board(&w_bb);
         print_board(&b_bb);
+
+        let mut w_ver = 0u64;
+        set_bit(&mut w_ver, A2);
+        set_bit(&mut w_ver, B2);
+        set_bit(&mut w_ver, G2);
+        set_bit(&mut w_ver, C2);
+
+        let mut b_ver = 0u64;
+        set_bit(&mut b_ver, D7);
+        set_bit(&mut b_ver, H5);
+
+        assert_eq!(w_bb, w_ver);
+        assert_eq!(b_bb, b_ver);
+    }
+
+    #[test]
+    fn test_source_double_push() {
+        let board = Board::from_fen("1K6/3pp3/4R3/7p/2n5/4b3/PPP1P1P1/8 w - - 0 1");
+        println!("{}", board);
+        let w_bb = board.pawns_with_double_pushes(White);
+        let b_bb = board.pawns_with_double_pushes(Black);
+
+        let mut w_ver = 0u64;
+        set_bit(&mut w_ver, A2);
+        set_bit(&mut w_ver, B2);
+        set_bit(&mut w_ver, G2);
+
+        let mut b_ver = 0u64;
+        set_bit(&mut b_ver, D7);
+
+        assert_eq!(w_bb, w_ver);
+        assert_eq!(b_bb, b_ver);
     }
 }
