@@ -1,5 +1,22 @@
 use crate::board::{Board, Piece, Side, Square};
 
+pub enum MoveType {
+    QuietMove    = 0b0000,
+    DoublePawn   = 0b0001,
+    KingCastle   = 0b0010,
+    QueenCastle  = 0b0011,
+    Capture      = 0b0100,
+    EnPassant    = 0b0101,
+    NPromotion   = 0b1000,
+    BPromotion   = 0b1001,
+    RPromotion   = 0b1010,
+    QPromotion   = 0b1011,
+    NPromCapture = 0b1100,
+    BPromCapture = 0b1101,
+    RPromCapture = 0b1110,
+    QPromCapture = 0b1111,
+}
+
 impl Board {
     pub fn is_attacked_at_by(&self, square: Square, side: Side) -> bool {
         let pawns = self.board_pieces[side as usize][Piece::Pawn as usize];
@@ -18,6 +35,10 @@ impl Board {
         if (rook_queens & self.get_rook_attacks(square, self.get_all_occupancy())) != 0 {return true}
 
         false
+    }
+
+    pub fn generate_moves(&self) {
+
     }
 }
 
