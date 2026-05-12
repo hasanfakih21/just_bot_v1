@@ -1,6 +1,29 @@
 use crate::board::{Board, Piece, Side, Square};
 
-pub enum MoveType {
+//12 bits for to and from square and 4 bits for move type
+pub struct Move(u16);
+
+impl Move {
+    pub fn new(from: Square, to: Square, kind: MoveKind) -> Self {
+        Move(from as u16 | ((to as u16) << 6) | ((kind as u16) << 12))
+    }
+
+    pub fn get_from(&self) -> Square {
+        Square::from((0x003F & self.0) as usize)
+    }
+
+    pub fn get_to(&self) -> Square {
+        Square::from(((0x0FC0 & self.0) >> 6) as usize)
+    }
+
+    pub fn get_kind(&self) -> MoveKind {
+        MoveKind::from(((0xF000 & self.0) >> 12) as u8)
+    }
+}
+
+
+#[derive(Debug)]
+pub enum MoveKind {
     QuietMove    = 0b0000,
     DoublePawn   = 0b0001,
     KingCastle   = 0b0010,
@@ -15,6 +38,29 @@ pub enum MoveType {
     BPromCapture = 0b1101,
     RPromCapture = 0b1110,
     QPromCapture = 0b1111,
+}
+
+impl MoveKind {
+    fn from(value: u8) -> Self {
+        use MoveKind::*;
+        match value {
+            0b0000 => QuietMove, 
+            0b0001 => DoublePawn, 
+            0b0010 => KingCastle, 
+            0b0011 => QueenCastle, 
+            0b0100 => Capture, 
+            0b0101 => EnPassant, 
+            0b1000 => NPromotion, 
+            0b1001 => BPromotion, 
+            0b1010 => RPromotion, 
+            0b1011 => QPromotion, 
+            0b1100 => NPromCapture, 
+            0b1101 => BPromCapture, 
+            0b1110 => RPromCapture, 
+            0b1111 => QPromCapture , 
+            _ => panic!("Not a valid move kind!!")
+        }
+    }
 }
 
 impl Board {
@@ -40,16 +86,21 @@ impl Board {
     pub fn generate_moves(&self) {
 
     }
+
+    pub fn pawn_push(&self) {
+
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use Square::*;
+    use Side::*;
 
     #[test]
     fn test_is_attacked_at_by() {
-        use Square::*;
-        use Side::*;
+
 
         let board = Board::from_fen("8/8/8/3p4/8/8/5N2/8 w - - 0 1");
         assert!(board.is_attacked_at_by(C4, Black));
@@ -64,5 +115,15 @@ mod tests {
         assert!(board2.is_attacked_at_by(H6, Black));
         assert!(!board2.is_attacked_at_by(F5, Black));
         assert!(!board2.is_attacked_at_by(F5, White));
+    }
+    
+    #[test]
+    fn test_move_create() {
+        let from = A2;
+        let to = A4;
+        let kind = MoveKind::DoublePawn;
+
+        let m = Move::new(from, to, kind);
+        println!("{:?}, {:?}, {:?}", m.get_from(), m.get_to(), m.get_kind());
     }
 }
