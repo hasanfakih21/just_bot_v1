@@ -13,7 +13,7 @@ pub use pieces::*;
 pub use sides::*;
 
 pub use crate::attacks::*;
-use crate::{board::bitboard::BitBoard, magics::{BISHOP_MAGIC_NUMBERS, ROOK_MAGIC_NUMBERS, get_magic_index}, occupancy::{BISHOP_OCCUPANCY_BIT_COUNTS, ROOK_OCCUPANCY_BIT_COUNTS, set_occupancy}};
+use crate::{board::{bitboard::BitBoard, moves::MoveList}, magics::{BISHOP_MAGIC_NUMBERS, ROOK_MAGIC_NUMBERS, get_magic_index}, occupancy::{BISHOP_OCCUPANCY_BIT_COUNTS, ROOK_OCCUPANCY_BIT_COUNTS, set_occupancy}};
 
 pub struct Board {
     pub board_pieces: [[BitBoard; 6]; 2],
@@ -30,6 +30,8 @@ pub struct Board {
     pub king_attacks: [BitBoard; 64],
     pub bishop_attacks: Vec<BitBoard>,
     pub rook_attacks: Vec<BitBoard>,
+
+    pub move_list: MoveList,
 }
 
 impl Default for Board {
@@ -56,6 +58,8 @@ impl Board {
             }), 
 
             pawn_attacks: [[BitBoard(0); 64]; 2], knight_attacks: [BitBoard(0); 64], king_attacks: [BitBoard(0); 64], bishop_attacks: vec![BitBoard(0); 64 * 512], rook_attacks: vec![BitBoard(0); 64 * 4096],
+
+            move_list: MoveList::new(),
         };
 
         b.init_leaping_attacks();
