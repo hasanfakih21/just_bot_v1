@@ -146,7 +146,8 @@ impl Board {
         empty & pawns
     }
 
-    pub fn gen_pawn_moves(&self, side: Side) {
+    pub fn gen_pawn_moves(&self) {
+        let side = self.side_to_move;
         let single_push_source = self.pawns_with_pushes(side);
         let double_push_source = self.pawns_with_double_pushes(side);
         //let movelist = MoveList::new();
@@ -185,6 +186,10 @@ impl Board {
                         println!("Capture from: {:?} To: {:?}", source, target);
                     }
                 }
+            }
+
+            if let Some(target) = self.enpassant && self.pawn_attacks[side as usize][source as usize].get_bit(target) {
+                println!("Enpassant capture from {:?} to {:?}", source, target);
             }
         }
     }
@@ -268,10 +273,8 @@ mod tests {
 
     #[test]
     fn test_pawn_move_gen() {
-        let board = Board::from_fen("1K6/3pp1P1/4R3/7p/2n5/4b3/PPP1P1p1/7B w - - 0 1");
+        let board = Board::from_fen("1K6/3pp1P1/4R3/3k3p/Ppn5/4b3/1PP1P1p1/7B b - a3 0 1");
 
-        board.gen_pawn_moves(Side::White);
-        println!();
-        board.gen_pawn_moves(Side::Black);
+        board.gen_pawn_moves();
     }
 }
