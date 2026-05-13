@@ -1,6 +1,6 @@
 use std::{fmt::Display, slice::Iter};
 
-use crate::board::{Board, Piece, Side, Square, bitboard::BitBoard, constants::{NORTH, RANK_1, RANK_4, RANK_5, RANK_8, SOUTH}};
+use crate::board::{Board, Castling, Piece, Side, Square, bitboard::BitBoard, constants::{NORTH, RANK_1, RANK_4, RANK_5, RANK_8, SOUTH, WK_SIDE, WQ_SIDE}};
 
 #[derive(Default, Debug)]
 pub struct MoveList(Vec<Move>);
@@ -193,6 +193,31 @@ impl Board {
             }
         }
     }
+
+    pub fn gen_castling_moves(&self) {
+        let side = self.side_to_move;
+        let king = self.board_pieces[side as usize][Piece::King as usize];
+        let occupancies = self.get_all_occupancy();
+        let mut king_side_occ = BitBoard(WK_SIDE);
+        let mut queen_side_occ = BitBoard(WQ_SIDE);
+        if side == Side::Black {king_side_occ.shift(NORTH * 7); queen_side_occ.shift(NORTH * 7);}
+
+        if self.castling_rights.can_king_side(side) && ((king_side_occ & occupancies).0 == 0) {
+            let target = match side {
+                Side::White => Castling::WhiteKing.king_landing_square(),
+                Side::Black => Castling::BlackKing.king_landing_square(),
+            };
+            println!("King side castle from: {:?} To: {:?}", king.least_sig_bit().unwrap(), target);
+        }
+
+        if self.castling_rights.can_queen_side(side) && ((queen_side_occ & occupancies).0 == 0) {
+            let target = match side {
+                Side::White => Castling::WhiteQueen.king_landing_square(),
+                Side::Black => Castling::BlackQueen.king_landing_square(),
+            };
+            println!("Queen side castle from: {:?} To: {:?}", king.least_sig_bit().unwrap(), target);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -276,5 +301,12 @@ mod tests {
         let board = Board::from_fen("1K6/3pp1P1/4R3/3k3p/Ppn5/4b3/1PP1P1p1/7B b - a3 0 1");
 
         board.gen_pawn_moves();
+    }
+
+    #[test]
+    fn test_castling_move_gen() {
+        let board = Board::from_fen("rn2kb1r/pppqn2p/2bp2p1/4p3/8/NQPBPN2/PP1B1PPP/R3K2R w KQkq - 6 10");
+
+        board.gen_castling_moves();
     }
 }

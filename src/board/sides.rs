@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use crate::board::Square;
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Side {
     White,
@@ -45,10 +47,19 @@ impl Castling {
 
     pub fn to_char(&self) -> char {
         match self {
-            Self::WhiteKing => 'K',
-            Self::BlackKing => 'k',
+            Self::WhiteKing  => 'K',
+            Self::BlackKing  => 'k',
             Self::WhiteQueen => 'Q',
             Self::BlackQueen => 'q',
+        }
+    }
+
+    pub fn king_landing_square(&self) -> Square {
+        match self {
+            Self::WhiteKing  => Square::G1,
+            Self::WhiteQueen => Square::C1,
+            Self::BlackKing  => Square::G8,
+            Self::BlackQueen => Square::C8,
         }
     }
 }

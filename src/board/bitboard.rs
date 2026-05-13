@@ -38,7 +38,7 @@ impl BitBoard {
             println!();
         }
         println!("\n    A  B  C  D  E  F  G  H");
-        println!("\nBitboard: {}", self.0);
+        println!("\nBitboard: {:x}", self.0);
     }
 
     pub const fn iter(&self) -> BitBoardIter {
