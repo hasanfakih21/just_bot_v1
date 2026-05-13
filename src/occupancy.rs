@@ -26,7 +26,7 @@ pub fn set_occupancy(index: usize, num_bits_in_mask: usize, mut attack_mask: Bit
     let mut occupancy = BitBoard(0u64);
 
     for count in 0..num_bits_in_mask {
-        let square = attack_mask.least_sig_bit();
+        let square = attack_mask.least_sig_bit().unwrap();
         attack_mask.clear_bit(square);
 
         if (index & (1 << count)) != 0 {

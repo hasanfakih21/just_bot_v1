@@ -1,4 +1,4 @@
-use std::slice::Iter;
+use std::{fmt::Display, slice::Iter};
 
 use crate::board::{Board, Piece, Side, Square, bitboard::BitBoard, constants::{NORTH, RANK_4, RANK_5, SOUTH}};
 
@@ -39,6 +39,12 @@ impl Move {
 
     pub fn get_kind(&self) -> MoveKind {
         MoveKind::from(((0xF000 & self.0) >> 12) as u8)
+    }
+}
+
+impl Display for Move {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?} {:?} {:?}", self.get_from(), self.get_to(), self.get_kind())
     }
 }
 
@@ -140,8 +146,26 @@ impl Board {
         empty & pawns
     }
 
-    pub fn pawn_moves(&self) {
+    pub fn pawn_moves(&self, side: Side) -> MoveList {
+        let p_moves = MoveList::new();
+        let single_push_source = self.pawns_with_pushes(side);
 
+        let mut single_push_target = single_push_source;
+        match side {
+            Side::White => single_push_target.shift(NORTH),
+            Side::Black => single_push_target.shift(SOUTH),
+        }
+
+        
+
+        let double_push_source = self.pawns_with_double_pushes(side);
+        let mut double_push_target = double_push_source;
+        match side {
+            Side::White => double_push_target.shift(NORTH * 2),
+            Side::Black => double_push_target.shift(SOUTH * 2),
+        }
+
+        p_moves
     }
 }
 

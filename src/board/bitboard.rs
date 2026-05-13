@@ -2,6 +2,18 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, N
 
 use super::Square;
 
+pub struct BitBoardIter {
+    bit_board: BitBoard    
+}
+
+impl Iterator for BitBoardIter {
+    type Item = Square;
+
+    fn next(&mut self) -> Option<Self::Item> {
+       Some(Square::E1)
+    }
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct BitBoard(pub u64);
 
@@ -36,8 +48,8 @@ impl BitBoard {
         self.0.count_ones() as usize
     }
 
-    pub const fn least_sig_bit(&self) -> Square {
-        Square::from(self.0.trailing_zeros() as usize)
+    pub const fn least_sig_bit(&self) -> Option<Square> {
+        if self.0 != 0 {Some(Square::from(self.0.trailing_zeros() as usize))} else {None}
     }
 
     pub const fn shift(&mut self, offset: i8) {
@@ -123,15 +135,15 @@ mod tests {
         let mut bb = BitBoard(0);
         bb.set_bit(Square::A3);
 
-        assert_eq!(bb.least_sig_bit(), Square::A3);
+        assert_eq!(bb.least_sig_bit().unwrap(), Square::A3);
 
         bb.set_bit(Square::B3);
         bb.set_bit(Square::B2);
         bb.set_bit(Square::H8);
         bb.set_bit(Square::C2);
 
-        assert_eq!(bb.least_sig_bit(), Square::B2);
+        assert_eq!(bb.least_sig_bit().unwrap(), Square::B2);
         bb.clear_bit(Square::B2);
-        assert_eq!(bb.least_sig_bit(), Square::C2);
+        assert_eq!(bb.least_sig_bit().unwrap(), Square::C2);
     }
 }
