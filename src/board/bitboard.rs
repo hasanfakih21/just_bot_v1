@@ -1,6 +1,9 @@
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
+
 use super::Square;
 
-pub struct BitBoard(u64);
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct BitBoard(pub u64);
 
 impl BitBoard {
     pub fn print_board(&self) {
@@ -40,4 +43,54 @@ impl BitBoard {
     pub const fn shift(&mut self, offset: i8) {
         if offset > 0 {self.0 <<= offset} else {self.0 >>= -offset}
     } 
+}
+
+impl BitAnd for BitBoard {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl BitAndAssign for BitBoard {
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 &= rhs.0
+    }
+}
+
+impl BitOr for BitBoard {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl BitOrAssign for BitBoard {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0
+    }
+}
+
+impl BitXor for BitBoard {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl BitXorAssign for BitBoard {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        self.0 ^= rhs.0
+    }
+}
+
+impl Not for BitBoard {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        Self(!self.0)
+    }
 }
