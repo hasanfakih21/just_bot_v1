@@ -19,7 +19,6 @@ impl MoveList {
     }
 }
 
-
 //12 bits for to and from square and 4 bits for move type
 #[derive(Debug)]
 pub struct Move(u16);
@@ -47,7 +46,6 @@ impl Display for Move {
         write!(f, "{:?} {:?} {:?}", self.get_from(), self.get_to(), self.get_kind())
     }
 }
-
 
 #[derive(Debug)]
 pub enum MoveKind {
@@ -201,7 +199,7 @@ impl Board {
 
         if self.castling_rights.can_king_side(side) && 
             ((king_side_occ & occupancies).0 == 0)  && 
-            !king_side_occ.iter().any(|e| self.is_attacked_at_by(e, side.other()))
+            !(king_side_occ | king).iter().any(|e| self.is_attacked_at_by(e, side.other()))
         {
             let target = match side {
                 Side::White => Castling::WhiteKing.king_landing_square(),
@@ -212,7 +210,7 @@ impl Board {
 
         if self.castling_rights.can_queen_side(side) &&
             ((queen_side_occ & occupancies).0 == 0)  &&
-            !need_to_be_safe.iter().any(|e| self.is_attacked_at_by(e, side.other()))
+            !(need_to_be_safe | king).iter().any(|e| self.is_attacked_at_by(e, side.other()))
         {
             let target = match side {
                 Side::White => Castling::WhiteQueen.king_landing_square(),
@@ -220,6 +218,23 @@ impl Board {
             };
             println!("Queen side castle from: {:?} To: {:?}", king.least_sig_bit().unwrap(), target);
         }
+    }
+
+    pub fn gen_knight_moves(&self) {
+        let side = self.side_to_move;
+        let opponent_pieces = self.board_occupancies[side.other() as usize];
+        let friendly_pieces = self.board_occupancies[side as usize];
+
+        for source in self.board_pieces[side as usize][Piece::Knight as usize].iter() {
+            let targets = self.get_knight_attacks(source) & !friendly_pieces;
+            for target in targets.iter() {
+                if opponent_pieces.get_bit(target) {
+                    println!("Knight capture from {:?} to {:?}", source, target);
+                } else {
+                    println!("Knight quiet move from {:?} to {:?}", source, target);
+                }
+            }
+        } 
     }
 }
 
@@ -311,5 +326,12 @@ mod tests {
         let board = Board::from_fen("r3k2r/p1q1n2p/nQpp2pb/8/2B1N3/2P1P3/PP1B1PPP/R3K2R b KQkq - 2 17");
 
         board.gen_castling_moves();
+    }
+
+    #[test]
+    fn test_knight_move_gen() {
+        let board = Board::from_fen("r3k2r/p2q3p/nQp3pb/2Np1n2/8/1BP1P3/PP1B1PPP/R3K2R w KQkq - 4 20");
+
+        board.gen_knight_moves();
     }
 }
