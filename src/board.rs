@@ -64,18 +64,18 @@ impl Board {
         b
     }
 
-    pub fn get_bit(&self, side: Side, piece: Piece, square: Square) -> bool {
+    pub fn is_there(&self, side: Side, piece: Piece, square: Square) -> bool {
         let b = 1u64 << square as u64;
         (self.board_pieces[side as usize][piece as usize].0 & b) != 0
     }
 
     pub fn get_piece_at_square(&self, square: Square) -> Option<(Piece, Side)> {
         for piece_index in 0..6 {
-            if self.get_bit(Side::White, Piece::from(piece_index), square) {
+            if self.is_there(Side::White, Piece::from(piece_index), square) {
                 return Some((Piece::from(piece_index), Side::White));
             }
 
-            if self.get_bit(Side::Black, Piece::from(piece_index), square) {
+            if self.is_there(Side::Black, Piece::from(piece_index), square) {
                 return Some((Piece::from(piece_index), Side::Black))
             }
         }

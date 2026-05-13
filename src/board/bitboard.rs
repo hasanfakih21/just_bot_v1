@@ -43,6 +43,11 @@ impl BitBoard {
     pub const fn shift(&mut self, offset: i8) {
         if offset > 0 {self.0 <<= offset} else {self.0 >>= -offset}
     } 
+
+    pub const fn get_bit(&self, square: Square) -> bool {
+        let b = 1u64 << square as u64;
+        (self.0 & b) != 0
+    }
 }
 
 impl BitAnd for BitBoard {
