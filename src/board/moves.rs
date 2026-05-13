@@ -1,6 +1,6 @@
 use std::{fmt::Display, slice::Iter};
 
-use crate::board::{Board, Piece, Side, Square, bitboard::BitBoard, constants::{NORTH, RANK_4, RANK_5, SOUTH}};
+use crate::board::{Board, Piece, Side, Square, bitboard::BitBoard, constants::{NORTH, RANK_1, RANK_4, RANK_5, RANK_8, SOUTH}};
 
 #[derive(Default, Debug)]
 pub struct MoveList(Vec<Move>);
@@ -146,26 +146,47 @@ impl Board {
         empty & pawns
     }
 
-    pub fn pawn_moves(&self, side: Side) -> MoveList {
-        let p_moves = MoveList::new();
+    pub fn gen_pawn_moves(&self, side: Side) {
         let single_push_source = self.pawns_with_pushes(side);
-
-        let mut single_push_target = single_push_source;
-        match side {
-            Side::White => single_push_target.shift(NORTH),
-            Side::Black => single_push_target.shift(SOUTH),
-        }
-
-        
-
         let double_push_source = self.pawns_with_double_pushes(side);
-        let mut double_push_target = double_push_source;
-        match side {
-            Side::White => double_push_target.shift(NORTH * 2),
-            Side::Black => double_push_target.shift(SOUTH * 2),
-        }
+        //let movelist = MoveList::new();
+        let promotion_rank = match side {Side::White => BitBoard(RANK_8), Side::Black => BitBoard(RANK_1)};
+        let pawns = self.board_pieces[side as usize][Piece::Pawn as usize];
+        let opponent_pieces = self.board_occupancies[side.other() as usize];
+        let offset = match side {Side::White => NORTH, Side::Black => SOUTH};
 
-        p_moves
+        for source in pawns.iter() {
+            if double_push_source.get_bit(source) {
+                let target = source.shift(offset * 2).unwrap();
+                println!("From: {:?} To: {:?}", source, target);
+            }
+
+            if single_push_source.get_bit(source) {
+                let target = source.shift(offset).unwrap();
+                if promotion_rank.get_bit(target) {
+                    println!("Knight promotion from {:?} to {:?}", source, target);
+                    println!("Bishop promotion from {:?} to {:?}", source, target);
+                    println!("Rook promotion from {:?} to {:?}", source, target);
+                    println!("Queen promotion from {:?} to {:?}", source, target);
+                } else {
+                    println!("From: {:?} To: {:?}", source, target);
+                }
+            }
+
+            let attacks = self.pawn_attacks[side as usize][source as usize] & opponent_pieces;
+            if attacks.0 != 0 {
+                for target in attacks.iter() {
+                    if promotion_rank.get_bit(target) {
+                        println!("Knight promotion capture from {:?} to {:?}", source, target);
+                        println!("Bishop promotion capture from {:?} to {:?}", source, target);
+                        println!("Rook promotion capture from {:?} to {:?}", source, target);
+                        println!("Queen promotion capture from {:?} to {:?}", source, target);
+                    } else {
+                        println!("Capture from: {:?} To: {:?}", source, target);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -243,5 +264,14 @@ mod tests {
 
         assert_eq!(w_bb, w_ver);
         assert_eq!(b_bb, b_ver);
+    }
+
+    #[test]
+    fn test_pawn_move_gen() {
+        let board = Board::from_fen("1K6/3pp1P1/4R3/7p/2n5/4b3/PPP1P1p1/7B w - - 0 1");
+
+        board.gen_pawn_moves(Side::White);
+        println!();
+        board.gen_pawn_moves(Side::Black);
     }
 }
