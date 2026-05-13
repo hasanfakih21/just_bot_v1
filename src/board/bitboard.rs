@@ -10,7 +10,12 @@ impl Iterator for BitBoardIter {
     type Item = Square;
 
     fn next(&mut self) -> Option<Self::Item> {
-       Some(Square::E1)
+        let next = self.bit_board.least_sig_bit();
+        if let Some(square) = next {
+            self.bit_board.clear_bit(square);
+        }
+
+        next
     }
 }
 
@@ -34,6 +39,10 @@ impl BitBoard {
         }
         println!("\n    A  B  C  D  E  F  G  H");
         println!("\nBitboard: {}", self.0);
+    }
+
+    pub const fn iter(&self) -> BitBoardIter {
+        BitBoardIter{ bit_board: *self }
     }
 
     pub const fn set_bit(&mut self, square: Square) {
@@ -145,5 +154,20 @@ mod tests {
         assert_eq!(bb.least_sig_bit().unwrap(), Square::B2);
         bb.clear_bit(Square::B2);
         assert_eq!(bb.least_sig_bit().unwrap(), Square::C2);
+    }
+
+    #[test]
+    fn test_bitboard_iter() {
+        let mut bb = BitBoard(0);
+
+        bb.set_bit(Square::A3);
+        bb.set_bit(Square::B3);
+        bb.set_bit(Square::B2);
+        bb.set_bit(Square::H8);
+        bb.set_bit(Square::C2);
+
+        for square in bb.iter() {
+            println!("{:?}", square);
+        }
     }
 }
