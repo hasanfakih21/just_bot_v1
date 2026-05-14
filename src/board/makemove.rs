@@ -1,6 +1,9 @@
 use crate::board::{CastlingRights, Piece, Side, Square, bitboard::BitBoard, constants::{KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE}, moves::{Move, MoveKind, MoveList}};
 use super::Board;
 
+pub struct LegalMove;
+pub struct IllegalMove;
+
 pub struct BoardState {
     pub board_pieces: [[BitBoard; 6]; 2],
     pub pieces_on_squares: [Option<(Side, Piece)>; 64],
@@ -12,7 +15,7 @@ pub struct BoardState {
 }
 
 impl Board {
-    pub fn make_move(&mut self, m: Move) {
+    pub fn make_move(&mut self, m: Move) -> Result<LegalMove, IllegalMove> {
         let from = m.get_from();
         let to = m.get_to();
         let kind = m.get_kind();
@@ -119,6 +122,12 @@ impl Board {
                 }
             }
         }
+
+        if self.is_king_in_attack(side) {
+            Err(IllegalMove)
+        } else {
+            Ok(LegalMove)
+        }
     }
 
     pub fn unmake_move(&mut self) {
@@ -146,6 +155,11 @@ impl Board {
             }
         );
     }
+
+    pub fn is_king_in_attack(&self, side: Side) -> bool {
+        let king_square = self.board_pieces[side as usize][Piece::King as usize].least_sig_bit().unwrap();
+        self.is_attacked_at_by(king_square, side.other())
+    }
 }
 
 #[cfg(test)]
@@ -158,7 +172,7 @@ mod tests {
         println!("{board}");
 
         let m = Move::new(Square::B4, Square::A3, MoveKind::EnPassant);
-        board.make_move(m);
+        let _ = board.make_move(m);
         println!("{board}");
         assert_eq!(board.get_piece_at_square(Square::A3).unwrap(), (Side::Black, Piece::Pawn));
         assert!(board.get_piece_at_square(Square::A4).is_none());
@@ -168,7 +182,7 @@ mod tests {
         assert_eq!(board.get_piece_at_square(Square::B4).unwrap(), (Side::Black, Piece::Pawn));
 
         let m = Move::new(Square::C4, Square::B2, MoveKind::Capture);
-        board.make_move(m);
+        let _ = board.make_move(m);
         println!("{board}");
         assert_eq!(board.get_piece_at_square(Square::B2).unwrap(), (Side::Black, Piece::Knight));
 
@@ -176,14 +190,14 @@ mod tests {
         println!("{board}");
 
         let m = Move::new(Square::E1, Square::G1, MoveKind::KingCastle);
-        board.make_move(m);
+        let _ = board.make_move(m);
         println!("{board}");
         assert_eq!(board.get_piece_at_square(Square::G1).unwrap(), (Side::White, Piece::King));
         assert_eq!(board.get_piece_at_square(Square::F1).unwrap(), (Side::White, Piece::Rook));
         assert!(board.get_piece_at_square(Square::E1).is_none());
 
         let m = Move::new(Square::E8, Square::C8, MoveKind::QueenCastle);
-        board.make_move(m);
+        let _ = board.make_move(m);
         println!("{board}");
         assert_eq!(board.get_piece_at_square(Square::C8).unwrap(), (Side::Black, Piece::King));
         assert_eq!(board.get_piece_at_square(Square::D8).unwrap(), (Side::Black, Piece::Rook));
@@ -193,16 +207,25 @@ mod tests {
         println!("{board}");
 
         let m = Move::new(Square::E2, Square::E1, MoveKind::BPromotion);
-        board.make_move(m);
+        let _ = board.make_move(m);
         println!("{board}");
         assert_eq!(board.get_piece_at_square(Square::E1).unwrap(), (Side::Black, Piece::Bishop));
         assert!(board.get_piece_at_square(Square::E2).is_none());
 
         board.unmake_move();
         let m = Move::new(Square::E2, Square::F1, MoveKind::QPromCapture);
-        board.make_move(m);
+        let _ = board.make_move(m);
         println!("{board}");
         assert_eq!(board.get_piece_at_square(Square::F1).unwrap(), (Side::Black, Piece::Queen));
         assert!(board.get_piece_at_square(Square::E2).is_none());
+
+        let mut board = Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP3PPP/R1B2q1K w - - 0 18");
+        println!("{board}");
+
+        let m = Move::new(Square::C1, Square::H6, MoveKind::Capture);
+        assert!(board.make_move(m).is_err());
+        board.unmake_move();
+        let m = Move::new(Square::H3, Square::G1, MoveKind::QuietMove);
+        assert!(board.make_move(m).is_ok());
     }
 }
