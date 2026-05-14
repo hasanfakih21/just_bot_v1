@@ -21,7 +21,7 @@ impl Board {
             self.copy_state();
             self.remove_piece(side, piece, from);
             self.place_piece(side, piece, to);
-            if let MoveKind::DoublePawn = kind {self.enpassant = Some(Square::from(from as usize ^ 8))}
+            if let MoveKind::DoublePawn = kind {self.enpassant = Some(Square::from(to as usize ^ 8))}
             if piece == Piece::King {
                 self.castling_rights.clear_king_side(side);
                 self.castling_rights.clear_queen_side(side);
@@ -30,8 +30,15 @@ impl Board {
 
         else {
             self.copy_state();
+            if let Some((other_side, captured_piece)) = self.get_piece_at_square(to) {
+                self.remove_piece(other_side, captured_piece, to);
+            }
+
             self.remove_piece(side, piece, from);
+            self.place_piece(side, piece, to);
         }
+
+        self.side_to_move = self.side_to_move.other();
     }
 
     pub fn unmake_move(&mut self) {
@@ -61,10 +68,19 @@ impl Board {
 
 #[cfg(test)]
 mod tests {
-    use crate::board::Square;
+    use crate::board::{Board, Square, moves::{Move, MoveKind}};
 
     #[test]
     fn test_make_move() {
-        println!("{:?}", Square::from(Square::G4 as usize ^ 8));
+        let mut board = Board::from_fen("r3k2r/p3n2p/n1pp2pb/1p2p1N1/8/2PBP3/PP1B1PPP/R3K2R w KQkq b6 0 16");
+        println!("{board}");
+
+        let m = Move::new(Square::A2, Square::A4, MoveKind::DoublePawn);
+        board.make_move(m);
+
+        println!("{board}");
+
+        board.unmake_move();
+        println!("{board}");
     }
 }
