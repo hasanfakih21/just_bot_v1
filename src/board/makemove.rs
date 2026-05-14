@@ -1,4 +1,4 @@
-use crate::board::{CastlingRights, Piece, Side, Square, bitboard::BitBoard, constants::{KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE}, moves::{Move, MoveKind, MoveList}};
+use crate::board::{CastlingRights, Piece, Side, Square, bitboard::BitBoard, constants::{KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE}, moves::{Move, MoveKind}};
 use super::Board;
 
 pub struct LegalMove;
@@ -11,7 +11,6 @@ pub struct BoardState {
     pub side_to_move: Side,
     pub enpassant: Option<Square>,
     pub castling_rights: CastlingRights,
-    pub move_list: MoveList,
 }
 
 impl Board {
@@ -138,7 +137,6 @@ impl Board {
             self.side_to_move = prev_state.side_to_move;
             self.enpassant = prev_state.enpassant;
             self.castling_rights = prev_state.castling_rights;
-            self.move_list = prev_state.move_list;
         }
     }
 
@@ -151,7 +149,6 @@ impl Board {
                 side_to_move: self.side_to_move,
                 enpassant: self.enpassant,
                 castling_rights: self.castling_rights,
-                move_list: self.move_list.clone(),
             }
         );
     }

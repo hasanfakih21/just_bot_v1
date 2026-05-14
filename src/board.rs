@@ -14,7 +14,7 @@ pub use pieces::*;
 pub use sides::*;
 
 pub use crate::attacks::*;
-use crate::{board::{bitboard::BitBoard, makemove::BoardState, moves::MoveList}, magics::{BISHOP_MAGIC_NUMBERS, ROOK_MAGIC_NUMBERS, get_magic_index}, occupancy::{BISHOP_OCCUPANCY_BIT_COUNTS, ROOK_OCCUPANCY_BIT_COUNTS, set_occupancy}};
+use crate::{board::{bitboard::BitBoard, makemove::BoardState}, magics::{BISHOP_MAGIC_NUMBERS, ROOK_MAGIC_NUMBERS, get_magic_index}, occupancy::{BISHOP_OCCUPANCY_BIT_COUNTS, ROOK_OCCUPANCY_BIT_COUNTS, set_occupancy}};
 
 pub struct Board {
     pub board_pieces: [[BitBoard; 6]; 2],
@@ -33,7 +33,6 @@ pub struct Board {
     pub bishop_attacks: Vec<BitBoard>,
     pub rook_attacks: Vec<BitBoard>,
 
-    pub move_list: MoveList,
     pub state_stack: Vec<BoardState>,
 }
 
@@ -63,7 +62,6 @@ impl Board {
 
             pawn_attacks: [[BitBoard(0); 64]; 2], knight_attacks: [BitBoard(0); 64], king_attacks: [BitBoard(0); 64], bishop_attacks: vec![BitBoard(0); 64 * 512], rook_attacks: vec![BitBoard(0); 64 * 4096],
 
-            move_list: MoveList::new(),
             state_stack: Vec::new(),
         };
 

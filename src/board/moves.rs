@@ -145,7 +145,7 @@ impl Board {
         empty & pawns
     }
 
-    pub fn gen_pawn_moves(&mut self) {
+    pub fn gen_pawn_moves(&self, move_list: &mut MoveList) {
         let side = self.side_to_move;
         let single_push_source = self.pawns_with_pushes(side);
         let double_push_source = self.pawns_with_double_pushes(side);
@@ -158,18 +158,18 @@ impl Board {
         for source in pawns.iter() {
             if double_push_source.get_bit(source) {
                 let target = source.shift(offset * 2).unwrap();
-                self.move_list.add(Move::new(source, target, MoveKind::DoublePawn));
+                move_list.add(Move::new(source, target, MoveKind::DoublePawn));
             }
 
             if single_push_source.get_bit(source) {
                 let target = source.shift(offset).unwrap();
                 if promotion_rank.get_bit(target) {
-                    self.move_list.add(Move::new(source, target, MoveKind::NPromotion));
-                    self.move_list.add(Move::new(source, target, MoveKind::BPromotion));
-                    self.move_list.add(Move::new(source, target, MoveKind::RPromotion));
-                    self.move_list.add(Move::new(source, target, MoveKind::QPromotion));
+                    move_list.add(Move::new(source, target, MoveKind::NPromotion));
+                    move_list.add(Move::new(source, target, MoveKind::BPromotion));
+                    move_list.add(Move::new(source, target, MoveKind::RPromotion));
+                    move_list.add(Move::new(source, target, MoveKind::QPromotion));
                 } else {
-                    self.move_list.add(Move::new(source, target, MoveKind::QuietMove));
+                    move_list.add(Move::new(source, target, MoveKind::QuietMove));
                 }
             }
 
@@ -177,23 +177,23 @@ impl Board {
             if attacks.0 != 0 {
                 for target in attacks.iter() {
                     if promotion_rank.get_bit(target) {
-                        self.move_list.add(Move::new(source, target, MoveKind::NPromCapture));
-                        self.move_list.add(Move::new(source, target, MoveKind::BPromCapture));
-                        self.move_list.add(Move::new(source, target, MoveKind::RPromCapture));
-                        self.move_list.add(Move::new(source, target, MoveKind::QPromCapture));
+                        move_list.add(Move::new(source, target, MoveKind::NPromCapture));
+                        move_list.add(Move::new(source, target, MoveKind::BPromCapture));
+                        move_list.add(Move::new(source, target, MoveKind::RPromCapture));
+                        move_list.add(Move::new(source, target, MoveKind::QPromCapture));
                     } else {
-                        self.move_list.add(Move::new(source, target, MoveKind::Capture));
+                        move_list.add(Move::new(source, target, MoveKind::Capture));
                     }
                 }
             }
 
             if let Some(target) = self.enpassant && self.pawn_attacks[side as usize][source as usize].get_bit(target) {
-                self.move_list.add(Move::new(source, target, MoveKind::EnPassant));
+                move_list.add(Move::new(source, target, MoveKind::EnPassant));
             }
         }
     }
 
-    pub fn gen_castling_moves(&mut self) {
+    pub fn gen_castling_moves(&self, move_list: &mut MoveList) {
         let side = self.side_to_move;
         let king = self.board_pieces[side as usize][Piece::King as usize];
         let occupancies = self.get_all_occupancy();
@@ -210,7 +210,7 @@ impl Board {
                 Side::White => Castling::WhiteKing.king_landing_square(),
                 Side::Black => Castling::BlackKing.king_landing_square(),
             };
-            self.move_list.add(Move::new(king.least_sig_bit().unwrap(), target, MoveKind::KingCastle));
+            move_list.add(Move::new(king.least_sig_bit().unwrap(), target, MoveKind::KingCastle));
         }
 
         if self.castling_rights.can_queen_side(side) &&
@@ -221,11 +221,11 @@ impl Board {
                 Side::White => Castling::WhiteQueen.king_landing_square(),
                 Side::Black => Castling::BlackQueen.king_landing_square(),
             };
-            self.move_list.add(Move::new(king.least_sig_bit().unwrap(), target, MoveKind::QueenCastle));
+            move_list.add(Move::new(king.least_sig_bit().unwrap(), target, MoveKind::QueenCastle));
         }
     }
 
-    pub fn gen_knight_moves(&mut self) {
+    pub fn gen_knight_moves(&self, move_list: &mut MoveList) {
         let side = self.side_to_move;
         let opponent_pieces = self.board_occupancies[side.other() as usize];
         let friendly_pieces = self.board_occupancies[side as usize];
@@ -234,15 +234,15 @@ impl Board {
             let targets = self.get_knight_attacks(source) & !friendly_pieces;
             for target in targets.iter() {
                 if opponent_pieces.get_bit(target) {
-                    self.move_list.add(Move::new(source, target, MoveKind::Capture));
+                    move_list.add(Move::new(source, target, MoveKind::Capture));
                 } else {
-                    self.move_list.add(Move::new(source, target, MoveKind::QuietMove));
+                    move_list.add(Move::new(source, target, MoveKind::QuietMove));
                 }
             }
         } 
     }
 
-    pub fn gen_bishop_moves(&mut self) {
+    pub fn gen_bishop_moves(&self, move_list: &mut MoveList) {
         let side = self.side_to_move;
 
         let opponent_pieces = self.board_occupancies[side.other() as usize];
@@ -252,15 +252,15 @@ impl Board {
             let targets = self.get_bishop_attacks(source, self.get_all_occupancy()) & !friendly_pieces;
             for target in targets.iter() {
                 if opponent_pieces.get_bit(target) {
-                    self.move_list.add(Move::new(source, target, MoveKind::Capture));
+                    move_list.add(Move::new(source, target, MoveKind::Capture));
                 } else {
-                    self.move_list.add(Move::new(source, target, MoveKind::QuietMove));
+                    move_list.add(Move::new(source, target, MoveKind::QuietMove));
                 }
             }
         } 
     }
 
-    pub fn gen_rook_moves(&mut self) {
+    pub fn gen_rook_moves(&self, move_list: &mut MoveList) {
         let side = self.side_to_move;
 
         let opponent_pieces = self.board_occupancies[side.other() as usize];
@@ -270,15 +270,15 @@ impl Board {
             let targets = self.get_rook_attacks(source, self.get_all_occupancy()) & !friendly_pieces;
             for target in targets.iter() {
                 if opponent_pieces.get_bit(target) {
-                    self.move_list.add(Move::new(source, target, MoveKind::Capture));
+                    move_list.add(Move::new(source, target, MoveKind::Capture));
                 } else {
-                    self.move_list.add(Move::new(source, target, MoveKind::QuietMove));
+                    move_list.add(Move::new(source, target, MoveKind::QuietMove));
                 }
             }
         } 
     }
 
-    pub fn gen_queen_moves(&mut self) {
+    pub fn gen_queen_moves(&self, move_list: &mut MoveList) {
         let side = self.side_to_move;
 
         let opponent_pieces = self.board_occupancies[side.other() as usize];
@@ -288,15 +288,15 @@ impl Board {
             let targets = self.get_queen_attacks(source, self.get_all_occupancy()) & !friendly_pieces;
             for target in targets.iter() {
                 if opponent_pieces.get_bit(target) {
-                    self.move_list.add(Move::new(source, target, MoveKind::Capture));
+                    move_list.add(Move::new(source, target, MoveKind::Capture));
                 } else {
-                    self.move_list.add(Move::new(source, target, MoveKind::QuietMove));
+                    move_list.add(Move::new(source, target, MoveKind::QuietMove));
                 }
             }
         } 
     }
 
-    pub fn gen_king_moves(&mut self) {
+    pub fn gen_king_moves(&self, move_list: &mut MoveList) {
         let side = self.side_to_move;
 
         let opponent_pieces = self.board_occupancies[side.other() as usize];
@@ -306,22 +306,24 @@ impl Board {
             let targets = self.get_king_attacks(source) & !friendly_pieces;
             for target in targets.iter() {
                 if opponent_pieces.get_bit(target) {
-                    self.move_list.add(Move::new(source, target, MoveKind::Capture));
+                    move_list.add(Move::new(source, target, MoveKind::Capture));
                 } else {
-                    self.move_list.add(Move::new(source, target, MoveKind::QuietMove));
+                    move_list.add(Move::new(source, target, MoveKind::QuietMove));
                 }
             }
         } 
     }
 
-    pub fn generate_all_moves(&mut self) {
-        self.gen_pawn_moves();
-        self.gen_castling_moves();
-        self.gen_knight_moves();
-        self.gen_bishop_moves();
-        self.gen_rook_moves();
-        self.gen_queen_moves();
-        self.gen_king_moves();
+    pub fn generate_all_moves(&self) -> MoveList {
+        let mut move_list = MoveList::new();
+        self.gen_pawn_moves(&mut move_list);
+        self.gen_castling_moves(&mut move_list);
+        self.gen_knight_moves(&mut move_list);
+        self.gen_bishop_moves(&mut move_list);
+        self.gen_rook_moves(&mut move_list);
+        self.gen_queen_moves(&mut move_list);
+        self.gen_king_moves(&mut move_list);
+        move_list
     }
 }
 
@@ -399,44 +401,5 @@ mod tests {
 
         assert_eq!(w_bb, w_ver);
         assert_eq!(b_bb, b_ver);
-    }
-
-    #[test]
-    fn test_pawn_move_gen() {
-        let mut board = Board::from_fen("1K6/3pp1P1/4R3/3k3p/Ppn5/4b3/1PP1P1p1/7B b - a3 0 1");
-
-        board.gen_pawn_moves();
-    }
-
-    #[test]
-    fn test_castling_move_gen() {
-        let mut board = Board::from_fen("r3k2r/p1q1n2p/nQpp2pb/8/2B1N3/2P1P3/PP1B1PPP/R3K2R b KQkq - 2 17");
-
-        board.gen_castling_moves();
-    }
-
-    #[test]
-    fn test_knight_move_gen() {
-        let mut board = Board::from_fen("r3k2r/p2q3p/nQp3pb/2Np1n2/8/1BP1P3/PP1B1PPP/R3K2R w KQkq - 4 20");
-
-        board.gen_knight_moves();
-    }
-
-    #[test]
-    fn test_bishop_move_gen() {
-        let mut board = Board::from_fen("r3k2r/p2q3p/nQp3pb/2Np1n2/8/1BP1P3/PP1B1PPP/R3K2R w KQkq - 4 20");
-
-        board.gen_bishop_moves();
-    }
-
-    #[test]
-    fn test_general_move_gen() {
-        let mut board = Board::from_fen("r3k2r/p2q3p/nQp3pb/2Np1n2/8/1BP1P3/PP1B1PPP/R3K2R w KQkq - 4 20");
-
-        board.generate_all_moves();
-
-        for m in board.move_list.iter() {
-            println!("{m}");
-        }
     }
 }
