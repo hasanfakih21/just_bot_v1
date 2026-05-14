@@ -49,9 +49,9 @@ async fn main() {
 
             let piece_present = board.get_piece_at_square(square);
 
-            if let Some(piece) = piece_present && piece.1 == board.side_to_move {
-                    selected_piece = Some((board.side_to_move, piece.0, square));
-                    board.remove_piece(board.side_to_move, piece.0, square);
+            if let Some(piece) = piece_present && piece.0 == board.side_to_move {
+                    selected_piece = Some((board.side_to_move, piece.1, square));
+                    board.remove_piece(board.side_to_move, piece.1, square);
                 }
         }
 
