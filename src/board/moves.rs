@@ -2,7 +2,7 @@ use std::{fmt::Display, slice::Iter};
 
 use crate::board::{Board, Castling, Piece, Side, Square, bitboard::BitBoard, constants::{B_FILE, NORTH, RANK_1, RANK_4, RANK_5, RANK_8, SOUTH, WK_SIDE, WQ_SIDE}};
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct MoveList(Vec<Move>);
 
 impl MoveList {
@@ -20,7 +20,7 @@ impl MoveList {
 }
 
 //12 bits for to and from square and 4 bits for move type
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Move(u16);
 
 impl Move {

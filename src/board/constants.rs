@@ -1,3 +1,5 @@
+use crate::board::Square;
+
 pub const A_FILE: u64  = 0x0101010101010101;
 pub const B_FILE: u64  = 0x0202020202020202;
 pub const G_FILE: u64  = 0x4040404040404040;
@@ -18,3 +20,9 @@ pub const NORTH: i8 = 8;
 pub const SOUTH: i8 = -8;
 pub const WEST: i8 = -1;
 pub const EAST: i8 = 1;
+
+pub const KING_SIDE_ROOK_WHITE: Square = Square::H1;
+pub const QUEEN_SIDE_ROOK_WHITE: Square = Square::A1;
+
+pub const KING_SIDE_ROOK_BLACK: Square = Square::H8;
+pub const QUEEN_SIDE_ROOK_BLACK: Square = Square::A8;
