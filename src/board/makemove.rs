@@ -1,4 +1,4 @@
-use crate::board::{CastlingRights, Piece, Side, Square, bitboard::BitBoard, moves::{Move, MoveKind}};
+use crate::board::{CastlingRights, Piece, Side, Square, bitboard::BitBoard, constants::{KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE}, moves::{Move, MoveKind, MoveList}};
 use super::Board;
 
 pub struct BoardState {
@@ -8,6 +8,7 @@ pub struct BoardState {
     pub side_to_move: Side,
     pub enpassant: Option<Square>,
     pub castling_rights: CastlingRights,
+    pub move_list: MoveList,
 }
 
 impl Board {
@@ -16,20 +17,52 @@ impl Board {
         let to = m.get_to();
         let kind = m.get_kind();
         let (side, piece) = self.get_piece_at_square(from).unwrap();
+        let king_rook_square = match side {Side::White => KING_SIDE_ROOK_WHITE, Side::Black => KING_SIDE_ROOK_BLACK};
+        let queen_rook_square = match side {Side::White => QUEEN_SIDE_ROOK_WHITE, Side::Black => QUEEN_SIDE_ROOK_BLACK};
+        self.copy_state();
+
+        self.enpassant = None;
+        if let Piece::King = piece {
+            self.castling_rights.clear_king_side(side);
+            self.castling_rights.clear_queen_side(side);
+        }
+        self.side_to_move = self.side_to_move.other();
+        if let Piece::Rook = piece {
+            if from == king_rook_square {self.castling_rights.clear_king_side(side);}
+            if from == queen_rook_square {self.castling_rights.clear_queen_side(side);}
+        }
 
         if kind.is_quiet() {
-            self.copy_state();
-            self.remove_piece(side, piece, from);
-            self.place_piece(side, piece, to);
-            if let MoveKind::DoublePawn = kind {self.enpassant = Some(Square::from(to as usize ^ 8))}
-            if piece == Piece::King {
-                self.castling_rights.clear_king_side(side);
-                self.castling_rights.clear_queen_side(side);
+            match kind {
+                MoveKind::KingCastle => {
+                    self.remove_piece(side, piece, from);
+                    self.remove_piece(side, Piece::Rook, king_rook_square);
+                    self.castling_rights.clear_king_side(side);
+                    self.castling_rights.clear_queen_side(side);
+                    self.place_piece(side, piece, to);
+                    self.place_piece(side, Piece::Rook, from.shift(1).unwrap());
+                },
+                MoveKind::QueenCastle => {
+                    self.remove_piece(side, piece, from);
+                    self.remove_piece(side, Piece::Rook, queen_rook_square);
+                    self.castling_rights.clear_queen_side(side);
+                    self.castling_rights.clear_king_side(side);
+                    self.place_piece(side, piece, to);
+                    self.place_piece(side, Piece::Rook, from.shift(-1).unwrap());
+                },
+                MoveKind::DoublePawn => {
+                    self.remove_piece(side, piece, from);
+                    self.place_piece(side, piece, to);
+                    self.enpassant = Some(Square::from(to as usize ^ 8))
+                },
+                _=> {
+                    self.remove_piece(side, piece, from);
+                    self.place_piece(side, piece, to);
+                }
             }
         }
 
         else {
-            self.copy_state();
             if let Some((other_side, captured_piece)) = self.get_piece_at_square(to) {
                 self.remove_piece(other_side, captured_piece, to);
             }
@@ -37,8 +70,6 @@ impl Board {
             self.remove_piece(side, piece, from);
             self.place_piece(side, piece, to);
         }
-
-        self.side_to_move = self.side_to_move.other();
     }
 
     pub fn unmake_move(&mut self) {
@@ -49,6 +80,7 @@ impl Board {
             self.side_to_move = prev_state.side_to_move;
             self.enpassant = prev_state.enpassant;
             self.castling_rights = prev_state.castling_rights;
+            self.move_list = prev_state.move_list;
         }
     }
 
@@ -61,6 +93,7 @@ impl Board {
                 side_to_move: self.side_to_move,
                 enpassant: self.enpassant,
                 castling_rights: self.castling_rights,
+                move_list: self.move_list.clone(),
             }
         );
     }
