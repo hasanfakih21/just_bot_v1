@@ -28,8 +28,8 @@ impl Board {
         }
         self.side_to_move = self.side_to_move.other();
         if let Piece::Rook = piece {
-            if from == king_rook_square {self.castling_rights.clear_king_side(side);}
-            if from == queen_rook_square {self.castling_rights.clear_queen_side(side);}
+            if from == king_rook_square  && self.castling_rights.can_king_side(side)  {self.castling_rights.clear_king_side(side);}
+            if from == queen_rook_square && self.castling_rights.can_queen_side(side) {self.castling_rights.clear_queen_side(side);}
         }
 
         if kind.is_quiet() {
@@ -63,12 +63,57 @@ impl Board {
         }
 
         else {
-            if let Some((other_side, captured_piece)) = self.get_piece_at_square(to) {
-                self.remove_piece(other_side, captured_piece, to);
-            }
+            match kind {
+                MoveKind::EnPassant => {
 
-            self.remove_piece(side, piece, from);
-            self.place_piece(side, piece, to);
+                },
+                MoveKind::BPromotion => {
+                    self.remove_piece(side, piece, from);
+                    self.place_piece(side, Piece::Bishop, to);
+                },
+                MoveKind::NPromotion => {
+                    self.remove_piece(side, piece, from);
+                    self.place_piece(side, Piece::Knight, to);
+                },
+                MoveKind::RPromotion => {
+                    self.remove_piece(side, piece, from);
+                    self.place_piece(side, Piece::Rook, to);
+                },
+                MoveKind::QPromotion => {
+                    self.remove_piece(side, piece, from);
+                    self.place_piece(side, Piece::Queen, to);
+                },
+                MoveKind::BPromCapture => {
+                    let (other_side, captured_piece) = self.get_piece_at_square(to).unwrap();
+                    self.remove_piece(other_side, captured_piece, to);
+                    self.remove_piece(side, piece, from);
+                    self.place_piece(side, Piece::Bishop, to);
+                },
+                MoveKind::NPromCapture => {
+                    let (other_side, captured_piece) = self.get_piece_at_square(to).unwrap();
+                    self.remove_piece(other_side, captured_piece, to);
+                    self.remove_piece(side, piece, from);
+                    self.place_piece(side, Piece::Knight, to);
+                },
+                MoveKind::RPromCapture => {
+                    let (other_side, captured_piece) = self.get_piece_at_square(to).unwrap();
+                    self.remove_piece(other_side, captured_piece, to);
+                    self.remove_piece(side, piece, from);
+                    self.place_piece(side, Piece::Rook, to);
+                },
+                MoveKind::QPromCapture => {
+                    let (other_side, captured_piece) = self.get_piece_at_square(to).unwrap();
+                    self.remove_piece(other_side, captured_piece, to);
+                    self.remove_piece(side, piece, from);
+                    self.place_piece(side, Piece::Queen, to);
+                },
+                _=> {
+                    let (other_side, captured_piece) = self.get_piece_at_square(to).unwrap();
+                    self.remove_piece(other_side, captured_piece, to);
+                    self.remove_piece(side, piece, from);
+                    self.place_piece(side, piece, to);
+                }
+            }
         }
     }
 
