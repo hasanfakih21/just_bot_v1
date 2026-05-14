@@ -64,6 +64,7 @@ impl Castling {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct CastlingRights(u8);
 
 impl CastlingRights {
@@ -101,6 +102,28 @@ impl CastlingRights {
 
     pub fn set(&mut self, mask: u8) {
         self.0 |= mask;
+    }
+
+    pub fn clear_king_side(&mut self, side: Side) {
+        match side {
+            Side::White => {
+                if self.can_king_side(side) {self.0 ^= Castling::WhiteKing as u8}
+            },
+            Side::Black => {
+                if self.can_king_side(side) {self.0 ^= Castling::BlackKing as u8}
+            }
+        }
+    }
+
+    pub fn clear_queen_side(&mut self, side: Side){
+        match side {
+            Side::White => {
+                if self.can_queen_side(side) {self.0 ^= Castling::WhiteQueen as u8}
+            },
+            Side::Black => {
+                if self.can_queen_side(side) {self.0 ^= Castling::BlackQueen as u8}
+            }
+        }
     }
 }
 
