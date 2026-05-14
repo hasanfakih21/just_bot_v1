@@ -86,6 +86,11 @@ impl MoveKind {
             _ => panic!("Not a valid move kind!!")
         }
     }
+
+    pub const fn is_quiet(&self) -> bool {
+        use MoveKind::*;
+        matches!(self, QuietMove | DoublePawn | KingCastle | QueenCastle)
+    }
 }
 
 impl Board {
@@ -308,6 +313,16 @@ impl Board {
             }
         } 
     }
+
+    pub fn generate_all_moves(&mut self) {
+        self.gen_pawn_moves();
+        self.gen_castling_moves();
+        self.gen_knight_moves();
+        self.gen_bishop_moves();
+        self.gen_rook_moves();
+        self.gen_queen_moves();
+        self.gen_king_moves();
+    }
 }
 
 #[cfg(test)]
@@ -418,7 +433,7 @@ mod tests {
     fn test_general_move_gen() {
         let mut board = Board::from_fen("r3k2r/p2q3p/nQp3pb/2Np1n2/8/1BP1P3/PP1B1PPP/R3K2R w KQkq - 4 20");
 
-        board.gen_queen_moves();
+        board.generate_all_moves();
 
         for m in board.move_list.iter() {
             println!("{m}");
