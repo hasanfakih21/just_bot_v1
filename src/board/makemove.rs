@@ -22,6 +22,8 @@ impl Board {
         let (side, piece) = self.get_piece_at_square(from).unwrap_or_else(|| {println!("Error here: {m}, {self}"); self.unmake_move(); panic!("{self}")});
         let king_rook_square = match side {Side::White => KING_SIDE_ROOK_WHITE, Side::Black => KING_SIDE_ROOK_BLACK};
         let queen_rook_square = match side {Side::White => QUEEN_SIDE_ROOK_WHITE, Side::Black => QUEEN_SIDE_ROOK_BLACK};
+        let opp_king_rook_square = match side {Side::White => KING_SIDE_ROOK_BLACK, Side::Black => KING_SIDE_ROOK_WHITE};
+        let opp_queen_rook_square = match side {Side::White => QUEEN_SIDE_ROOK_BLACK, Side::Black => QUEEN_SIDE_ROOK_WHITE};
         self.copy_state();
 
         self.enpassant = None;
@@ -68,9 +70,8 @@ impl Board {
         else {
             if let Some((other_side, captured_piece)) = self.get_piece_at_square(to)
                 && captured_piece == Piece::Rook {
-                    let (_, file) = to.to_rank_and_file();
-                    if file == 7 {self.castling_rights.clear_king_side(other_side);}
-                    if file == 0 {self.castling_rights.clear_queen_side(other_side);}
+                    if to == opp_king_rook_square {self.castling_rights.clear_king_side(other_side);}
+                    if to == opp_queen_rook_square {self.castling_rights.clear_queen_side(other_side);}
                 }
             match kind {
                 MoveKind::EnPassant => {
