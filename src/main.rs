@@ -26,6 +26,7 @@ async fn main() {
 
     loop {
         request_new_screen_size(768.0, 768.0);
+        clear_background(WHITE);
         let mouse_pos = mouse_position();
         draw_texture_ex(
             &board_texture,
@@ -38,8 +39,6 @@ async fn main() {
             }
         );
 
-        draw_board(mailbox, &piece_textures);  
-
         if is_mouse_button_pressed(MouseButton::Left) && selected_piece.is_none() {
             let square = get_square_from_mouse_position(mouse_pos);
             let piece_present = board.get_piece_at_square(square);
@@ -51,6 +50,7 @@ async fn main() {
                 }
         }
 
+        draw_board(mailbox, &piece_textures);  
         if is_mouse_button_down(MouseButton::Left) && let Some((side, piece, _)) = selected_piece {
             draw_piece(mouse_pos.0 - 48.0, mouse_pos.1 - 48.0, &piece_textures[side as usize][piece as usize]);
         } else if selected_piece.is_some() {
@@ -63,6 +63,7 @@ async fn main() {
             selected_piece = None;
             selected_piece_moves.clear();
             mailbox = board.pieces_on_squares;
+            draw_board(mailbox, &piece_textures);  
         }
 
         next_frame().await
