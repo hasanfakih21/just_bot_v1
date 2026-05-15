@@ -1,17 +1,31 @@
 use crate::board::Board;
 
 pub fn perft(depth: usize, board: &mut Board, nodes_count: &mut usize) {
-    if depth == 0 {
-        *nodes_count += 1;
-        return;
+    for m in board.generate_all_moves().iter() {
+        if board.make_move(*m).is_ok() {  
+            let divided_nodes = perft_divide(depth - 1, board);
+            println!("{m}: {divided_nodes}");
+            *nodes_count += divided_nodes;
+            board.unmake_move();
+        } 
     }
+}
+
+pub fn perft_divide(depth: usize, board: &mut Board) -> usize {
+    if depth == 0 {
+        return 1;
+    }
+
+    let mut nodes = 0;
 
     for m in board.generate_all_moves().iter() {
         if board.make_move(*m).is_ok() {
-            perft(depth - 1, board, nodes_count);
-        };
-        board.unmake_move();
+            nodes += perft_divide(depth - 1, board);
+            board.unmake_move();
+        }
     }
+
+    nodes
 }
 
 #[cfg(test)]
@@ -20,10 +34,11 @@ mod tests {
 
     #[test]
     fn test_perft() {
-        let mut board = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
+        let mut board = Board::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1 ");
+        println!("{board}");
         let mut nodes_count = 0;
-        perft(4, &mut board, &mut nodes_count);
+        perft(5, &mut board, &mut nodes_count);
 
-        println!("Number of nodes: {nodes_count}")
+        println!("Number of nodes: {nodes_count}");
     }
 }

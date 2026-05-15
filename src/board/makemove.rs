@@ -4,6 +4,7 @@ use super::Board;
 pub struct LegalMove;
 pub struct IllegalMove;
 
+#[derive(Debug)]
 pub struct BoardState {
     pub board_pieces: [[BitBoard; 6]; 2],
     pub pieces_on_squares: [Option<(Side, Piece)>; 64],
@@ -18,7 +19,7 @@ impl Board {
         let from = m.get_from();
         let to = m.get_to();
         let kind = m.get_kind();
-        let (side, piece) = self.get_piece_at_square(from).unwrap();
+        let (side, piece) = self.get_piece_at_square(from).unwrap_or_else(|| {println!("Error here: {m}, {self}"); self.unmake_move(); panic!("{self}")});
         let king_rook_square = match side {Side::White => KING_SIDE_ROOK_WHITE, Side::Black => KING_SIDE_ROOK_BLACK};
         let queen_rook_square = match side {Side::White => QUEEN_SIDE_ROOK_WHITE, Side::Black => QUEEN_SIDE_ROOK_BLACK};
         self.copy_state();
@@ -65,6 +66,12 @@ impl Board {
         }
 
         else {
+            if let Some((other_side, captured_piece)) = self.get_piece_at_square(to)
+                && captured_piece == Piece::Rook {
+                    let (_, file) = to.to_rank_and_file();
+                    if file == 7 {self.castling_rights.clear_king_side(other_side);}
+                    if file == 0 {self.castling_rights.clear_queen_side(other_side);}
+                }
             match kind {
                 MoveKind::EnPassant => {
                     let pawn_square = Square::from(to as usize ^ 8);
@@ -123,6 +130,7 @@ impl Board {
         }
 
         if self.is_king_in_attack(side) {
+            self.unmake_move();
             Err(IllegalMove)
         } else {
             Ok(LegalMove)
@@ -224,5 +232,13 @@ mod tests {
         board.unmake_move();
         let m = Move::new(Square::H3, Square::G1, MoveKind::QuietMove);
         assert!(board.make_move(m).is_ok());
+
+        let mut board = Board::from_fen("r3k2N/p1ppqpb1/bn2pn2/3P4/1p2P3/2N2Q2/PPPBBPpP/R3K2R b KQq - 0 2");
+        println!("{board}");
+
+        let m = Move::new(Square::G2, Square::H1, MoveKind::NPromCapture);
+        assert!(board.make_move(m).is_ok());
+        assert!(!board.castling_rights.can_king_side(Side::White));
+        println!("{board}");
     }
 }

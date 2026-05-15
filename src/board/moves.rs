@@ -43,7 +43,7 @@ impl Move {
 
 impl Display for Move {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?} {:?} {:?}", self.get_from(), self.get_to(), self.get_kind())
+        write!(f, "{:?} {:?}", self.get_from(), self.get_to())
     }
 }
 
@@ -338,6 +338,7 @@ mod tests {
     fn test_is_attacked_at_by() {
         let board = Board::from_fen("8/8/8/3p4/8/8/5N2/8 w - - 0 1");
         assert!(board.is_attacked_at_by(C4, Black));
+        assert!(board.is_attacked_at_by(E4, Black));
         assert!(board.is_attacked_at_by(D3, White));
         assert!(!board.is_attacked_at_by(F2, Black));
 
