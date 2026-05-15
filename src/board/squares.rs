@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[derive(Debug)]
 pub struct InvalidSquare;
 
@@ -43,7 +45,7 @@ impl TryFrom<&str> for Square {
         let mut file = i.next().ok_or(InvalidSquare)? as u8;
         let mut rank = i.next().ok_or(InvalidSquare)? as u8;
 
-        if (b'a'..b'h').contains(&file) && (b'1'..b'8').contains(&rank) {
+        if (b'a'..= b'h').contains(&file) && (b'1'..= b'8').contains(&rank) {
             file -= b'a';
             rank -= b'1';
         }
@@ -52,6 +54,15 @@ impl TryFrom<&str> for Square {
         }
 
         Square::try_from(((rank * 8) + file) as usize)
+    }
+}
+
+impl Display for Square { 
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let (rank, file) = self.to_rank_and_file();
+        let file_char = (file as u8 + b'a') as char;
+        let rank_char = (rank as u8 + b'1') as char;
+        write!(f, "{file_char}{rank_char}") 
     }
 }
 
@@ -71,5 +82,18 @@ impl Square {
 
     pub fn shift(&self, offset: i8) -> Option<Square> {
         Square::try_from((*self as i8) + offset).ok() 
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_string_parse() {
+        let string = "h4";
+        if let Ok(sq) = Square::try_from(string) {
+            println!("{sq}");
+        }
     }
 }
