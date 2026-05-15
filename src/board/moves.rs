@@ -52,7 +52,15 @@ impl Move {
 
 impl Display for Move {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?} {:?}", self.get_from(), self.get_to())
+        let mut promotion_piece = "";
+        match self.get_kind() {
+            MoveKind::BPromotion | MoveKind::BPromCapture => promotion_piece = "b",    
+            MoveKind::NPromotion | MoveKind::NPromCapture => promotion_piece = "n",
+            MoveKind::RPromotion | MoveKind::RPromCapture => promotion_piece = "r",
+            MoveKind::QPromotion | MoveKind::QPromCapture => promotion_piece = "q",    
+            _ => ()
+        }
+        write!(f, "{}{}{}", self.get_from(), self.get_to(), promotion_piece)
     }
 }
 
