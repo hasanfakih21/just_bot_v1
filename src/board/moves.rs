@@ -48,6 +48,17 @@ impl Move {
     pub fn get_kind(&self) -> MoveKind {
         MoveKind::from(((0xF000 & self.0) >> 12) as u8)
     }
+
+    pub fn get_promoted_piece(&self) -> Option<Piece> {
+        let kind = self.get_kind();
+        let mut promoted_piece = None;
+
+        if kind.is_knight_promotion() {promoted_piece = Some(Piece::Knight)}
+        else if kind.is_bishop_promotion() {promoted_piece = Some(Piece::Bishop)}
+        else if kind.is_rook_promotion() {promoted_piece = Some(Piece::Rook)}
+        else if kind.is_queen_promotion() {promoted_piece = Some(Piece::Queen)}
+        promoted_piece
+    }
 }
 
 impl Display for Move {
@@ -107,6 +118,31 @@ impl MoveKind {
     pub const fn is_quiet(&self) -> bool {
         use MoveKind::*;
         matches!(self, QuietMove | DoublePawn | KingCastle | QueenCastle)
+    }
+
+    pub const fn is_promotion(&self) -> bool {
+        use MoveKind::*;
+        matches!(self, NPromotion | BPromotion | RPromotion | QPromotion | NPromCapture | BPromCapture | RPromCapture | QPromCapture)
+    }
+
+    pub const fn is_knight_promotion(&self) -> bool {
+        use MoveKind::*;
+        matches!(self, NPromCapture | NPromotion)
+    }
+
+    pub const fn is_bishop_promotion(&self) -> bool {
+        use MoveKind::*;
+        matches!(self, BPromCapture | BPromotion)
+    }
+
+    pub const fn is_rook_promotion(&self) -> bool {
+        use MoveKind::*;
+        matches!(self, RPromCapture | RPromotion)
+    }
+
+    pub const fn is_queen_promotion(&self) -> bool {
+        use MoveKind::*;
+        matches!(self, QPromCapture | QPromotion)
     }
 }
 
@@ -334,12 +370,12 @@ impl Board {
     pub fn generate_all_moves(&self) -> MoveList {
         let mut move_list = MoveList::new();
         self.gen_pawn_moves(&mut move_list);
-        self.gen_castling_moves(&mut move_list);
         self.gen_knight_moves(&mut move_list);
         self.gen_bishop_moves(&mut move_list);
         self.gen_rook_moves(&mut move_list);
         self.gen_queen_moves(&mut move_list);
         self.gen_king_moves(&mut move_list);
+        self.gen_castling_moves(&mut move_list);
         move_list
     }
 }
