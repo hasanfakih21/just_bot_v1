@@ -1,3 +1,3 @@
 fn main() {
-    println!("test");
+    justbot::uci::input_loop();
 }
