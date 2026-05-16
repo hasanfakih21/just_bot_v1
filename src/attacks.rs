@@ -1,5 +1,5 @@
-use crate::board::bitboard::BitBoard;
-use crate::{Side, Square};
+use crate::board::bitboard::{BitBoard};
+use crate::board::{Side, Square};
 use crate::board::constants::*;
 
 pub fn mask_pawn_attacks(side: Side, square: Square) -> BitBoard {
