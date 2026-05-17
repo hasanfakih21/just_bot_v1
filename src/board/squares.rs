@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, ops::BitXor};
 
 #[derive(Debug)]
 pub struct InvalidSquare;
@@ -82,6 +82,14 @@ impl Square {
 
     pub fn shift(&self, offset: i8) -> Option<Square> {
         Square::try_from((*self as i8) + offset).ok() 
+    }
+}
+
+impl BitXor for Square {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        Self::from(self as usize ^ rhs as usize)        
     }
 }
 
