@@ -88,7 +88,7 @@ impl Board {
     }
 
     pub const fn evaluate(&self) -> i32 {
-        self.get_material_evaluation() + self.get_piece_square_evaluation() + self.board_state.checkmated
+        self.get_material_evaluation() + self.get_piece_square_evaluation()
     }
 
     pub fn get_piece_square_score(&mut self, piece: Piece, square: Square, side: Side) -> i32 {

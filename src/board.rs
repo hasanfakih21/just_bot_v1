@@ -24,7 +24,6 @@ pub struct BoardState {
     pub castling_rights: CastlingRights,
     pub material_value: [i32; 2],
     pub piece_square_value: [i32; 2],
-    pub checkmated: i32,
 }
 
 impl BoardState {
@@ -38,7 +37,6 @@ impl BoardState {
             castling_rights: CastlingRights::new(),
             material_value: [0; 2],
             piece_square_value: [0; 2],
-            checkmated: 0,
         }
     }
 }

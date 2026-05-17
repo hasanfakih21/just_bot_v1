@@ -1,7 +1,7 @@
 use crate::board::{Board, moves::Move};
 
 pub fn best_move(depth: usize, board: &mut Board) -> Option<Move> { 
-    let mut max = i32::MIN;
+    let mut max = -10000;
     let mut best_move: Option<Move> = None;
 
     for m in board.generate_all_moves().iter() {
@@ -24,7 +24,7 @@ pub fn negamax(depth: usize, board: &mut Board) -> i32 {
         return board.evaluate();
     }
 
-    let mut max = i32::MIN;
+    let mut max = -10000;
     for m in board.generate_all_moves().iter() {
         if board.make_move(*m).is_ok() {
             let score = -negamax(depth - 1, board);
