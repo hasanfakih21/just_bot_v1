@@ -5,7 +5,7 @@ pub struct InvalidPiece;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-pub enum Piece { //Num 0 to 5
+pub enum Piece {
     Pawn,
     Knight,
     Bishop,
@@ -42,17 +42,28 @@ impl Piece {
             _ => Err(InvalidPiece)
         }
     }
+
+    pub const fn value(&self) -> i32 {
+        match self {
+            Self::Pawn   => 100,
+            Self::Knight => 350,
+            Self::Bishop => 350,
+            Self::Rook   => 525,
+            Self::Queen  => 1000,
+            Self::King   => 0,
+        }
+    }
 }
 
 impl Display for Piece {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let output = match self {
-            Piece::Pawn => "P",
+            Piece::Pawn   => "P",
             Piece::Knight => "N",
             Piece::Bishop => "B",
-            Piece::Rook => "R",
-            Piece::Queen => "Q",
-            Piece::King => "K",
+            Piece::Rook   => "R",
+            Piece::Queen  => "Q",
+            Piece::King   => "K",
         };
 
         write!(f, "{output}")

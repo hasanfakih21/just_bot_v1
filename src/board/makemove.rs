@@ -12,6 +12,7 @@ pub struct BoardState {
     pub side_to_move: Side,
     pub enpassant: Option<Square>,
     pub castling_rights: CastlingRights,
+    pub material_value: [i32; 2],
 }
 
 impl Board {
@@ -146,6 +147,7 @@ impl Board {
             self.side_to_move = prev_state.side_to_move;
             self.enpassant = prev_state.enpassant;
             self.castling_rights = prev_state.castling_rights;
+            self.material_value = prev_state.material_value;
         }
     }
 
@@ -158,6 +160,7 @@ impl Board {
                 side_to_move: self.side_to_move,
                 enpassant: self.enpassant,
                 castling_rights: self.castling_rights,
+                material_value: self.material_value,
             }
         );
     }

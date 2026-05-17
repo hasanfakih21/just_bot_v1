@@ -34,6 +34,7 @@ pub struct Board {
     pub rook_attacks: Vec<BitBoard>,
 
     pub state_stack: Vec<BoardState>,
+    pub material_value: [i32; 2],
 }
 
 impl Default for Board {
@@ -63,6 +64,7 @@ impl Board {
             pawn_attacks: [[BitBoard(0); 64]; 2], knight_attacks: [BitBoard(0); 64], king_attacks: [BitBoard(0); 64], bishop_attacks: vec![BitBoard(0); 64 * 512], rook_attacks: vec![BitBoard(0); 64 * 4096],
 
             state_stack: Vec::new(),
+            material_value: [0; 2],
         };
 
         b.init_leaping_attacks();
@@ -84,12 +86,14 @@ impl Board {
         self.board_pieces[side as usize][piece as usize].set_bit(square);
         self.board_occupancies[side as usize].set_bit(square); 
         self.pieces_on_squares[square as usize] = Some((side, piece));
+        self.material_value[side as usize] += piece.value();
     }
 
     pub fn remove_piece(&mut self, side: Side, piece: Piece, square: Square) {
         self.board_pieces[side as usize][piece as usize].clear_bit(square);
         self.board_occupancies[side as usize].clear_bit(square);
         self.pieces_on_squares[square as usize] = None;
+        self.material_value[side as usize] -= piece.value();
     }
 
     pub fn init_leaping_attacks(&mut self) {
