@@ -1,4 +1,6 @@
-use crate::board::{Board, Piece, Square, constants::STARTING_FEN, moves::Move};
+use std::time::Instant;
+
+use crate::{board::{Board, Piece, Square, constants::STARTING_FEN, moves::Move}, perft::perft};
 
 impl Board {
     pub fn parse_move(&self, move_string: &str) -> Result<Move, &str> {
@@ -91,7 +93,7 @@ pub fn go(args: &str, board: &mut Board) {
         return
     }
 
-    let (command, _) = args.split_once(" ").unwrap_or((args, ""));
+    let (command, args) = args.split_once(" ").unwrap_or((args, ""));
     
     match command.trim() {
         "depth" => {
@@ -99,7 +101,15 @@ pub fn go(args: &str, board: &mut Board) {
             let move_list = board.generate_all_moves();
             let last_move = move_list.iter().last();
             if let Some(m) = last_move {println!("bestmove {m}")}
-        }
+        },
+        "perft" => {
+            println!("{args}");
+            if let Ok(depth) = args.trim().parse::<usize>() {
+                let clock = Instant::now();
+                let nodes_count = perft(depth, board);
+                println!("Number of nodes: {nodes_count}\nTime: {}ms", clock.elapsed().as_millis()); 
+            } else {eprintln!("Enter a valid depth!")}
+        },
         _=> {
             //eprintln!("Not a valid go argument!")
             let move_list = board.generate_all_moves();
