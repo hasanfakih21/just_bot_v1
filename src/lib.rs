@@ -5,3 +5,4 @@ pub mod magics;
 pub mod perft;
 pub mod uci;
 pub mod evaluation;
+pub mod search;
