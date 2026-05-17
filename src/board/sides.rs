@@ -9,7 +9,7 @@ pub enum Side {
 }
 
 impl Side {
-    pub fn other(&self) -> Self {
+    pub const fn other(&self) -> Self {
         match self {
             Self::White => Self::Black,
             Self::Black => Self::White
@@ -35,7 +35,7 @@ pub enum Castling {
 }
 
 impl Castling {
-    pub fn from(c: char) -> Self {
+    pub const fn from(c: char) -> Self {
         match c {
             'K' => Castling::WhiteKing,
             'k' => Castling::BlackKing,
@@ -45,7 +45,7 @@ impl Castling {
         }
     }
 
-    pub fn to_char(&self) -> char {
+    pub const fn to_char(&self) -> char {
         match self {
             Self::WhiteKing  => 'K',
             Self::BlackKing  => 'k',
@@ -54,7 +54,7 @@ impl Castling {
         }
     }
 
-    pub fn king_landing_square(&self) -> Square {
+    pub const fn king_landing_square(&self) -> Square {
         match self {
             Self::WhiteKing  => Square::G1,
             Self::WhiteQueen => Square::C1,
