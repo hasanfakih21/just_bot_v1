@@ -91,13 +91,21 @@ pub fn go(args: &str, board: &mut Board) {
         return
     }
 
-    let (command, args) = args.split_once(" ").unwrap_or((args, ""));
+    let (command, _) = args.split_once(" ").unwrap_or((args, ""));
     
     match command.trim() {
         "depth" => {
-            println!("{}", args.trim().parse::<u8>().unwrap());
+            //println!("{}", args.trim().parse::<u8>().unwrap());
+            let move_list = board.generate_all_moves();
+            let last_move = move_list.iter().last();
+            if let Some(m) = last_move {println!("bestmove {m}")}
         }
-        _=> eprintln!("Not a valid go argument!")
+        _=> {
+            //eprintln!("Not a valid go argument!")
+            let move_list = board.generate_all_moves();
+            let last_move = move_list.iter().last();
+            if let Some(m) = last_move {println!("bestmove {m}")}
+        }
     }
 }
 
@@ -116,7 +124,7 @@ pub mod tests {
     fn test_parse_move() {
         let board = Board::from_fen(STARTING_FEN);
         if let Ok(m) = board.parse_move("e2e4") {
-            println!("{m}");
+            println!("bestmove {m}");
         }
     }
 }
