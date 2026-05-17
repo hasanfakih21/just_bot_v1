@@ -1,11 +1,10 @@
-use crate::board::{Board, Square};
+use crate::board::Board;
 
 pub fn perft(depth: usize, board: &mut Board) -> usize {
     let mut nodes_count = 0;
 
     for m in board.generate_all_moves().iter() {
         if board.make_move(*m).is_ok() {  
-            if m.get_from() == Square::D1 && m.get_to() == Square::A1 {println!("{board}")}
             let divided_nodes = perft_divide(depth - 1, board);
             println!("{m}: {divided_nodes}");
             nodes_count += divided_nodes;
