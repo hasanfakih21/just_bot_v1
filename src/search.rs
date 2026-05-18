@@ -29,7 +29,6 @@ pub fn negamax(depth: usize, board: &mut Board, mut alpha: i32, beta: i32) -> i3
         if board.make_move(*m).is_ok() {
             let score = -negamax(depth - 1, board, -beta, -alpha);
             board.unmake_move();
-            max = max.max(score);
             if score > max {
                 max = score;
                 if score > alpha {alpha = score;}
