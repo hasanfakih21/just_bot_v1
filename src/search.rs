@@ -21,7 +21,7 @@ pub fn best_move(depth: usize, board: &mut Board) -> Option<Move> {
 
 pub fn negamax(depth: usize, board: &mut Board, mut alpha: i32, beta: i32) -> i32 {
     if depth == 0 {
-        return board.evaluate();
+        return quiesce(board, alpha, beta);
     }
 
     let mut max = -10000;
@@ -38,6 +38,31 @@ pub fn negamax(depth: usize, board: &mut Board, mut alpha: i32, beta: i32) -> i3
     }
 
     max
+}
+
+pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32) -> i32 {
+    let static_eval = board.evaluate();
+
+    let mut best_value = static_eval;
+    if best_value >= beta {
+        return best_value;
+    }
+    if best_value > alpha {
+        alpha = best_value;
+    }
+
+    for m in board.generate_all_moves().iter() {
+        if !m.get_kind().is_quiet() && board.make_move(*m).is_ok() {
+            let score = -quiesce(board, -beta, -alpha);
+            board.unmake_move();
+
+            if score >= beta {return score}
+            if score > best_value {best_value = score}
+            if score > alpha {alpha = score}
+        }
+    }
+
+    best_value
 }
 
 #[cfg(test)]
