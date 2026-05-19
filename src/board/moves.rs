@@ -4,7 +4,7 @@ use std::vec::IntoIter;
 use crate::board::{Board, Castling, Piece, Side, Square, bitboard::BitBoard, constants::{B_FILE, NORTH, RANK_1, RANK_4, RANK_5, RANK_8, SOUTH, WK_SIDE, WQ_SIDE}};
 
 #[derive(Default, Debug, Clone)]
-pub struct MoveList(Vec<Move>);
+pub struct MoveList(pub Vec<Move>);
 
 impl MoveList {
     pub fn new() -> Self {
@@ -28,8 +28,14 @@ impl MoveList {
     }
 }
 
+impl FromIterator<Move> for MoveList {
+    fn from_iter<T: IntoIterator<Item = Move>>(iter: T) -> Self {
+        MoveList(iter.into_iter().collect())
+    } 
+}
+
 //12 bits for to and from square and 4 bits for move type
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Move(u16);
 
 impl Move {
@@ -143,6 +149,11 @@ impl MoveKind {
     pub const fn is_queen_promotion(&self) -> bool {
         use MoveKind::*;
         matches!(self, QPromCapture | QPromotion)
+    }
+
+    pub const fn is_capture(&self) -> bool {
+        use MoveKind::*;
+        matches!(self, Capture | NPromCapture | BPromCapture | RPromCapture | QPromCapture)
     }
 }
 

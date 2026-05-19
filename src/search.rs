@@ -1,3 +1,5 @@
+use std::cmp::Reverse;
+
 use crate::board::{Board, moves::{Move, MoveList}};
 
 pub fn best_move(depth: usize, board: &mut Board) -> Option<(Move, i32)> { 
@@ -6,9 +8,11 @@ pub fn best_move(depth: usize, board: &mut Board) -> Option<(Move, i32)> {
 
     for m in board.generate_all_moves().iter() {
         if board.make_move(*m).is_ok() {
-            let score = -negamax(depth - 1, board, -10000, 10000);
+            let mut nodes = 0;
+            let score = -negamax(depth - 1, board, -10000, 10000, &mut nodes);
             board.unmake_move();
             println!("{m}: {score}");
+            println!("Nodes Searched: {nodes}");
             if score >= max {
                 max = score;
                 best_move = Some((*m, score));
@@ -19,17 +23,17 @@ pub fn best_move(depth: usize, board: &mut Board) -> Option<(Move, i32)> {
     best_move
 }
 
-pub fn negamax(depth: usize, board: &mut Board, mut alpha: i32, beta: i32) -> i32 {
+pub fn negamax(depth: usize, board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32) -> i32 {
     if depth == 0 {
-        return board.evaluate();
+        return quiesce(board, alpha, beta, nodes);
     }
 
     let mut legal_moves = 0;
     let mut max = -10000;
-    for m in board.generate_all_moves().iter() {
+    for m in mvv_lva(board).iter() {
         if board.make_move(*m).is_ok() {
             legal_moves += 1;
-            let score = -negamax(depth - 1, board, -beta, -alpha);
+            let score = -negamax(depth - 1, board, -beta, -alpha, nodes);
             board.unmake_move();
             if score > max {
                 max = score;
@@ -52,14 +56,23 @@ pub fn negamax(depth: usize, board: &mut Board, mut alpha: i32, beta: i32) -> i3
 
 pub fn mvv_lva(board: &mut Board) -> MoveList {
     let move_list = board.generate_all_moves();
-    //let attack_mask = board.get
-    
+    //We want to sort the moves based on most valuable victim / least valuable attacker
+    //Sort captures based on (attacked piece value - attacking piece value)
+    let (mut captures, mut others): (Vec<Move>, Vec<Move>) = move_list.into_iter().partition(|m| m.get_kind().is_capture());
 
-    move_list
+    captures.sort_by_key(|m| {
+        let attacker = board.get_piece_at_square(m.get_from()).unwrap().1;
+        let victim = board.get_piece_at_square(m.get_to()).unwrap().1;
+        Reverse(victim.value() - attacker.value()) 
+    });
+
+    captures.append(&mut others);
+    MoveList(captures)
 }
 
-pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32) -> i32 {
+pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32) -> i32 {
     let static_eval = board.evaluate();
+    *nodes += 1;
 
     let mut best_value = static_eval;
     if best_value >= beta {
@@ -68,10 +81,10 @@ pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32) -> i32 {
     if best_value > alpha {
         alpha = best_value;
     }
-
+    
     for m in board.generate_all_moves().iter() {
         if !m.get_kind().is_quiet() && board.make_move(*m).is_ok() {
-            let score = -quiesce(board, -beta, -alpha);
+            let score = -quiesce(board, -beta, -alpha, nodes);
             board.unmake_move();
 
             if score >= beta {return score}
@@ -85,7 +98,7 @@ pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32) -> i32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::{board::{Board, constants::STARTING_FEN}, search::best_move};
+    use crate::{board::{Board, Square, constants::STARTING_FEN, moves::{Move, MoveKind}}, search::{best_move, mvv_lva}};
 
     #[test]
     fn test_negamax() {
@@ -94,5 +107,30 @@ mod tests {
         if let Some(m) = best_move {
             println!("Best move: {}", m.0);
         }
+    }
+
+    #[test]
+    fn test_mvv_lva() {
+        let mut board = Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1"); 
+        let move_list = mvv_lva(&mut board);
+
+        for m in move_list.iter() {
+            print!("{m}, ");
+        }
+        println!();
+
+        let first_move = move_list.iter().next().unwrap();
+        assert_eq!(*first_move, Move::new(Square::F8, Square::B4, MoveKind::Capture));
+
+        let mut board = Board::from_fen("rnbq1rk1/pN1p1ppp/4n2b/2p1p3/N1BP3R/2P2Q2/PP3PPP/2B1K2R w K - 0 1"); 
+        let move_list = mvv_lva(&mut board);
+
+        for m in move_list.iter() {
+            print!("{m}, ");
+        }
+        println!();
+
+        let first_move = move_list.iter().next().unwrap();
+        assert_eq!(*first_move, Move::new(Square::B7, Square::D8, MoveKind::Capture));
     }
 }
