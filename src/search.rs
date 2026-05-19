@@ -1,18 +1,23 @@
-use std::cmp::Reverse;
+use std::{cmp::Reverse, time::Instant};
 
 use crate::board::{Board, moves::{Move, MoveList}};
 
 pub fn best_move(depth: usize, board: &mut Board) -> Option<(Move, i32)> { 
     let mut max = -10000;
     let mut best_move: Option<(Move, i32)> = None;
+    let mut total_nodes = 1;
 
+    let clock = Instant::now();
     for m in board.generate_all_moves().iter() {
         if board.make_move(*m).is_ok() {
             let mut nodes = 0;
             let score = -negamax(depth - 1, board, -10000, 10000, &mut nodes);
+            total_nodes += nodes;
+            println!("info nodes {total_nodes}");  
+            let nps = total_nodes as f64 / clock.elapsed().as_secs_f64();
+            println!("info nps {:.0}", nps);
             board.unmake_move();
             println!("{m}: {score}");
-            println!("Nodes Searched: {nodes}");
             if score >= max {
                 max = score;
                 best_move = Some((*m, score));
@@ -27,6 +32,8 @@ pub fn negamax(depth: usize, board: &mut Board, mut alpha: i32, beta: i32, nodes
     if depth == 0 {
         return quiesce(board, alpha, beta, nodes);
     }
+
+    *nodes += 1;
 
     let mut legal_moves = 0;
     let mut max = -10000;

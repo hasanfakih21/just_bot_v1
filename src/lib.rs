@@ -7,3 +7,4 @@ pub mod uci;
 pub mod evaluation;
 pub mod search;
 pub mod zobrist;
+pub mod transposition;

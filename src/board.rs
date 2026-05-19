@@ -16,7 +16,7 @@ pub mod makemove;
 
 #[derive(Debug, Clone)]
 pub struct BoardState {
-    pub board_pieces: [[BitBoard; 6]; 2],
+    pub board_pieces: [BitBoard; 12],
     pub pieces_on_squares: [Option<(Side, Piece)>; 64],
     pub board_occupancies: [BitBoard; 2],
     pub side_to_move: Side,
@@ -29,7 +29,7 @@ pub struct BoardState {
 impl BoardState {
     pub fn new() -> Self {
         BoardState { 
-            board_pieces: [[BitBoard(0); 6]; 2], 
+            board_pieces: [BitBoard(0); 12], 
             pieces_on_squares: [None; 64],
             board_occupancies: [BitBoard(0); 2],
             side_to_move: Side::White,
@@ -92,7 +92,7 @@ impl Board {
 
     pub fn is_there(&self, side: Side, piece: Piece, square: Square) -> bool {
         let b = 1u64 << square as u64;
-        (self.board_state.board_pieces[side as usize][piece as usize].0 & b) != 0
+        (self.board_state.board_pieces[(piece as usize) + (side as usize * 6)].0 & b) != 0
     }
 
     pub fn get_piece_at_square(&self, square: Square) -> Option<(Side, Piece)> {
@@ -100,7 +100,7 @@ impl Board {
     }
 
     pub fn place_piece(&mut self, side: Side, piece: Piece, square: Square) {
-        self.board_state.board_pieces[side as usize][piece as usize].set_bit(square);
+        self.board_state.board_pieces[(piece as usize) + (side as usize * 6)].set_bit(square);
         self.board_state.board_occupancies[side as usize].set_bit(square); 
         self.board_state.pieces_on_squares[square as usize] = Some((side, piece));
         self.board_state.material_value[side as usize] += piece.value();
@@ -108,7 +108,7 @@ impl Board {
     }
 
     pub fn remove_piece(&mut self, side: Side, piece: Piece, square: Square) {
-        self.board_state.board_pieces[side as usize][piece as usize].clear_bit(square);
+        self.board_state.board_pieces[(piece as usize) + (side as usize * 6)].clear_bit(square);
         self.board_state.board_occupancies[side as usize].clear_bit(square);
         self.board_state.pieces_on_squares[square as usize] = None;
         self.board_state.material_value[side as usize] -= piece.value();
@@ -128,8 +128,10 @@ impl Board {
 
     pub fn get_all_attacks(&self, side: Side) -> BitBoard {
         let mut attacks = BitBoard(0);
-        for (i, e) in self.board_state.board_pieces[side as usize].iter().enumerate() {
-            e.iter().for_each(|s| attacks |= self.get_piece_attack(side, s, Piece::from(i)));
+        for i in 0..6 {
+            for source in self.board_state.board_pieces[i + (side as usize * 6)].iter() {
+                attacks |= self.get_piece_attack(side, source, Piece::from(i));
+            }
         }
 
         attacks & !self.board_state.board_occupancies[side as usize]
