@@ -61,6 +61,32 @@ pub fn negamax(depth: usize, board: &mut Board, mut alpha: i32, beta: i32, nodes
     max
 }
 
+pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32) -> i32 {
+    let static_eval = board.evaluate();
+    *nodes += 1;
+
+    let mut best_value = static_eval;
+    if best_value >= beta {
+        return best_value;
+    }
+    if best_value > alpha {
+        alpha = best_value;
+    }
+
+    for m in mvv_lva(board).iter() {
+        if !m.get_kind().is_quiet() && board.make_move(*m).is_ok() {
+            let score = -quiesce(board, -beta, -alpha, nodes);
+            board.unmake_move();
+
+            if score >= beta {return score}
+            if score > best_value {best_value = score}
+            if score > alpha {alpha = score}
+        }
+    }
+        
+    best_value
+}
+
 pub fn mvv_lva(board: &mut Board) -> MoveList {
     let move_list = board.generate_all_moves();
     //We want to sort the moves based on most valuable victim / least valuable attacker
@@ -77,31 +103,6 @@ pub fn mvv_lva(board: &mut Board) -> MoveList {
     MoveList(captures)
 }
 
-pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32) -> i32 {
-    let static_eval = board.evaluate();
-    *nodes += 1;
-
-    let mut best_value = static_eval;
-    if best_value >= beta {
-        return best_value;
-    }
-    if best_value > alpha {
-        alpha = best_value;
-    }
-    
-    for m in board.generate_all_moves().iter() {
-        if !m.get_kind().is_quiet() && board.make_move(*m).is_ok() {
-            let score = -quiesce(board, -beta, -alpha, nodes);
-            board.unmake_move();
-
-            if score >= beta {return score}
-            if score > best_value {best_value = score}
-            if score > alpha {alpha = score}
-        }
-    }
-
-    best_value
-}
 
 #[cfg(test)]
 mod tests {
