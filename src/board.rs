@@ -120,7 +120,7 @@ impl Board {
             Piece::Pawn   => self.get_pawn_attacks(square, side),
             Piece::Knight => self.get_knight_attacks(square),
             Piece::Bishop => self.get_bishop_attacks(square, self.get_all_occupancy()),
-            Piece::Rook   => self.get_bishop_attacks(square, self.get_all_occupancy()),
+            Piece::Rook   => self.get_rook_attacks(square, self.get_all_occupancy()),
             Piece::Queen  => self.get_queen_attacks(square, self.get_all_occupancy()),
             Piece::King   => self.get_king_attacks(square),
         }

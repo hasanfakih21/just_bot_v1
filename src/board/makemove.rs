@@ -11,7 +11,8 @@ impl Board {
         let from = m.get_from();
         let to = m.get_to();
         let kind = m.get_kind();
-        let (side, piece) = self.get_piece_at_square(from).unwrap_or_else(|| {println!("Error here: {m}, {self}"); self.unmake_move(); panic!("{self}")});
+        let (side, piece) = self.get_piece_at_square(from).ok_or(IllegalMove)?;
+
         let king_rook_square = match side {Side::White => KING_SIDE_ROOK_WHITE, Side::Black => KING_SIDE_ROOK_BLACK};
         let queen_rook_square = match side {Side::White => QUEEN_SIDE_ROOK_WHITE, Side::Black => QUEEN_SIDE_ROOK_BLACK};
         let opp_king_rook_square = match side {Side::White => KING_SIDE_ROOK_BLACK, Side::Black => KING_SIDE_ROOK_WHITE};

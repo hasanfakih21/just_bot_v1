@@ -1,6 +1,6 @@
 use std::{cmp::Reverse, time::Instant};
 
-use crate::board::{Board, moves::{Move, MoveList}};
+use crate::board::{Board, Square, moves::{Move, MoveKind, MoveList}};
 
 pub fn best_move(depth: usize, board: &mut Board) -> Option<(Move, i32)> { 
     let mut max = -10000;
@@ -83,7 +83,6 @@ pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32) ->
             if score > alpha {alpha = score}
         }
     }
-        
     best_value
 }
 
@@ -95,7 +94,10 @@ pub fn mvv_lva(board: &mut Board) -> MoveList {
 
     captures.sort_by_key(|m| {
         let attacker = board.get_piece_at_square(m.get_from()).unwrap().1;
-        let victim = board.get_piece_at_square(m.get_to()).unwrap().1;
+        let victim = match m.get_kind() {
+            MoveKind::EnPassant => board.get_piece_at_square(Square::from(m.get_to() as usize ^ 8)).unwrap().1,
+            _ => board.get_piece_at_square(m.get_to()).unwrap().1,
+        };
         Reverse(victim.value() - attacker.value()) 
     });
 
