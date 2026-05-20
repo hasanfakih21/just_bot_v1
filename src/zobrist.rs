@@ -1,6 +1,6 @@
 use std::{array, sync::Mutex};
 
-use crate::magics::get_random_u64_num;
+use crate::{board::{CastlingRights, Piece, Side, Square}, magics::get_random_u64_num};
 
 
 #[derive(Debug)]
@@ -11,12 +11,30 @@ pub struct Zobrist {
     enpassant: [u64; 8],
 }
 
+impl Zobrist {
+    pub fn get_piece_num(&self, side: Side, piece: Piece, square: Square) -> u64 {
+        self.pieces[(piece as usize) + (side as usize * 6)][square as usize]
+    }
+
+    pub fn get_side_num(&self) -> u64 {
+        self.side
+    }
+
+    pub fn get_castling_num(&self, rights: CastlingRights) -> u64 {
+        self.castling[rights.0 as usize]
+    }
+
+    pub fn get_enpassant_num(&self, square: Square) -> u64 {
+        self.enpassant[square as usize % 8]
+    }
+}
+
 pub static ZOBRIST: Mutex<Zobrist> = {
     Mutex::new(Zobrist {
-        pieces: [[0; 64]; 12],
-        side: 0,
-        castling: [0; 16],
-        enpassant: [0; 8],
+        pieces: [[0; 64]; 12], //Number for each piece on each square 12 pieces 64 squares 
+        side: 0, //Number to indicate the side to move is black
+        castling: [0; 16], //Castling rights 2^4 aka all possible castling combinations.
+        enpassant: [0; 8], //File of valid en-passant square
     })
 };
 
