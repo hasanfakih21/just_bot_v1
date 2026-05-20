@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use crate::{board::bitboard::BitBoard, magics::{BISHOP_MAGIC_NUMBERS, ROOK_MAGIC_NUMBERS, get_magic_index}, occupancy::{BISHOP_OCCUPANCY_BIT_COUNTS, ROOK_OCCUPANCY_BIT_COUNTS, set_occupancy}};
+use crate::{board::bitboard::BitBoard, magics::{BISHOP_MAGIC_NUMBERS, ROOK_MAGIC_NUMBERS, get_magic_index}, occupancy::{BISHOP_OCCUPANCY_BIT_COUNTS, ROOK_OCCUPANCY_BIT_COUNTS, set_occupancy}, zobrist::init_zobrist_nums};
 pub use crate::attacks::*;
 pub use squares::*;
 pub use pieces::*;
@@ -70,6 +70,7 @@ impl Default for Board {
 //Little-Endian Rank-File Mapping
 impl Board {
     pub fn new() -> Self {
+        init_zobrist_nums();
         let mut b = Board {
             bishop_masks: std::array::from_fn(|i| {
                 mask_bishop_attacks(Square::from(i))
