@@ -24,6 +24,8 @@ pub struct BoardState {
     pub castling_rights: CastlingRights,
     pub material_value: [i32; 2],
     pub piece_square_value: [i32; 2],
+    pub half_move_clock: u8,
+    pub full_move: usize,
     pub hash: u64,
 }
 
@@ -38,6 +40,8 @@ impl BoardState {
             castling_rights: CastlingRights::new(),
             material_value: [0; 2],
             piece_square_value: [0; 2],
+            half_move_clock: 0,
+            full_move: 0,
             hash: 0,
         }
     }
