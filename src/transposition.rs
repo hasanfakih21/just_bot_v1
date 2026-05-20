@@ -55,12 +55,17 @@ impl TranspositionTable {
         TranspositionTable(vec![None; ENTRIES])
     }
 
-    pub fn add_entry(&mut self, entry: Entry, hash: u64) {
+    pub fn add_entry(&mut self, best_move: Move, score: i32, node: NodeType, hash: u64) {
+        let entry = Entry::new(hash, best_move, score, node);
         self.0[index(hash)] = Some(entry);
     }
 
     pub fn get_entry(&self, hash: u64) -> &Option<Entry> {
         &self.0[index(hash)]
+    }
+
+    pub fn get_best_move(&self, hash: u64) -> Option<Move> {
+        self.0[index(hash)].as_ref().map(|e| e.get_best_move())
     }
 }
 

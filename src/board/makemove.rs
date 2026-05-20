@@ -20,6 +20,8 @@ impl Board {
 
         self.copy_state();
 
+        self.board_state.hash ^= ZOBRIST.get_castling_num(self.board_state.castling_rights);
+
         if let Some(square) = self.board_state.enpassant {
             self.board_state.hash ^= ZOBRIST.get_enpassant_num(square);
             self.board_state.enpassant = None;

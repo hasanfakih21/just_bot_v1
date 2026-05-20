@@ -23,7 +23,6 @@ impl Board {
                 let piece = Piece::from_char(p).unwrap();
                 let square = Square::from_rank_and_file(rank, file);
                 board.place_piece(side, piece, square);
-                board.board_state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
 
                 file += 1;
             }
