@@ -1,6 +1,24 @@
 use std::{cmp::Reverse, time::Instant};
 
-use crate::{board::{Board, Square, moves::{Move, MoveKind, MoveList}}, transposition::{Entry, NodeType}};
+use crate::{board::{Board, Square, moves::{Move, MoveKind, MoveList}}, transposition::NodeType};
+
+pub const MAX_TIME: f32 = 20.0;
+
+pub fn search_runner(board: &mut Board) -> Option<(Move, i32)> {
+    //let time = Instant::now();
+    let mut depth = 1;
+    let mut best_move;
+
+    loop { 
+        best_move = search(depth, board);
+        println!("info depth {depth}");
+        depth += 1;
+
+        if depth > 7 {break;}
+    }
+
+    best_move
+}
 
 pub fn search(depth: usize, board: &mut Board) -> Option<(Move, i32)> { 
     let mut max = -10000;
@@ -10,7 +28,8 @@ pub fn search(depth: usize, board: &mut Board) -> Option<(Move, i32)> {
     let clock = Instant::now();
     for m in board.generate_all_moves().iter() {
         if board.make_move(*m).is_ok() {
-            let mut nodes = 0;
+            let mut nodes = 0;  
+
             let score = -negamax(depth - 1, board, -10000, 10000, &mut nodes);
             total_nodes += nodes;
             println!("info nodes {total_nodes}");  
@@ -25,7 +44,7 @@ pub fn search(depth: usize, board: &mut Board) -> Option<(Move, i32)> {
         }
     }
 
-    board.tt.add_entry(Entry::new(board.board_state.hash, best_move.unwrap().0, best_move.unwrap().1, NodeType::PV), board.board_state.hash);
+    board.tt.add_entry(best_move.unwrap().0, best_move.unwrap().1, NodeType::PV, board.board_state.hash);
     best_move
 }
 
@@ -38,6 +57,8 @@ pub fn negamax(depth: usize, board: &mut Board, mut alpha: i32, beta: i32, nodes
 
     let mut legal_moves = 0;
     let mut max = -10000;
+    let mut best_move: Option<Move> = None;
+
     for m in mvv_lva(board).iter() {
         if board.make_move(*m).is_ok() {
             legal_moves += 1;
@@ -45,6 +66,7 @@ pub fn negamax(depth: usize, board: &mut Board, mut alpha: i32, beta: i32, nodes
             board.unmake_move();
             if score > max {
                 max = score;
+                best_move = Some(*m);
                 if score > alpha {alpha = score;}
             }
             if score >= beta {return max}
@@ -57,6 +79,10 @@ pub fn negamax(depth: usize, board: &mut Board, mut alpha: i32, beta: i32, nodes
         } else {
             return 0;
         }
+    }
+
+    if let Some(m) = best_move {
+        board.tt.add_entry(m, max, NodeType::PV, board.board_state.hash);
     }
 
     max
@@ -103,10 +129,15 @@ pub fn mvv_lva(board: &mut Board) -> MoveList {
         Reverse(victim.value() - attacker.value()) 
     });
 
+    //Want to add the best move from the transposition table if it exists to the beginning of the list
     captures.append(&mut others);
+    if let Some(e) = board.tt.get_entry(board.board_state.hash) && board.board_state.hash == e.get_key() {
+            let best_move = e.get_best_move();
+            captures.insert(0, best_move);
+        }
+
     MoveList(captures)
 }
-
 
 #[cfg(test)]
 mod tests {

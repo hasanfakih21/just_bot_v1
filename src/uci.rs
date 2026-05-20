@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use crate::{board::{Board, Piece, Square, constants::STARTING_FEN, moves::Move}, perft::perft, search::search};
+use crate::{board::{Board, Piece, Square, constants::STARTING_FEN, moves::Move}, perft::perft, search::{search, search_runner}};
 
 impl Board {
     pub fn parse_move(&self, move_string: &str) -> Result<Move, &str> {
@@ -113,7 +113,7 @@ pub fn go(args: &str, board: &mut Board) {
         },
         _=> {
             //eprintln!("Not a valid go argument!")
-            let best_move = search(7, board);
+            let best_move = search_runner(board);
             if let Some((m, i)) = best_move {
                 println!("info score cp {i}");
                 println!("bestmove {m}");
