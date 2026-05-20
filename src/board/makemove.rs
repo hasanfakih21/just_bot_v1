@@ -1,4 +1,4 @@
-use crate::board::{Piece, Side, Square, constants::{KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE}, moves::{Move, MoveKind}};
+use crate::{board::{Piece, Side, Square, constants::{KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE}, moves::{Move, MoveKind}}, zobrist::ZOBRIST};
 use super::Board;
 
 pub struct LegalMove;
@@ -20,13 +20,19 @@ impl Board {
 
         self.copy_state();
 
-        self.board_state.enpassant = None;
+        if let Some(square) = self.board_state.enpassant {
+            self.board_state.hash ^= ZOBRIST.get_enpassant_num(square);
+            self.board_state.enpassant = None;
+        }
+
         if let Piece::King = piece {
             self.board_state.castling_rights.clear_king_side(side);
             self.board_state.castling_rights.clear_queen_side(side);
         }
 
         self.board_state.side_to_move = self.board_state.side_to_move.other();
+        self.board_state.hash ^= ZOBRIST.get_side_num();
+
         if let Piece::Rook = piece {
             if from == king_rook_square  && self.board_state.castling_rights.can_king_side(side)  {self.board_state.castling_rights.clear_king_side(side);}
             if from == queen_rook_square && self.board_state.castling_rights.can_queen_side(side) {self.board_state.castling_rights.clear_queen_side(side);}
@@ -53,7 +59,8 @@ impl Board {
                 MoveKind::DoublePawn => {
                     self.remove_piece(side, piece, from);
                     self.place_piece(side, piece, to);
-                    self.board_state.enpassant = Some(Square::from(to as usize ^ 8))
+                    self.board_state.enpassant = Some(Square::from(to as usize ^ 8));
+                    self.board_state.hash ^= ZOBRIST.get_enpassant_num(Square::from(to as usize ^ 8));
                 },
                 _=> {
                     self.remove_piece(side, piece, from);
@@ -124,6 +131,8 @@ impl Board {
                 }
             }
         }
+
+        self.board_state.hash ^= ZOBRIST.get_castling_num(self.board_state.castling_rights);
 
         if self.is_king_in_attack(side) {
             self.unmake_move();

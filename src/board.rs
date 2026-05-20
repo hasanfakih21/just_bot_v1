@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use crate::{board::bitboard::BitBoard, magics::{BISHOP_MAGIC_NUMBERS, ROOK_MAGIC_NUMBERS, get_magic_index}, occupancy::{BISHOP_OCCUPANCY_BIT_COUNTS, ROOK_OCCUPANCY_BIT_COUNTS, set_occupancy}, zobrist::init_zobrist_nums};
+use crate::{board::bitboard::BitBoard, magics::{BISHOP_MAGIC_NUMBERS, ROOK_MAGIC_NUMBERS, get_magic_index}, occupancy::{BISHOP_OCCUPANCY_BIT_COUNTS, ROOK_OCCUPANCY_BIT_COUNTS, set_occupancy}, transposition::TranspositionTable, zobrist::ZOBRIST};
 pub use crate::attacks::*;
 pub use squares::*;
 pub use pieces::*;
@@ -24,6 +24,7 @@ pub struct BoardState {
     pub castling_rights: CastlingRights,
     pub material_value: [i32; 2],
     pub piece_square_value: [i32; 2],
+    pub hash: u64,
 }
 
 impl BoardState {
@@ -37,6 +38,7 @@ impl BoardState {
             castling_rights: CastlingRights::new(),
             material_value: [0; 2],
             piece_square_value: [0; 2],
+            hash: 0,
         }
     }
 }
@@ -59,6 +61,7 @@ pub struct Board {
 
     pub board_state: BoardState,
     pub state_stack: Vec<BoardState>,
+    pub tt: TranspositionTable,
 }
 
 impl Default for Board {
@@ -70,7 +73,6 @@ impl Default for Board {
 //Little-Endian Rank-File Mapping
 impl Board {
     pub fn new() -> Self {
-        init_zobrist_nums();
         let mut b = Board {
             bishop_masks: std::array::from_fn(|i| {
                 mask_bishop_attacks(Square::from(i))
@@ -83,6 +85,7 @@ impl Board {
 
             state_stack: Vec::new(),
             board_state: BoardState::new(),
+            tt: TranspositionTable::new(),
         };
 
         b.init_leaping_attacks();
@@ -106,6 +109,7 @@ impl Board {
         self.board_state.pieces_on_squares[square as usize] = Some((side, piece));
         self.board_state.material_value[side as usize] += piece.value();
         self.board_state.piece_square_value[side as usize] += self.get_piece_square_score(piece, square, side);
+        self.board_state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
     }
 
     pub fn remove_piece(&mut self, side: Side, piece: Piece, square: Square) {
@@ -114,6 +118,7 @@ impl Board {
         self.board_state.pieces_on_squares[square as usize] = None;
         self.board_state.material_value[side as usize] -= piece.value();
         self.board_state.piece_square_value[side as usize] -= self.get_piece_square_score(piece, square, side);
+        self.board_state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
     }
 
     pub fn get_piece_attack(&self, side: Side, square: Square, piece: Piece) -> BitBoard {
