@@ -80,7 +80,9 @@ pub const ZOBRIST: Zobrist = {
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
-    use super::*;
+    use crate::board::Board;
+
+use super::*;
 
     #[test]
     fn test_zobrist() {
@@ -95,5 +97,18 @@ mod tests {
                 .chain(zobrist.enpassant.iter())
                 .chain([zobrist.side].iter())
                 .all(|e| seen.insert(e))); 
+    }
+
+    #[test]
+    fn test_board_hashing() {
+        let board1 = Board::from_fen("8/6K1/3N4/8/5Q2/8/1kr5/8 w - - 0 1");
+        let ver_hash = ZOBRIST.get_piece_num(Side::White, Piece::Knight, Square::D6) 
+        ^ ZOBRIST.get_piece_num(Side::White, Piece::Queen, Square::F4)
+        ^ ZOBRIST.get_piece_num(Side::White, Piece::King, Square::G7)
+        ^ ZOBRIST.get_piece_num(Side::Black, Piece::Rook, Square::C2)
+        ^ ZOBRIST.get_piece_num(Side::Black, Piece::King, Square::B2)
+        ^ ZOBRIST.get_castling_num(CastlingRights(0));
+
+        assert_eq!(board1.board_state.hash, ver_hash);
     }
 }
