@@ -30,7 +30,7 @@ pub fn best_move(depth: usize, board: &mut Board) -> Option<(Move, i32)> {
 
 pub fn negamax(depth: usize, board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32) -> i32 {
     if depth == 0 {
-        return quiesce(board, alpha, beta, nodes);
+        return quiesce(board, alpha, beta, nodes); 
     }
 
     *nodes += 1;
@@ -83,6 +83,7 @@ pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32) ->
             if score > alpha {alpha = score}
         }
     }
+
     best_value
 }
 

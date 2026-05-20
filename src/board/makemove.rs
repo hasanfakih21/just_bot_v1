@@ -17,6 +17,7 @@ impl Board {
         let queen_rook_square = match side {Side::White => QUEEN_SIDE_ROOK_WHITE, Side::Black => QUEEN_SIDE_ROOK_BLACK};
         let opp_king_rook_square = match side {Side::White => KING_SIDE_ROOK_BLACK, Side::Black => KING_SIDE_ROOK_WHITE};
         let opp_queen_rook_square = match side {Side::White => QUEEN_SIDE_ROOK_BLACK, Side::Black => QUEEN_SIDE_ROOK_WHITE};
+
         self.copy_state();
 
         self.board_state.enpassant = None;
@@ -24,6 +25,7 @@ impl Board {
             self.board_state.castling_rights.clear_king_side(side);
             self.board_state.castling_rights.clear_queen_side(side);
         }
+
         self.board_state.side_to_move = self.board_state.side_to_move.other();
         if let Piece::Rook = piece {
             if from == king_rook_square  && self.board_state.castling_rights.can_king_side(side)  {self.board_state.castling_rights.clear_king_side(side);}
@@ -144,6 +146,10 @@ impl Board {
     pub fn is_king_in_attack(&self, side: Side) -> bool {
         let king_square = self.board_state.board_pieces[(Piece::King as usize) + (side as usize * 6)].least_sig_bit().unwrap();
         self.is_attacked_at_by(king_square, side.other())
+    }
+
+    pub fn king_in_check(&self) -> bool {
+        self.is_king_in_attack(Side::White) || self.is_king_in_attack(Side::Black)
     }
 }
 
