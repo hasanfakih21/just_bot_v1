@@ -69,3 +69,34 @@ impl Default for TranspositionTable {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{board::Board, search::search};
+
+    #[test]
+    fn test_transposition_table() {
+        let mut board = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
+        if let Some((best_move, score)) = search(3, &mut board) {
+            let hash = board.board_state.hash;
+            let entry = board.tt.get_entry(hash);
+
+            let m = entry.as_ref().unwrap().get_best_move();
+            let s = entry.as_ref().unwrap().get_score();
+
+            assert_eq!(best_move, m);
+            assert_eq!(score, s);
+
+            let _ = board.make_move(best_move);
+            let _ = search(2, &mut board);
+
+            let entry = board.tt.get_entry(hash);
+
+            let m = entry.as_ref().unwrap().get_best_move();
+            let s = entry.as_ref().unwrap().get_score();
+
+            assert_eq!(best_move, m);
+            assert_eq!(score, s);
+        }
+    }
+}
