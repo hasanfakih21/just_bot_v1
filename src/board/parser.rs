@@ -1,4 +1,5 @@
-use crate::{board::{Board, Castling, Piece, Side, Square}, zobrist::ZOBRIST};
+use crate::{types::{Castling, Piece, Side, Square, ZOBRIST}};
+use crate::board::Board;
 
 //Starting Position: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 //[pieces] [turn to move] [castling rights] [enpassant] [halfmove clock] [fullmove clock]
@@ -72,7 +73,7 @@ impl Board {
 
 #[cfg(test)]
 mod tests {
-    use crate::board::constants::STARTING_FEN;
+    use crate::types::constants::STARTING_FEN;
     use super::*;
 
     #[test]

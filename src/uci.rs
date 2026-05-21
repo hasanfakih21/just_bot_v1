@@ -1,6 +1,8 @@
 use std::time::Instant;
 
-use crate::{board::{Board, Piece, Square, constants::STARTING_FEN, moves::Move}, perft::perft, search::{search, search_runner}};
+use crate::board::Board;
+use crate::types::*;
+use crate::search::{search, search_runner};
 
 impl Board {
     pub fn parse_move(&self, move_string: &str) -> Result<Move, &str> {
@@ -107,13 +109,20 @@ pub fn go(args: &str, board: &mut Board) {
             println!("{args}");
             if let Ok(depth) = args.trim().parse::<usize>() {
                 let clock = Instant::now();
-                let nodes_count = perft(depth, board);
+                let nodes_count = crate::perft::perft(depth, board);
                 println!("Number of nodes: {nodes_count}\nTime: {}ms", clock.elapsed().as_millis()); 
             } else {eprintln!("Enter a valid depth!")}
         },
+        "wtime" => { //Example: go wtime 900000 btime 900000 winc 0 binc 0
+            let best_move = search_runner(board, 10, 10);
+            if let Some((m, i)) = best_move {
+                println!("info score cp {i}");
+                println!("bestmove {m}");
+            }
+        }
         _=> {
             //eprintln!("Not a valid go argument!")
-            let best_move = search_runner(board);
+            let best_move = search_runner(board, 10, 10);
             if let Some((m, i)) = best_move {
                 println!("info score cp {i}");
                 println!("bestmove {m}");
@@ -130,7 +139,7 @@ pub fn uci() {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::board::constants::STARTING_FEN;
+    use crate::types::constants::STARTING_FEN;
     use super::*;
 
     #[test]

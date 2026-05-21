@@ -35,7 +35,8 @@ pub fn perft_divide(depth: usize, board: &mut Board) -> usize {
 #[cfg(test)]
 mod tests {
     use std::time::Instant;
-    use crate::{board::{Board, constants::STARTING_FEN}, perft::perft};
+    use super::*;
+    use crate::types::STARTING_FEN;
 
     #[test]
     fn test_perft() {

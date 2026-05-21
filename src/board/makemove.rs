@@ -1,4 +1,4 @@
-use crate::{board::{Piece, Side, Square, constants::{KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE}, moves::{Move, MoveKind}}, zobrist::ZOBRIST};
+use crate::{types::{Piece, Side, Square, ZOBRIST, constants::{KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE}, moves::{Move, MoveKind}}};
 use super::Board;
 
 pub struct LegalMove;
@@ -171,7 +171,8 @@ impl Board {
 
 #[cfg(test)]
 mod tests {
-    use crate::board::{Board, Piece, Side, Square, moves::{Move, MoveKind}};
+    use crate::types::{Piece, Side, Square, moves::{Move, MoveKind}};
+    use crate::board::Board;
 
     #[test]
     fn test_make_move() {

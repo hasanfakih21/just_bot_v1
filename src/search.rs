@@ -1,6 +1,7 @@
 use std::{cmp::Reverse, time::Instant};
 
-use crate::{board::{Board, Square, moves::{Move, MoveKind, MoveList}}, transposition::NodeType};
+use crate::board::Board;
+use crate::types::*;
 
 pub const MAX_TIME: f32 = 20.0;
 
@@ -18,9 +19,8 @@ impl Board {
     }
 }
 
-
-pub fn search_runner(board: &mut Board) -> Option<(Move, i32)> {
-    //let time = Instant::now();
+pub fn search_runner(board: &mut Board, time_left: usize, increment: usize) -> Option<(Move, i32)> {
+    //let time = Instant::now(); //simple time managment strategy: remaining time/20 + increment/2
     let mut depth = 1;
     let mut best_move;
 
@@ -29,7 +29,8 @@ pub fn search_runner(board: &mut Board) -> Option<(Move, i32)> {
         best_move = search(depth, board);
         depth += 1;
 
-        if depth > 6 {break;}
+        //if time.elapsed().as_secs_f32() > MAX_TIME {break;}
+        if depth > 6 {break}
     }
 
     best_move
@@ -42,7 +43,7 @@ pub fn search(depth: usize, board: &mut Board) -> Option<(Move, i32)> {
     let ply = 1;
 
     let clock = Instant::now();
-    for m in board.generate_all_moves().iter() {
+    for m in mvv_lva(board).iter() {
         if board.make_move(*m).is_ok() {
             let mut nodes = 0;  
 
@@ -173,7 +174,8 @@ pub fn mvv_lva(board: &mut Board) -> MoveList {
 
 #[cfg(test)]
 mod tests {
-    use crate::{board::{Board, Square, constants::STARTING_FEN, moves::{Move, MoveKind}}, search::{search, mvv_lva}};
+    use crate::board::Board;
+    use super::*;
 
     #[test]
     fn test_negamax() {

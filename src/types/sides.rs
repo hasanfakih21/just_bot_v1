@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::board::Square;
+use crate::types::Square;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Side {

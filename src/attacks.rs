@@ -1,6 +1,6 @@
-use crate::board::bitboard::{BitBoard};
-use crate::board::{Side, Square};
-use crate::board::constants::*;
+use crate::types::bitboard::{BitBoard};
+use crate::types::{Side, Square};
+use crate::types::constants::*;
 
 pub fn mask_pawn_attacks(side: Side, square: Square) -> BitBoard {
     let current = 1u64 << square as u64;
@@ -226,7 +226,7 @@ pub fn blocked_rook_attacks(square: Square, block_board: BitBoard) -> BitBoard {
 
 #[cfg(test)]
 mod tests {
-    use crate::board::bitboard::BitBoard;
+    use crate::types::bitboard::BitBoard;
     use super::*;
 
     #[test]

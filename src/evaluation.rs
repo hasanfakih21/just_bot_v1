@@ -1,5 +1,7 @@
-use crate::board::{Board, Piece, Side, Square};
+use crate::types::{Piece, Side, Square};
+use crate::board::Board;
 
+//Tables from https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
 pub const MG_PAWN_TABLE: [i32; 64] = [
       0,   0,   0,   0,   0,   0,  0,   0,
      98, 134,  61,  95,  68, 126, 34, -11,
@@ -184,7 +186,8 @@ impl Board {
 
 #[cfg(test)]
 mod tests {
-    use crate::board::{Board, Piece, Side, Square, constants::STARTING_FEN};
+    use super::*;
+    use crate::types::STARTING_FEN;
 
     #[test]
     fn test_get_material_evaluation() {

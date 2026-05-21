@@ -1,4 +1,4 @@
-use crate::board::Square;
+use crate::types::Square;
 
 pub const A_FILE: u64  = 0x0101010101010101;
 pub const B_FILE: u64  = 0x0202020202020202;

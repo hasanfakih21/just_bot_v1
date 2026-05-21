@@ -1,4 +1,4 @@
-use crate::board::moves::Move;
+use crate::types::moves::Move;
 
 const TT_SIZE: usize = 64;
 const MEGABYTE: usize = 1024 * 1024;

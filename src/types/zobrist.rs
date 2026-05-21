@@ -1,4 +1,4 @@
-use crate::board::{CastlingRights, Piece, Side, Square};
+use crate::types::{CastlingRights, Piece, Side, Square};
 
 
 #[derive(Debug)]

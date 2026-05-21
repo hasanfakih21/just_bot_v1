@@ -1,18 +1,11 @@
 use std::fmt::Display;
-use crate::{board::bitboard::BitBoard, magics::{BISHOP_MAGIC_NUMBERS, ROOK_MAGIC_NUMBERS, get_magic_index}, occupancy::{BISHOP_OCCUPANCY_BIT_COUNTS, ROOK_OCCUPANCY_BIT_COUNTS, set_occupancy}, transposition::TranspositionTable, zobrist::ZOBRIST};
-pub use crate::attacks::*;
-pub use squares::*;
-pub use pieces::*;
-pub use sides::*;
+use crate::types::*;
+use crate::attacks::*;
+use crate::magics::*;
 
-pub mod squares;
-pub mod pieces;
-pub mod sides;
-pub mod constants;
-pub mod moves;
 pub mod parser;
-pub mod bitboard;
 pub mod makemove;
+pub mod movegen;
 
 #[derive(Debug, Clone)]
 pub struct BoardState {
@@ -253,7 +246,7 @@ impl Display for Board {
 
 #[cfg(test)]
 mod tests {
-    use crate::board::{constants::STARTING_FEN, moves::Move};
+    use crate::board::moves::Move;
     use super::*;
 
     #[test]
