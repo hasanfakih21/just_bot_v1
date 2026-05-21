@@ -1,6 +1,7 @@
 use std::time::Instant;
 
 use crate::board::Board;
+use crate::board::movegen::MoveGenKind;
 use crate::types::*;
 use crate::search::{search, search_runner};
 
@@ -19,7 +20,7 @@ impl Board {
             }
         }
 
-        let move_list = self.generate_all_moves();
+        let move_list = self.generate_moves(MoveGenKind::All);
         if let Some(m) = move_list.iter().find(|e| e.get_from() == from && e.get_to() == to && e.get_promoted_piece() == promotion_piece) {
             Ok(*m)
         } else {

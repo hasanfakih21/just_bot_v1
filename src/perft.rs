@@ -1,9 +1,9 @@
-use crate::board::Board;
+use crate::board::{Board, movegen::MoveGenKind};
 
 pub fn perft(depth: usize, board: &mut Board) -> usize {
     let mut nodes_count = 0;
 
-    for m in board.generate_all_moves().iter() {
+    for m in board.generate_moves(MoveGenKind::All).iter() {
         if board.make_move(*m).is_ok() {  
             let divided_nodes = perft_divide(depth - 1, board);
             println!("{m}: {divided_nodes}");
@@ -22,7 +22,7 @@ pub fn perft_divide(depth: usize, board: &mut Board) -> usize {
 
     let mut nodes = 0;
 
-    for m in board.generate_all_moves().iter() {
+    for m in board.generate_moves(MoveGenKind::All).iter() {
         if board.make_move(*m).is_ok() {
             nodes += perft_divide(depth - 1, board);
             board.unmake_move();

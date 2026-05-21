@@ -1,3 +1,4 @@
+use crate::board::movegen::MoveGenKind;
 use crate::types::{Piece, Side, Square};
 use crate::board::Board;
 
@@ -172,7 +173,7 @@ impl Board {
     }
 
     pub fn has_legal_move(&mut self) -> bool {
-        let move_list = self.generate_all_moves();
+        let move_list = self.generate_moves(MoveGenKind::All);
         for m in move_list.iter() {
             if self.make_move(*m).is_ok() {
                 self.unmake_move();
