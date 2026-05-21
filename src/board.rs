@@ -27,6 +27,7 @@ pub struct BoardState {
     pub half_move_clock: u8,
     pub full_move: usize,
     pub hash: u64,
+    pub game_history: Vec<u64>,
 }
 
 impl BoardState {
@@ -43,6 +44,7 @@ impl BoardState {
             half_move_clock: 0,
             full_move: 0,
             hash: 0,
+            game_history: Vec::new(),
         }
     }
 }

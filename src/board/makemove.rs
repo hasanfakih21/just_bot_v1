@@ -134,7 +134,12 @@ impl Board {
             }
         }
 
+        //Irreversible Move
+        if kind.is_capture() || piece == Piece::Pawn {self.board_state.half_move_clock = 0} else {self.board_state.half_move_clock += 1}
+
+        if self.board_state.side_to_move == Side::White {self.board_state.full_move += 1}
         self.board_state.hash ^= ZOBRIST.get_castling_num(self.board_state.castling_rights);
+        self.board_state.game_history.push(self.board_state.hash);
 
         if self.is_king_in_attack(side) {
             self.unmake_move();
