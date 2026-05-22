@@ -24,7 +24,7 @@ impl MoveList {
     pub fn pop(&mut self) -> Option<Move> {
         if self.len == 0 { None }
         else {
-            let e = unsafe{Some(self.inner[self.len].assume_init())}; 
+            let e = unsafe{Some(self.inner[self.len - 1].assume_init())}; 
             self.len -= 1;
             e
         }
