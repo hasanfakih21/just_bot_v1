@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::board::Square;
+use crate::types::Square;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Side {
@@ -12,7 +12,7 @@ impl Side {
     pub const fn other(&self) -> Self {
         match self {
             Self::White => Self::Black,
-            Self::Black => Self::White
+            Self::Black => Self::White,
         }
     }
 }
@@ -22,15 +22,15 @@ impl Display for Side {
         match self {
             Side::White => write!(f, "White"),
             Side::Black => write!(f, "Black"),
-        } 
+        }
     }
 }
 
 #[repr(u8)]
 pub enum Castling {
-    WhiteKing  = 0b0001,
+    WhiteKing = 0b0001,
     WhiteQueen = 0b0010,
-    BlackKing  = 0b0100,
+    BlackKing = 0b0100,
     BlackQueen = 0b1000,
 }
 
@@ -41,14 +41,14 @@ impl Castling {
             'k' => Castling::BlackKing,
             'Q' => Castling::WhiteQueen,
             'q' => Castling::BlackQueen,
-            _ => panic!("Invalid character for castling identifier!")
+            _ => panic!("Invalid character for castling identifier!"),
         }
     }
 
     pub const fn to_char(&self) -> char {
         match self {
-            Self::WhiteKing  => 'K',
-            Self::BlackKing  => 'k',
+            Self::WhiteKing => 'K',
+            Self::BlackKing => 'k',
             Self::WhiteQueen => 'Q',
             Self::BlackQueen => 'q',
         }
@@ -56,9 +56,9 @@ impl Castling {
 
     pub const fn king_landing_square(&self) -> Square {
         match self {
-            Self::WhiteKing  => Square::G1,
+            Self::WhiteKing => Square::G1,
             Self::WhiteQueen => Square::C1,
-            Self::BlackKing  => Square::G8,
+            Self::BlackKing => Square::G8,
             Self::BlackQueen => Square::C8,
         }
     }
@@ -75,14 +75,14 @@ impl CastlingRights {
     pub const fn can_king_side(&self, side: Side) -> bool {
         match side {
             Side::White => (Castling::WhiteKing as u8 & self.0) > 0,
-            Side::Black => (Castling::BlackKing as u8 & self.0) > 0
+            Side::Black => (Castling::BlackKing as u8 & self.0) > 0,
         }
     }
 
     pub const fn can_queen_side(&self, side: Side) -> bool {
         match side {
             Side::White => (Castling::WhiteQueen as u8 & self.0) > 0,
-            Side::Black => (Castling::BlackQueen as u8 & self.0) > 0
+            Side::Black => (Castling::BlackQueen as u8 & self.0) > 0,
         }
     }
 
@@ -107,21 +107,29 @@ impl CastlingRights {
     pub fn clear_king_side(&mut self, side: Side) {
         match side {
             Side::White => {
-                if self.can_king_side(side) {self.0 ^= Castling::WhiteKing as u8}
-            },
+                if self.can_king_side(side) {
+                    self.0 ^= Castling::WhiteKing as u8
+                }
+            }
             Side::Black => {
-                if self.can_king_side(side) {self.0 ^= Castling::BlackKing as u8}
+                if self.can_king_side(side) {
+                    self.0 ^= Castling::BlackKing as u8
+                }
             }
         }
     }
 
-    pub fn clear_queen_side(&mut self, side: Side){
+    pub fn clear_queen_side(&mut self, side: Side) {
         match side {
             Side::White => {
-                if self.can_queen_side(side) {self.0 ^= Castling::WhiteQueen as u8}
-            },
+                if self.can_queen_side(side) {
+                    self.0 ^= Castling::WhiteQueen as u8
+                }
+            }
             Side::Black => {
-                if self.can_queen_side(side) {self.0 ^= Castling::BlackQueen as u8}
+                if self.can_queen_side(side) {
+                    self.0 ^= Castling::BlackQueen as u8
+                }
             }
         }
     }
@@ -137,10 +145,18 @@ impl Display for CastlingRights {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut output_string = String::from("");
 
-        if self.can_king_side(Side::White) {output_string.push('K');}
-        if self.can_queen_side(Side::White) {output_string.push('Q');}
-        if self.can_king_side(Side::Black) {output_string.push('k');}
-        if self.can_queen_side(Side::Black) {output_string.push('q');}
+        if self.can_king_side(Side::White) {
+            output_string.push('K');
+        }
+        if self.can_queen_side(Side::White) {
+            output_string.push('Q');
+        }
+        if self.can_king_side(Side::Black) {
+            output_string.push('k');
+        }
+        if self.can_queen_side(Side::Black) {
+            output_string.push('q');
+        }
 
         write!(f, "{output_string}")
     }

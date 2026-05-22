@@ -1,5 +1,4 @@
-use crate::board::{CastlingRights, Piece, Side, Square};
-
+use crate::types::{CastlingRights, Piece, Side, Square};
 
 #[derive(Debug)]
 pub struct Zobrist {
@@ -34,16 +33,16 @@ pub const fn pseudo_rand(state: &mut u64) -> u64 {
 
     *state = state.wrapping_add(INCREMENT);
     let mut z = *state;
-    z = (z ^ (z >> 30)).wrapping_mul(MULT1); 
-    z = (z ^ (z >> 27)).wrapping_mul(MULT2); 
+    z = (z ^ (z >> 30)).wrapping_mul(MULT1);
+    z = (z ^ (z >> 27)).wrapping_mul(MULT2);
     z ^ (z >> 31)
 }
 
-pub const ZOBRIST: Zobrist = { 
+pub const ZOBRIST: Zobrist = {
     const SEED: u64 = 0xDEE4BD7D_B659CAD9u64;
     let mut state = SEED;
 
-    let mut pieces = [[0; 64]; 12]; 
+    let mut pieces = [[0; 64]; 12];
     let mut x = 0;
     while x < 12 {
         let mut y = 0;
@@ -52,10 +51,10 @@ pub const ZOBRIST: Zobrist = {
             y += 1;
         }
         x += 1;
-    } 
+    }
 
     let side = pseudo_rand(&mut state);
-    let mut castling = [0; 16]; 
+    let mut castling = [0; 16];
     let mut x = 0;
     while x < 16 {
         castling[x] = pseudo_rand(&mut state);
@@ -70,19 +69,19 @@ pub const ZOBRIST: Zobrist = {
     }
 
     Zobrist {
-        pieces, //Number for each piece on each square 12 pieces 64 squares 
-        side, //Number to indicate the side to move is black
-        castling, //Castling rights 2^4 aka all possible castling combinations.
+        pieces,    //Number for each piece on each square 12 pieces 64 squares
+        side,      //Number to indicate the side to move is black
+        castling,  //Castling rights 2^4 aka all possible castling combinations.
         enpassant, //File of valid en-passant square
     }
 };
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
     use crate::board::Board;
+    use std::collections::HashSet;
 
-use super::*;
+    use super::*;
 
     #[test]
     fn test_zobrist() {
@@ -90,24 +89,28 @@ use super::*;
         println!("{:?}", zobrist);
 
         //want to check if every number is unique
-        let mut seen = HashSet::new(); 
-        assert!(zobrist.pieces
-                .iter().flatten()
+        let mut seen = HashSet::new();
+        assert!(
+            zobrist
+                .pieces
+                .iter()
+                .flatten()
                 .chain(zobrist.castling.iter())
                 .chain(zobrist.enpassant.iter())
                 .chain([zobrist.side].iter())
-                .all(|e| seen.insert(e))); 
+                .all(|e| seen.insert(e))
+        );
     }
 
     #[test]
     fn test_board_hashing() {
         let board1 = Board::from_fen("8/6K1/3N4/8/5Q2/8/1kr5/8 w - - 0 1");
-        let ver_hash = ZOBRIST.get_piece_num(Side::White, Piece::Knight, Square::D6) 
-        ^ ZOBRIST.get_piece_num(Side::White, Piece::Queen, Square::F4)
-        ^ ZOBRIST.get_piece_num(Side::White, Piece::King, Square::G7)
-        ^ ZOBRIST.get_piece_num(Side::Black, Piece::Rook, Square::C2)
-        ^ ZOBRIST.get_piece_num(Side::Black, Piece::King, Square::B2)
-        ^ ZOBRIST.get_castling_num(CastlingRights(0));
+        let ver_hash = ZOBRIST.get_piece_num(Side::White, Piece::Knight, Square::D6)
+            ^ ZOBRIST.get_piece_num(Side::White, Piece::Queen, Square::F4)
+            ^ ZOBRIST.get_piece_num(Side::White, Piece::King, Square::G7)
+            ^ ZOBRIST.get_piece_num(Side::Black, Piece::Rook, Square::C2)
+            ^ ZOBRIST.get_piece_num(Side::Black, Piece::King, Square::B2)
+            ^ ZOBRIST.get_castling_num(CastlingRights(0));
 
         assert_eq!(board1.board_state.hash, ver_hash);
     }
