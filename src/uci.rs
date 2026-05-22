@@ -2,8 +2,8 @@ use std::time::Instant;
 
 use crate::board::Board;
 use crate::board::movegen::MoveGenKind;
-use crate::types::*;
 use crate::search::{search, search_runner};
+use crate::types::*;
 
 impl Board {
     pub fn parse_move(&self, move_string: &str) -> Result<Move, &str> {
@@ -16,12 +16,14 @@ impl Board {
                 "b" => promotion_piece = Some(Piece::Bishop),
                 "r" => promotion_piece = Some(Piece::Rook),
                 "q" => promotion_piece = Some(Piece::Queen),
-                _ => ()
+                _ => (),
             }
         }
 
         let move_list = self.generate_moves(MoveGenKind::All);
-        if let Some(m) = move_list.iter().find(|e| e.get_from() == from && e.get_to() == to && e.get_promoted_piece() == promotion_piece) {
+        if let Some(m) = move_list.iter().find(|e| {
+            e.get_from() == from && e.get_to() == to && e.get_promoted_piece() == promotion_piece
+        }) {
             Ok(*m)
         } else {
             Err("Invalid move string")
@@ -35,7 +37,7 @@ pub fn input_loop() {
     let mut input_buffer = String::new();
     loop {
         if std::io::stdin().read_line(&mut input_buffer).unwrap() == 0 {
-            break;   
+            break;
         }
 
         let (command, args) = input_buffer.split_once(" ").unwrap_or((&input_buffer, ""));
@@ -47,9 +49,9 @@ pub fn input_loop() {
             "ucinewgame" => board = Board::from_fen(STARTING_FEN),
             "go" => go(args, &mut board),
             "quit" => break,
-            _=> eprintln!("Not a valid command"),
+            _ => eprintln!("Not a valid command"),
         }
-        
+
         input_buffer.clear();
     }
 }
@@ -57,7 +59,7 @@ pub fn input_loop() {
 pub fn position(args: &str, board: &mut Board) {
     if args.trim().is_empty() {
         eprintln!("Need to provide a valid argument!");
-        return
+        return;
     }
 
     let (command, args) = args.split_once(" ").unwrap_or((args, ""));
@@ -66,24 +68,26 @@ pub fn position(args: &str, board: &mut Board) {
     match command.trim() {
         "startpos" => {
             *board = Board::from_fen(STARTING_FEN);
-        },
+        }
         "fen" => {
             if args.trim().is_empty() {
                 eprintln!("Please provide a fen string");
                 return;
             }
             *board = Board::from_fen(args);
-        },
-        _ => eprintln!("Not a valid position argument!")
-    }   
+        }
+        _ => eprintln!("Not a valid position argument!"),
+    }
 
     if !moves.trim().is_empty() {
         for m_str in moves.split_ascii_whitespace() {
             let result = board.parse_move(m_str);
-            if let Ok(m) = result && board.make_move(m).is_err() {
+            if let Ok(m) = result
+                && board.make_move(m).is_err()
+            {
                 eprintln!("Illegal Move! {m}");
                 return;
-            } 
+            }
         }
     }
 
@@ -93,11 +97,11 @@ pub fn position(args: &str, board: &mut Board) {
 pub fn go(args: &str, board: &mut Board) {
     if args.trim().is_empty() {
         eprintln!("Need to provide a valid argument!");
-        return
+        return;
     }
 
     let (command, args) = args.split_once(" ").unwrap_or((args, ""));
-    
+
     match command.trim() {
         "depth" => {
             let best_move = search(args.trim().parse::<usize>().unwrap(), board);
@@ -105,23 +109,29 @@ pub fn go(args: &str, board: &mut Board) {
                 println!("info score cp {i}");
                 println!("bestmove {m}");
             }
-        },
+        }
         "perft" => {
             println!("{args}");
             if let Ok(depth) = args.trim().parse::<usize>() {
                 let clock = Instant::now();
                 let nodes_count = crate::perft::perft(depth, board);
-                println!("Number of nodes: {nodes_count}\nTime: {}ms", clock.elapsed().as_millis()); 
-            } else {eprintln!("Enter a valid depth!")}
-        },
-        "wtime" => { //Example: go wtime 900000 btime 900000 winc 0 binc 0
+                println!(
+                    "Number of nodes: {nodes_count}\nTime: {}ms",
+                    clock.elapsed().as_millis()
+                );
+            } else {
+                eprintln!("Enter a valid depth!")
+            }
+        }
+        "wtime" => {
+            //Example: go wtime 900000 btime 900000 winc 0 binc 0
             let best_move = search_runner(board, 10, 10);
             if let Some((m, i)) = best_move {
                 println!("info score cp {i}");
                 println!("bestmove {m}");
             }
         }
-        _=> {
+        _ => {
             //eprintln!("Not a valid go argument!")
             let best_move = search_runner(board, 10, 10);
             if let Some((m, i)) = best_move {
@@ -140,8 +150,8 @@ pub fn uci() {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::types::constants::STARTING_FEN;
     use super::*;
+    use crate::types::constants::STARTING_FEN;
 
     #[test]
     fn test_parse_move() {

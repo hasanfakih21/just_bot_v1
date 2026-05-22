@@ -39,18 +39,18 @@ impl Piece {
             'R' => Ok(Piece::Rook),
             'Q' => Ok(Piece::Queen),
             'K' => Ok(Piece::King),
-            _ => Err(InvalidPiece)
+            _ => Err(InvalidPiece),
         }
     }
 
     pub const fn value(&self) -> i32 {
         match self {
-            Self::Pawn   => 100,
+            Self::Pawn => 100,
             Self::Knight => 320,
             Self::Bishop => 330,
-            Self::Rook   => 500,
-            Self::Queen  => 900,
-            Self::King   => 0,
+            Self::Rook => 500,
+            Self::Queen => 900,
+            Self::King => 0,
         }
     }
 }
@@ -58,12 +58,12 @@ impl Piece {
 impl Display for Piece {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let output = match self {
-            Piece::Pawn   => "P",
+            Piece::Pawn => "P",
             Piece::Knight => "N",
             Piece::Bishop => "B",
-            Piece::Rook   => "R",
-            Piece::Queen  => "Q",
-            Piece::King   => "K",
+            Piece::Rook => "R",
+            Piece::Queen => "Q",
+            Piece::King => "K",
         };
 
         write!(f, "{output}")

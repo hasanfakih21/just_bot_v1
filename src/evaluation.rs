@@ -1,8 +1,9 @@
+use crate::board::Board;
 use crate::board::movegen::MoveGenKind;
 use crate::types::{Piece, Side, Square};
-use crate::board::Board;
 
 //Tables from https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
+#[rustfmt::skip]
 pub const MG_PAWN_TABLE: [i32; 64] = [
       0,   0,   0,   0,   0,   0,  0,   0,
      98, 134,  61,  95,  68, 126, 34, -11,
@@ -14,6 +15,7 @@ pub const MG_PAWN_TABLE: [i32; 64] = [
       0,   0,   0,   0,   0,   0,  0,   0,
 ];
 
+#[rustfmt::skip]
 pub const EG_PAWN_TABLE: [i32; 64] = [
       0,   0,   0,   0,   0,   0,   0,   0,
     178, 173, 158, 134, 147, 132, 165, 187,
@@ -25,6 +27,7 @@ pub const EG_PAWN_TABLE: [i32; 64] = [
       0,   0,   0,   0,   0,   0,   0,   0,
 ];
 
+#[rustfmt::skip]
 pub const MG_KNIGHT_TABLE: [i32; 64] = [
     -167, -89, -34, -49,  61, -97, -15, -107,
      -73, -41,  72,  36,  23,  62,   7,  -17,
@@ -36,6 +39,7 @@ pub const MG_KNIGHT_TABLE: [i32; 64] = [
     -105, -21, -58, -33, -17, -28, -19,  -23,
 ];
 
+#[rustfmt::skip]
 pub const EG_KNIGHT_TABLE: [i32; 64] = [
     -58, -38, -13, -28, -31, -27, -63, -99,
     -25,  -8, -25,  -2,  -9, -25, -24, -52,
@@ -47,6 +51,7 @@ pub const EG_KNIGHT_TABLE: [i32; 64] = [
     -29, -51, -23, -15, -22, -18, -50, -64,
 ];
 
+#[rustfmt::skip]
 pub const MG_BISHOP_TABLE: [i32; 64] = [
     -29,   4, -82, -37, -25, -42,   7,  -8,
     -26,  16, -18, -13,  30,  59,  18, -47,
@@ -58,6 +63,7 @@ pub const MG_BISHOP_TABLE: [i32; 64] = [
     -33,  -3, -14, -21, -13, -12, -39, -21,
 ];
 
+#[rustfmt::skip]
 pub const EG_BISHOP_TABLE: [i32; 64] = [
     -14, -21, -11,  -8, -7,  -9, -17, -24,
      -8,  -4,   7, -12, -3, -13,  -4, -14,
@@ -69,6 +75,7 @@ pub const EG_BISHOP_TABLE: [i32; 64] = [
     -23,  -9, -23,  -5, -9, -16,  -5, -17,
 ];
 
+#[rustfmt::skip]
 pub const MG_ROOK_TABLE: [i32; 64] = [
      32,  42,  32,  51, 63,  9,  31,  43,
      27,  32,  58,  62, 80, 67,  26,  44,
@@ -80,6 +87,7 @@ pub const MG_ROOK_TABLE: [i32; 64] = [
     -19, -13,   1,  17, 16,  7, -37, -26,
 ];
 
+#[rustfmt::skip]
 pub const EG_ROOK_TABLE: [i32; 64] = [
     13, 10, 18, 15, 12,  12,   8,   5,
     11, 13, 13, 11, -3,   3,   8,   3,
@@ -91,6 +99,7 @@ pub const EG_ROOK_TABLE: [i32; 64] = [
     -9,  2,  3, -1, -5, -13,   4, -20,
 ];
 
+#[rustfmt::skip]
 pub const MG_QUEEN_TABLE: [i32; 64] = [
     -28,   0,  29,  12,  59,  44,  43,  45,
     -24, -39,  -5,   1, -16,  57,  28,  54,
@@ -102,6 +111,7 @@ pub const MG_QUEEN_TABLE: [i32; 64] = [
      -1, -18,  -9,  10, -15, -25, -31, -50,
 ];
 
+#[rustfmt::skip]
 pub const EG_QUEEN_TABLE: [i32; 64] = [
      -9,  22,  22,  27,  27,  19,  10,  20,
     -17,  20,  32,  41,  58,  25,  30,   0,
@@ -113,6 +123,7 @@ pub const EG_QUEEN_TABLE: [i32; 64] = [
     -33, -28, -22, -43,  -5, -32, -20, -41,
 ];
 
+#[rustfmt::skip]
 pub const MG_KING_TABLE: [i32; 64] = [
     -65,  23,  16, -15, -56, -34,   2,  13,
      29,  -1, -20,  -7,  -8,  -4, -38, -29,
@@ -124,6 +135,7 @@ pub const MG_KING_TABLE: [i32; 64] = [
     -15,  36,  12, -54,   8, -28,  24,  14,
 ];
 
+#[rustfmt::skip]
 pub const EG_KING_TABLE: [i32; 64] = [
     -74, -35, -18, -18, -11,  15,   4, -17,
     -12,  17,  14,  17,  17,  38,  23,  11,
@@ -135,15 +147,29 @@ pub const EG_KING_TABLE: [i32; 64] = [
     -53, -34, -21, -11, -28, -14, -24, -43
 ];
 
-pub const MG_TABLE_ARRAY: [[i32; 64]; 6] = [MG_PAWN_TABLE, MG_KNIGHT_TABLE, MG_BISHOP_TABLE, MG_ROOK_TABLE, MG_QUEEN_TABLE, MG_KING_TABLE];
-pub const EG_TABLE_ARRAY: [[i32; 64]; 6] = [EG_PAWN_TABLE, EG_KNIGHT_TABLE, EG_BISHOP_TABLE, EG_ROOK_TABLE, EG_QUEEN_TABLE, EG_KING_TABLE];
+pub const MG_TABLE_ARRAY: [[i32; 64]; 6] = [
+    MG_PAWN_TABLE,
+    MG_KNIGHT_TABLE,
+    MG_BISHOP_TABLE,
+    MG_ROOK_TABLE,
+    MG_QUEEN_TABLE,
+    MG_KING_TABLE,
+];
+pub const EG_TABLE_ARRAY: [[i32; 64]; 6] = [
+    EG_PAWN_TABLE,
+    EG_KNIGHT_TABLE,
+    EG_BISHOP_TABLE,
+    EG_ROOK_TABLE,
+    EG_QUEEN_TABLE,
+    EG_KING_TABLE,
+];
 pub const MAX_MATERIAL_VALUE: i32 = 8000;
 
 impl Board {
     pub const fn get_material_evaluation(&self) -> i32 {
         let side = self.board_state.side_to_move;
         self.board_state.material_value[side as usize]
-        - self.board_state.material_value[side.other() as usize]
+            - self.board_state.material_value[side.other() as usize]
     }
 
     pub const fn evaluate(&self) -> i32 {
@@ -154,10 +180,12 @@ impl Board {
         let mg_table = MG_TABLE_ARRAY[piece as usize];
         let eg_table = EG_TABLE_ARRAY[piece as usize];
 
-        let total_material_value = (self.board_state.material_value[side as usize] + self.board_state.material_value[side.other() as usize]).min(MAX_MATERIAL_VALUE);
+        let total_material_value = (self.board_state.material_value[side as usize]
+            + self.board_state.material_value[side.other() as usize])
+            .min(MAX_MATERIAL_VALUE);
         let mg_weight: f32 = total_material_value as f32 / MAX_MATERIAL_VALUE as f32;
         let eg_weight: f32 = 1.0 - mg_weight;
-        
+
         let index = match side {
             Side::White => (square ^ Square::A8) as usize,
             Side::Black => square as usize,
@@ -169,7 +197,7 @@ impl Board {
     pub const fn get_piece_square_evaluation(&self) -> i32 {
         let side = self.board_state.side_to_move;
         self.board_state.piece_square_value[side as usize]
-        - self.board_state.piece_square_value[side.other() as usize]
+            - self.board_state.piece_square_value[side.other() as usize]
     }
 
     pub fn has_legal_move(&mut self) -> bool {

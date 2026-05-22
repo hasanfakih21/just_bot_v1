@@ -1,11 +1,11 @@
-use std::fmt::Display;
-use crate::types::*;
 use crate::attacks::*;
 use crate::magics::*;
+use crate::types::*;
+use std::fmt::Display;
 
-pub mod parser;
 pub mod makemove;
 pub mod movegen;
+pub mod parser;
 
 #[derive(Debug, Clone)]
 pub struct BoardState {
@@ -25,8 +25,8 @@ pub struct BoardState {
 
 impl BoardState {
     pub fn new() -> Self {
-        BoardState { 
-            board_pieces: [BitBoard(0); 12], 
+        BoardState {
+            board_pieces: [BitBoard(0); 12],
             pieces_on_squares: [None; 64],
             board_occupancies: [BitBoard(0); 2],
             side_to_move: Side::White,
@@ -73,14 +73,14 @@ impl Default for Board {
 impl Board {
     pub fn new() -> Self {
         let mut b = Board {
-            bishop_masks: std::array::from_fn(|i| {
-                mask_bishop_attacks(Square::from(i))
-            }),
-            rook_masks: std::array::from_fn(|i| {
-                mask_rook_attacks(Square::from(i))
-            }), 
+            bishop_masks: std::array::from_fn(|i| mask_bishop_attacks(Square::from(i))),
+            rook_masks: std::array::from_fn(|i| mask_rook_attacks(Square::from(i))),
 
-            pawn_attacks: [[BitBoard(0); 64]; 2], knight_attacks: [BitBoard(0); 64], king_attacks: [BitBoard(0); 64], bishop_attacks: vec![BitBoard(0); 64 * 512], rook_attacks: vec![BitBoard(0); 64 * 4096],
+            pawn_attacks: [[BitBoard(0); 64]; 2],
+            knight_attacks: [BitBoard(0); 64],
+            king_attacks: [BitBoard(0); 64],
+            bishop_attacks: vec![BitBoard(0); 64 * 512],
+            rook_attacks: vec![BitBoard(0); 64 * 4096],
 
             state_stack: Vec::new(),
             board_state: BoardState::new(),
@@ -104,10 +104,11 @@ impl Board {
 
     pub fn place_piece(&mut self, side: Side, piece: Piece, square: Square) {
         self.board_state.board_pieces[(piece as usize) + (side as usize * 6)].set_bit(square);
-        self.board_state.board_occupancies[side as usize].set_bit(square); 
+        self.board_state.board_occupancies[side as usize].set_bit(square);
         self.board_state.pieces_on_squares[square as usize] = Some((side, piece));
         self.board_state.material_value[side as usize] += piece.value();
-        self.board_state.piece_square_value[side as usize] += self.get_piece_square_score(piece, square, side);
+        self.board_state.piece_square_value[side as usize] +=
+            self.get_piece_square_score(piece, square, side);
         self.board_state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
     }
 
@@ -116,18 +117,19 @@ impl Board {
         self.board_state.board_occupancies[side as usize].clear_bit(square);
         self.board_state.pieces_on_squares[square as usize] = None;
         self.board_state.material_value[side as usize] -= piece.value();
-        self.board_state.piece_square_value[side as usize] -= self.get_piece_square_score(piece, square, side);
+        self.board_state.piece_square_value[side as usize] -=
+            self.get_piece_square_score(piece, square, side);
         self.board_state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
     }
 
     pub fn get_piece_attack(&self, side: Side, square: Square, piece: Piece) -> BitBoard {
         match piece {
-            Piece::Pawn   => self.get_pawn_attacks(square, side),
+            Piece::Pawn => self.get_pawn_attacks(square, side),
             Piece::Knight => self.get_knight_attacks(square),
             Piece::Bishop => self.get_bishop_attacks(square, self.get_all_occupancy()),
-            Piece::Rook   => self.get_rook_attacks(square, self.get_all_occupancy()),
-            Piece::Queen  => self.get_queen_attacks(square, self.get_all_occupancy()),
-            Piece::King   => self.get_king_attacks(square),
+            Piece::Rook => self.get_rook_attacks(square, self.get_all_occupancy()),
+            Piece::Queen => self.get_queen_attacks(square, self.get_all_occupancy()),
+            Piece::King => self.get_king_attacks(square),
         }
     }
 
@@ -155,13 +157,15 @@ impl Board {
     pub fn init_rook_attacks(&mut self) {
         for i in 0..64 {
             let square = Square::from(i);
-            let relevant_bits = ROOK_OCCUPANCY_BIT_COUNTS[square as usize]; 
+            let relevant_bits = ROOK_OCCUPANCY_BIT_COUNTS[square as usize];
             let magic_number = ROOK_MAGIC_NUMBERS[square as usize];
 
             for index in 0..4096 {
-                let occupancy_bb = set_occupancy(index, relevant_bits, self.rook_masks[square as usize]);
+                let occupancy_bb =
+                    set_occupancy(index, relevant_bits, self.rook_masks[square as usize]);
                 let magic_index = get_magic_index(occupancy_bb, relevant_bits, magic_number);
-                self.rook_attacks[(square as usize * 4096) + magic_index] = blocked_rook_attacks(square, occupancy_bb);
+                self.rook_attacks[(square as usize * 4096) + magic_index] =
+                    blocked_rook_attacks(square, occupancy_bb);
             }
         }
     }
@@ -169,13 +173,15 @@ impl Board {
     pub fn init_bishop_attacks(&mut self) {
         for i in 0..64 {
             let square = Square::from(i);
-            let relevant_bits = BISHOP_OCCUPANCY_BIT_COUNTS[square as usize]; 
+            let relevant_bits = BISHOP_OCCUPANCY_BIT_COUNTS[square as usize];
             let magic_number = BISHOP_MAGIC_NUMBERS[square as usize];
 
             for index in 0..512 {
-                let occupancy_bb = set_occupancy(index, relevant_bits, self.bishop_masks[square as usize]);
+                let occupancy_bb =
+                    set_occupancy(index, relevant_bits, self.bishop_masks[square as usize]);
                 let magic_index = get_magic_index(occupancy_bb, relevant_bits, magic_number);
-                self.bishop_attacks[(square as usize * 512) + magic_index] = blocked_bishop_attacks(square, occupancy_bb);
+                self.bishop_attacks[(square as usize * 512) + magic_index] =
+                    blocked_bishop_attacks(square, occupancy_bb);
             }
         }
     }
@@ -194,7 +200,11 @@ impl Board {
 
     pub fn get_bishop_attacks(&self, square: Square, board_occupancy: BitBoard) -> BitBoard {
         let occupancy = board_occupancy & self.bishop_masks[square as usize];
-        let magic_index = get_magic_index(occupancy, BISHOP_OCCUPANCY_BIT_COUNTS[square as usize], BISHOP_MAGIC_NUMBERS[square as usize]);
+        let magic_index = get_magic_index(
+            occupancy,
+            BISHOP_OCCUPANCY_BIT_COUNTS[square as usize],
+            BISHOP_MAGIC_NUMBERS[square as usize],
+        );
         let offset = (square as usize * 512) + magic_index;
 
         self.bishop_attacks[offset]
@@ -202,18 +212,24 @@ impl Board {
 
     pub fn get_rook_attacks(&self, square: Square, board_occupancy: BitBoard) -> BitBoard {
         let occupancy = board_occupancy & self.rook_masks[square as usize];
-        let magic_index = get_magic_index(occupancy, ROOK_OCCUPANCY_BIT_COUNTS[square as usize], ROOK_MAGIC_NUMBERS[square as usize]);
+        let magic_index = get_magic_index(
+            occupancy,
+            ROOK_OCCUPANCY_BIT_COUNTS[square as usize],
+            ROOK_MAGIC_NUMBERS[square as usize],
+        );
         let offset = (square as usize * 4096) + magic_index;
 
         self.rook_attacks[offset]
     }
 
     pub fn get_queen_attacks(&self, square: Square, board_occupancy: BitBoard) -> BitBoard {
-        self.get_bishop_attacks(square, board_occupancy) | self.get_rook_attacks(square, board_occupancy)
+        self.get_bishop_attacks(square, board_occupancy)
+            | self.get_rook_attacks(square, board_occupancy)
     }
 
     pub fn get_all_occupancy(&self) -> BitBoard {
-        self.board_state.board_occupancies[Side::White as usize] | self.board_state.board_occupancies[Side::Black as usize]
+        self.board_state.board_occupancies[Side::White as usize]
+            | self.board_state.board_occupancies[Side::Black as usize]
     }
 }
 
@@ -239,15 +255,20 @@ impl Display for Board {
             output.push('\n');
         }
         output.push_str("\n     A  B  C  D  E  F  G  H\n");
-        output.push_str(&format!("\n     Side to move: {} \n     Castling: {}\n     Enpassant: {:?}\n", self.board_state.side_to_move, self.board_state.castling_rights, self.board_state.enpassant));
+        output.push_str(&format!(
+            "\n     Side to move: {} \n     Castling: {}\n     Enpassant: {:?}\n",
+            self.board_state.side_to_move,
+            self.board_state.castling_rights,
+            self.board_state.enpassant
+        ));
         write!(f, "{}", output)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::board::moves::Move;
     use super::*;
+    use crate::board::moves::Move;
 
     #[test]
     fn test_get_rook_attack() {
@@ -269,7 +290,7 @@ mod tests {
         let mut occ = BitBoard(0);
 
         board.get_bishop_attacks(Square::A3, occ).print_board();
-        
+
         occ.set_bit(Square::D6);
         board.get_bishop_attacks(Square::G3, occ).print_board();
     }

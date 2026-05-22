@@ -1,4 +1,7 @@
-use std::{fmt::Display, mem::{self, MaybeUninit}};
+use std::{
+    fmt::Display,
+    mem::{self, MaybeUninit},
+};
 
 use crate::types::{Piece, Square};
 
@@ -22,9 +25,10 @@ impl MoveList {
     }
 
     pub fn pop(&mut self) -> Option<Move> {
-        if self.len == 0 { None }
-        else {
-            let e = unsafe{Some(self.inner[self.len - 1].assume_init())}; 
+        if self.len == 0 {
+            None
+        } else {
+            let e = unsafe { Some(self.inner[self.len - 1].assume_init()) };
             self.len -= 1;
             e
         }
@@ -39,11 +43,11 @@ impl MoveList {
     }
 
     pub fn iter(&self) -> std::slice::Iter<'_, Move> {
-        unsafe {self.inner[..self.len].assume_init_ref().iter()}
+        unsafe { self.inner[..self.len].assume_init_ref().iter() }
     }
 
     pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, Move> {
-        unsafe {self.inner[..self.len].assume_init_mut().iter_mut()}
+        unsafe { self.inner[..self.len].assume_init_mut().iter_mut() }
     }
 }
 
@@ -55,7 +59,7 @@ impl FromIterator<Move> for MoveList {
         }
 
         ml
-    } 
+    }
 }
 
 impl Default for MoveList {
@@ -100,10 +104,15 @@ impl Move {
         let kind = self.get_kind();
         let mut promoted_piece = None;
 
-        if kind.is_knight_promotion() {promoted_piece = Some(Piece::Knight)}
-        else if kind.is_bishop_promotion() {promoted_piece = Some(Piece::Bishop)}
-        else if kind.is_rook_promotion() {promoted_piece = Some(Piece::Rook)}
-        else if kind.is_queen_promotion() {promoted_piece = Some(Piece::Queen)}
+        if kind.is_knight_promotion() {
+            promoted_piece = Some(Piece::Knight)
+        } else if kind.is_bishop_promotion() {
+            promoted_piece = Some(Piece::Bishop)
+        } else if kind.is_rook_promotion() {
+            promoted_piece = Some(Piece::Rook)
+        } else if kind.is_queen_promotion() {
+            promoted_piece = Some(Piece::Queen)
+        }
         promoted_piece
     }
 }
@@ -112,11 +121,11 @@ impl Display for Move {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut promotion_piece = "";
         match self.get_kind() {
-            MoveKind::BPromotion | MoveKind::BPromCapture => promotion_piece = "b",    
+            MoveKind::BPromotion | MoveKind::BPromCapture => promotion_piece = "b",
             MoveKind::NPromotion | MoveKind::NPromCapture => promotion_piece = "n",
             MoveKind::RPromotion | MoveKind::RPromCapture => promotion_piece = "r",
-            MoveKind::QPromotion | MoveKind::QPromCapture => promotion_piece = "q",    
-            _ => ()
+            MoveKind::QPromotion | MoveKind::QPromCapture => promotion_piece = "q",
+            _ => (),
         }
         write!(f, "{}{}{}", self.get_from(), self.get_to(), promotion_piece)
     }
@@ -124,16 +133,16 @@ impl Display for Move {
 
 #[derive(Debug)]
 pub enum MoveKind {
-    QuietMove    = 0b0000,
-    DoublePawn   = 0b0001,
-    KingCastle   = 0b0010,
-    QueenCastle  = 0b0011,
-    Capture      = 0b0100,
-    EnPassant    = 0b0101,
-    NPromotion   = 0b1000,
-    BPromotion   = 0b1001,
-    RPromotion   = 0b1010,
-    QPromotion   = 0b1011,
+    QuietMove = 0b0000,
+    DoublePawn = 0b0001,
+    KingCastle = 0b0010,
+    QueenCastle = 0b0011,
+    Capture = 0b0100,
+    EnPassant = 0b0101,
+    NPromotion = 0b1000,
+    BPromotion = 0b1001,
+    RPromotion = 0b1010,
+    QPromotion = 0b1011,
     NPromCapture = 0b1100,
     BPromCapture = 0b1101,
     RPromCapture = 0b1110,
@@ -144,21 +153,21 @@ impl MoveKind {
     fn from(value: u8) -> Self {
         use MoveKind::*;
         match value {
-            0b0000 => QuietMove, 
-            0b0001 => DoublePawn, 
-            0b0010 => KingCastle, 
-            0b0011 => QueenCastle, 
-            0b0100 => Capture, 
-            0b0101 => EnPassant, 
-            0b1000 => NPromotion, 
-            0b1001 => BPromotion, 
-            0b1010 => RPromotion, 
-            0b1011 => QPromotion, 
-            0b1100 => NPromCapture, 
-            0b1101 => BPromCapture, 
-            0b1110 => RPromCapture, 
-            0b1111 => QPromCapture , 
-            _ => panic!("Not a valid move kind!!")
+            0b0000 => QuietMove,
+            0b0001 => DoublePawn,
+            0b0010 => KingCastle,
+            0b0011 => QueenCastle,
+            0b0100 => Capture,
+            0b0101 => EnPassant,
+            0b1000 => NPromotion,
+            0b1001 => BPromotion,
+            0b1010 => RPromotion,
+            0b1011 => QPromotion,
+            0b1100 => NPromCapture,
+            0b1101 => BPromCapture,
+            0b1110 => RPromCapture,
+            0b1111 => QPromCapture,
+            _ => panic!("Not a valid move kind!!"),
         }
     }
 
@@ -169,7 +178,17 @@ impl MoveKind {
 
     pub const fn is_promotion(&self) -> bool {
         use MoveKind::*;
-        matches!(self, NPromotion | BPromotion | RPromotion | QPromotion | NPromCapture | BPromCapture | RPromCapture | QPromCapture)
+        matches!(
+            self,
+            NPromotion
+                | BPromotion
+                | RPromotion
+                | QPromotion
+                | NPromCapture
+                | BPromCapture
+                | RPromCapture
+                | QPromCapture
+        )
     }
 
     pub const fn is_knight_promotion(&self) -> bool {
@@ -194,7 +213,9 @@ impl MoveKind {
 
     pub const fn is_capture(&self) -> bool {
         use MoveKind::*;
-        matches!(self, Capture | NPromCapture | BPromCapture | RPromCapture | QPromCapture | EnPassant)
+        matches!(
+            self,
+            Capture | NPromCapture | BPromCapture | RPromCapture | QPromCapture | EnPassant
+        )
     }
 }
-

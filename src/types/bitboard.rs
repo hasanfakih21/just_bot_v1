@@ -3,7 +3,7 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, N
 use super::Square;
 
 pub struct BitBoardIter {
-    bit_board: BitBoard    
+    bit_board: BitBoard,
 }
 
 impl Iterator for BitBoardIter {
@@ -29,10 +29,10 @@ impl BitBoard {
         for rank in (0..8).rev() {
             print!("{}   ", 1 + rank);
             for file in 0..8 {
-                let board_index = (rank * 8) + file; 
+                let board_index = (rank * 8) + file;
                 let bit_state = self.0 & (1u64 << board_index);
 
-                print!("{}  ", if bit_state != 0 {1} else {0});
+                print!("{}  ", if bit_state != 0 { 1 } else { 0 });
             }
 
             println!();
@@ -42,7 +42,7 @@ impl BitBoard {
     }
 
     pub const fn iter(&self) -> BitBoardIter {
-        BitBoardIter{ bit_board: *self }
+        BitBoardIter { bit_board: *self }
     }
 
     pub const fn set_bit(&mut self, square: Square) {
@@ -50,7 +50,7 @@ impl BitBoard {
     }
 
     pub const fn clear_bit(&mut self, square: Square) {
-        self.0  &= !(1u64 << square as u64);
+        self.0 &= !(1u64 << square as u64);
     }
 
     pub const fn count_bits(&self) -> usize {
@@ -58,12 +58,20 @@ impl BitBoard {
     }
 
     pub const fn least_sig_bit(&self) -> Option<Square> {
-        if self.0 != 0 {Some(Square::from(self.0.trailing_zeros() as usize))} else {None}
+        if self.0 != 0 {
+            Some(Square::from(self.0.trailing_zeros() as usize))
+        } else {
+            None
+        }
     }
 
     pub const fn shift(&mut self, offset: i8) {
-        if offset > 0 {self.0 <<= offset} else {self.0 >>= -offset}
-    } 
+        if offset > 0 {
+            self.0 <<= offset
+        } else {
+            self.0 >>= -offset
+        }
+    }
 
     pub const fn get_bit(&self, square: Square) -> bool {
         let b = 1u64 << square as u64;

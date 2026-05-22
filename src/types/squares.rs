@@ -5,6 +5,7 @@ pub struct InvalidSquare;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
+#[rustfmt::skip]
 pub enum Square {
     A1, B1, C1, D1, E1, F1, G1, H1,
     A2, B2, C2, D2, E2, F2, G2, H2,
@@ -45,11 +46,10 @@ impl TryFrom<&str> for Square {
         let mut file = i.next().ok_or(InvalidSquare)? as u8;
         let mut rank = i.next().ok_or(InvalidSquare)? as u8;
 
-        if (b'a'..= b'h').contains(&file) && (b'1'..= b'8').contains(&rank) {
+        if (b'a'..=b'h').contains(&file) && (b'1'..=b'8').contains(&rank) {
             file -= b'a';
             rank -= b'1';
-        }
-        else {
+        } else {
             return Err(InvalidSquare);
         }
 
@@ -57,12 +57,12 @@ impl TryFrom<&str> for Square {
     }
 }
 
-impl Display for Square { 
+impl Display for Square {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (rank, file) = self.to_rank_and_file();
         let file_char = (file as u8 + b'a') as char;
         let rank_char = (rank as u8 + b'1') as char;
-        write!(f, "{file_char}{rank_char}") 
+        write!(f, "{file_char}{rank_char}")
     }
 }
 
@@ -81,7 +81,7 @@ impl Square {
     }
 
     pub fn shift(&self, offset: i8) -> Option<Square> {
-        Square::try_from((*self as i8) + offset).ok() 
+        Square::try_from((*self as i8) + offset).ok()
     }
 }
 
@@ -89,7 +89,7 @@ impl BitXor for Square {
     type Output = Self;
 
     fn bitxor(self, rhs: Self) -> Self::Output {
-        Self::from(self as usize ^ rhs as usize)        
+        Self::from(self as usize ^ rhs as usize)
     }
 }
 

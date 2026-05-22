@@ -23,7 +23,12 @@ pub struct Entry {
 
 impl Entry {
     pub fn new(key: u64, best_move: Move, score: i32, node: NodeType) -> Self {
-        Entry { key, best_move, score, node}
+        Entry {
+            key,
+            best_move,
+            score,
+            node,
+        }
     }
 
     pub fn get_key(&self) -> u64 {
@@ -37,7 +42,7 @@ impl Entry {
     pub fn get_score(&self) -> i32 {
         self.score
     }
-    
+
     pub fn get_node_type(&self) -> NodeType {
         self.node
     }
@@ -81,7 +86,8 @@ mod tests {
 
     #[test]
     fn test_transposition_table() {
-        let mut board = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
+        let mut board =
+            Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
         if let Some((best_move, score)) = search(3, &mut board) {
             let hash = board.board_state.hash;
             let entry = board.tt.get_entry(hash);
