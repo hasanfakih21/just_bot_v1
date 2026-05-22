@@ -306,4 +306,27 @@ mod tests {
         assert_eq!(score, 0);
         assert_eq!(m, Move::new(C1, C2, QuietMove));
     }
+
+    #[test]
+    fn test_mate_in_one() {
+        let mut board =
+            Board::from_fen("r1b4r/p1p1q3/1bppk3/4pp2/3PP1Q1/2P1R3/PP3PPP/RN4K1 w - - 0 18");
+        let best_move = search(1, &mut board);
+        println!("Best Move: {}", best_move.unwrap().0);
+        assert_eq!(
+            Move::new(Square::G4, Square::F5, MoveKind::Capture),
+            best_move.unwrap().0
+        );
+    }
+
+    #[test]
+    fn test_mate_in_four() {
+        let mut board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36");
+        let best_move = search(4, &mut board);
+        println!("Best Move: {}", best_move.unwrap().0);
+        assert_eq!(
+            Move::new(Square::F6, Square::G4, MoveKind::QuietMove),
+            best_move.unwrap().0
+        );
+    }
 }
