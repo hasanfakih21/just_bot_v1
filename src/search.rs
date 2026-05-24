@@ -81,7 +81,7 @@ pub fn search(data: &mut SearchData, depth: usize, board: &mut Board) -> Option<
         best_move.unwrap().1,
         Bound::Exact,
         board.board_state.hash,
-        ply
+        ply,
     );
     best_move
 }
@@ -145,7 +145,7 @@ pub fn negamax(
                 if let Some(m) = best_move {
                     board
                         .tt
-                        .add_entry(m, best_score, Bound::Upper, board.board_state.hash, ply);
+                        .add_entry(m, best_score, Bound::Lower, board.board_state.hash, ply);
                 }
                 return best_score;
             }
@@ -192,8 +192,7 @@ pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32, pl
         alpha = best_score;
     }
 
-    let move_list =
-    if board.king_in_check() {
+    let move_list = if board.king_in_check() {
         order_moves(board)
     } else {
         order_noisy_moves(board)
@@ -264,10 +263,7 @@ pub fn order_noisy_moves(board: &mut Board) -> MoveList {
 
     let pawn_promos = board.generate_moves(MoveGenKind::NonCapturePromotions);
 
-    for m in captures
-        .iter()
-        .chain(pawn_promos.iter())
-    {
+    for m in captures.iter().chain(pawn_promos.iter()) {
         if let Some(bm) = best_move
             && *m == bm
         {

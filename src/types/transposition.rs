@@ -47,7 +47,7 @@ impl Entry {
     pub fn get_bound(&self) -> Bound {
         self.bound
     }
- 
+
     pub fn get_depth(&self) -> u8 {
         self.depth
     }
@@ -55,7 +55,7 @@ impl Entry {
 
 //https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
 const fn index(hash: u64) -> usize {
-    (((hash as u128) * (ENTRIES as u128)) >> 64) as usize 
+    (((hash as u128) * (ENTRIES as u128)) >> 64) as usize
 }
 
 #[derive(Debug, Clone)]
@@ -124,7 +124,7 @@ mod tests {
 
     // #[test]
     // fn test_transposition_size() {
-    //     let board = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - "); 
+    //     let board = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
     //     let size_of_tt = board.tt;
     //     println!("{:?}", size_of_tt);
     // }
