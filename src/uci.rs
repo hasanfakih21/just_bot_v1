@@ -131,10 +131,15 @@ pub fn go(args: &str, board: &mut Board) {
             let times: Vec<u128> = args.iter().filter_map(|e| e.parse::<u128>().ok()).collect();
 
             println!("{:?}", times);
+            let wtime = times.first().unwrap_or(&300000);
+            let btime = times.get(1).unwrap_or(&300000);
+
+            let winc = times.get(2).unwrap_or(&0);
+            let binc = times.get(3).unwrap_or(&0);
 
             let best_move = match board.board_state.side_to_move {
-                Side::White => search_runner(board, SearchKind::Normal(times[0], times[2])),
-                Side::Black => search_runner(board, SearchKind::Normal(times[1], times[3])),
+                Side::White => search_runner(board, SearchKind::Normal(*wtime, *winc)),
+                Side::Black => search_runner(board, SearchKind::Normal(*btime, *binc)),
             };
 
             if let Some((m, i)) = best_move {
@@ -143,7 +148,7 @@ pub fn go(args: &str, board: &mut Board) {
             }
         }
         "movetime" => {
-            let time = args.trim().parse::<u128>().unwrap(); 
+            let time = args.trim().parse::<u128>().unwrap();
             let best_move = search_runner(board, SearchKind::Exact(time));
             if let Some((m, i)) = best_move {
                 println!("info score cp {i}");
