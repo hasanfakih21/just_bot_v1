@@ -76,13 +76,11 @@ pub fn search(data: &mut SearchData, depth: usize, board: &mut Board) -> Option<
         }
     }
 
-    board.tt.add_entry(
-        best_move.unwrap().0,
-        best_move.unwrap().1,
-        Bound::Exact,
-        board.board_state.hash,
-        ply,
-    );
+    if let Some((m, s)) = best_move {
+        board
+            .tt
+            .add_entry(m, s, Bound::Exact, board.board_state.hash, depth);
+    }
     best_move
 }
 
@@ -109,6 +107,17 @@ pub fn negamax(
         }
     }
 
+    //TT Cutoffs only if depth of entry is greater or equal to the depth of the current node
+    if let Some(e) = board.tt.get_entry(board.board_state.hash)
+        && board.board_state.hash == e.get_key() && e.get_depth() >= depth
+    {
+        match e.get_bound() {
+            Bound::Exact => return e.get_score(),
+            Bound::Lower => if e.get_score() >= beta {return e.get_score()}
+            Bound::Upper => if e.get_score() < alpha {return e.get_score()}
+        }
+    }
+
     let mut legal_moves = 0;
     let mut best_score = -10000;
     let mut best_move: Option<Move> = None;
@@ -119,6 +128,7 @@ pub fn negamax(
             legal_moves += 1;
             let mut score;
 
+            //PVS
             if legal_moves == 1 {
                 //First Move
                 score = -negamax(data, depth - 1, board, -beta, -alpha, nodes, ply + 1);
@@ -141,12 +151,16 @@ pub fn negamax(
                 best_move = Some(*m);
             }
 
-            if score >= beta || data.over_limit() {
+            if score >= beta {
                 if let Some(m) = best_move {
                     board
                         .tt
-                        .add_entry(m, best_score, Bound::Lower, board.board_state.hash, ply);
+                        .add_entry(m, best_score, Bound::Lower, board.board_state.hash, depth);
                 }
+                return best_score;
+            }
+
+            if data.over_limit() {
                 return best_score;
             }
         }
@@ -163,13 +177,13 @@ pub fn negamax(
     if let Some(m) = best_move {
         board
             .tt
-            .add_entry(m, best_score, bound, board.board_state.hash, ply);
+            .add_entry(m, best_score, bound, board.board_state.hash, depth);
     }
 
     best_score
 }
 
-pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32, ply: u8) -> i32 {
+pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32, _ply: u8) -> i32 {
     let static_eval = board.evaluate();
     *nodes += 1;
 
@@ -182,8 +196,8 @@ pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32, pl
     }
 
     let mut best_score = static_eval;
-    let mut bound = Bound::Upper;
-    let mut best_move: Option<Move> = None;
+    //let mut bound = Bound::Upper;
+    //let mut best_move: Option<Move> = None;
 
     if best_score >= beta {
         return best_score;
@@ -200,33 +214,33 @@ pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32, pl
 
     for m in move_list.iter() {
         if board.make_move(*m).is_ok() {
-            let score = -quiesce(board, -beta, -alpha, nodes, ply + 1);
+            let score = -quiesce(board, -beta, -alpha, nodes, _ply + 1);
             board.unmake_move();
 
             if score >= beta {
-                if let Some(m) = best_move {
-                    board
-                        .tt
-                        .add_entry(m, best_score, Bound::Lower, board.board_state.hash, ply);
-                }
+                // if let Some(m) = best_move {
+                //     board
+                //         .tt
+                //         .add_entry(m, best_score, Bound::Lower, board.board_state.hash, 0);
+                // }
                 return score;
             }
             if score > best_score {
                 best_score = score;
-                best_move = Some(*m);
+                //best_move = Some(*m);
             }
             if score > alpha {
                 alpha = score;
-                bound = Bound::Exact;
+                //bound = Bound::Exact;
             }
         }
     }
 
-    if let Some(m) = best_move {
-        board
-            .tt
-            .add_entry(m, best_score, bound, board.board_state.hash, ply);
-    }
+    // if let Some(m) = best_move {
+    //     board
+    //         .tt
+    //         .add_entry(m, best_score, bound, board.board_state.hash, 0);
+    // }
 
     best_score
 }

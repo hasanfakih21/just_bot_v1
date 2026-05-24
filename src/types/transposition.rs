@@ -15,14 +15,14 @@ pub enum Bound {
 pub struct Entry {
     key: u64,
     best_move: Move,
-    depth: u8,
+    depth: usize,
     score: i32,
     bound: Bound,
     //age
 }
 
 impl Entry {
-    pub fn new(key: u64, best_move: Move, score: i32, bound: Bound, depth: u8) -> Self {
+    pub fn new(key: u64, best_move: Move, score: i32, bound: Bound, depth: usize) -> Self {
         Entry {
             key,
             best_move,
@@ -48,7 +48,7 @@ impl Entry {
         self.bound
     }
 
-    pub fn get_depth(&self) -> u8 {
+    pub fn get_depth(&self) -> usize {
         self.depth
     }
 }
@@ -66,9 +66,15 @@ impl TranspositionTable {
         TranspositionTable(vec![None; ENTRIES])
     }
 
-    pub fn add_entry(&mut self, best_move: Move, score: i32, bound: Bound, hash: u64, depth: u8) {
+    pub fn add_entry(&mut self, best_move: Move, score: i32, bound: Bound, hash: u64, depth: usize) {
         let entry = Entry::new(hash, best_move, score, bound, depth);
-        self.0[index(hash)] = Some(entry);
+        if let Some(e) = self.get_entry(hash) {
+            if depth > e.get_depth() {
+                self.0[index(hash)] = Some(entry);
+            }
+        } else {
+            self.0[index(hash)] = Some(entry);
+        }
     }
 
     pub fn get_entry(&self, hash: u64) -> &Option<Entry> {

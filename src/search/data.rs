@@ -1,5 +1,6 @@
 use std::time::{Duration, Instant};
 
+#[derive(Debug)]
 pub struct SearchData {
     nodes_searched: usize,
     time: Instant,
@@ -7,11 +8,15 @@ pub struct SearchData {
     time_limit: u128,
 }
 
+#[derive(Debug)]
 pub enum SearchKind {
     Depth(usize),
     Exact(u128),
     Normal(u128, u128),
 }
+
+#[derive(Debug)]
+pub struct SearchCancelled;
 
 impl SearchData {
     pub fn new(kind: SearchKind) -> Self {
