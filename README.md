@@ -1,4 +1,10 @@
-<h1 align="center">JustBot</h1>
+<div align="center">
+<h1>JustBot Chess Engine</h1>
+  
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-green?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0.en.html)
+
+</div>
+
 
 JustBot is my first attempt at creating a UCI chess engine with magic bitboards without any agentic or LLM assisted coding.
 
