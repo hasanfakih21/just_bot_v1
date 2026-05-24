@@ -109,6 +109,46 @@ pub fn search(data: &mut SearchData, depth: usize, board: &mut Board, alpha: i32
     best_move
 }
 
+pub fn search_checks(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32, ply: u8) -> i32 {
+    let mut best_score = -INFINITY;
+    let mut legal_moves = 0;
+
+    *nodes += 1;
+
+    if !board.king_in_check() {
+        return quiesce(board, alpha, beta, nodes, ply);
+    }
+
+
+    for m in order_moves(board).iter() {
+        if board.make_move(*m).is_ok() {
+            legal_moves += 1;
+            let score = -search_checks(board, -beta, -alpha, nodes, ply + 1);
+            board.unmake_move();
+
+            if score >= beta {
+                return score;
+            }
+            if score > best_score {
+                best_score = score;
+            }
+            if score > alpha {
+                alpha = score;
+            }
+        }
+    }
+
+    if legal_moves == 0 {
+        if board.is_king_in_attack(board.board_state.side_to_move) {
+            return -9000 + ply as i32;
+        } else {
+            return 0;
+        }
+    }
+
+    best_score
+}
+
 pub fn negamax(
     data: &mut SearchData,
     depth: usize,
@@ -119,7 +159,11 @@ pub fn negamax(
     ply: u8,
 ) -> i32 {
     if depth == 0 {
-        return quiesce(board, alpha, beta, nodes, ply); //Horizon Node
+        if board.king_in_check() {
+            return search_checks(board, alpha, beta, nodes, ply);
+        } else {
+            return quiesce(board, alpha, beta, nodes, ply); //Horizon Node
+        }
     }
 
     *nodes += 1;
@@ -231,13 +275,7 @@ pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32, _p
         alpha = best_score;
     }
 
-    let move_list = if board.king_in_check() {
-        order_moves(board)
-    } else {
-        order_noisy_moves(board)
-    };
-
-    for m in move_list.iter() {
+    for m in order_noisy_moves(board).iter() {
         if board.make_move(*m).is_ok() {
             let score = -quiesce(board, -beta, -alpha, nodes, _ply + 1);
             board.unmake_move();
