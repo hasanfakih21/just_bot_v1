@@ -7,6 +7,8 @@ use crate::types::*;
 
 pub mod data;
 
+pub const FAIL_INCREMENTS: [i32; 5] = [25, 50, 150, 300, INFINITY];
+
 impl Board {
     pub fn detect_repetitions(&self) -> usize {
         let half_moves = self.board_state.half_move_clock as usize;
@@ -29,13 +31,31 @@ pub fn search_runner(board: &mut Board, kind: SearchKind) -> Option<(Move, i32)>
 
     //Initialize with move from first depth
     println!("info depth {depth}");
-    let mut best_move = search(&mut data, depth, board);
+    let mut best_move = search(&mut data, depth, board, -INFINITY, INFINITY);
     depth += 1;
+
+    //Aspiration Window
+    let mut score = best_move.unwrap().1;
+    let mut alpha_window = score - (100/4);
+    let mut beta_window = score + (100/4);
+    let mut alpha_fail = 0;
+    let mut beta_fail = 0;
 
     //Iterative Deepening
     loop {
         println!("info depth {depth}");
-        let deeper_move = search(&mut data, depth, board);
+        let deeper_move = search(&mut data, depth, board, alpha_window, beta_window);
+        let new_score = deeper_move.unwrap().1;
+        if new_score <= alpha_window { //Failed Low
+            alpha_window -= FAIL_INCREMENTS[alpha_fail];
+            alpha_fail += 1;
+            continue;
+        } else if new_score > beta_window { //Failed High
+            beta_window += FAIL_INCREMENTS[beta_fail];
+            beta_fail += 1;
+            continue;
+        }
+
         depth += 1;
 
         if data.over_limit() {
@@ -45,12 +65,17 @@ pub fn search_runner(board: &mut Board, kind: SearchKind) -> Option<(Move, i32)>
         }
 
         best_move = deeper_move;
+        score = new_score;
+        alpha_fail = 0;
+        beta_fail = 0;
+        alpha_window = score - (100/4);
+        beta_window = score + (100/4);
     }
 
     best_move
 }
 
-pub fn search(data: &mut SearchData, depth: usize, board: &mut Board) -> Option<(Move, i32)> {
+pub fn search(data: &mut SearchData, depth: usize, board: &mut Board, alpha: i32, beta: i32) -> Option<(Move, i32)> {
     //Root Search
     let mut best_score = -10000;
     let mut best_move: Option<(Move, i32)> = None;
@@ -62,7 +87,7 @@ pub fn search(data: &mut SearchData, depth: usize, board: &mut Board) -> Option<
         if board.make_move(*m).is_ok() {
             let mut nodes = 0;
 
-            let score = -negamax(data, depth - 1, board, -10000, 10000, &mut nodes, ply + 1);
+            let score = -negamax(data, depth - 1, board, -beta, -alpha, &mut nodes, ply + 1);
             total_nodes += nodes;
             println!("info nodes {total_nodes}");
             let nps = total_nodes as f64 / clock.elapsed().as_secs_f64();
@@ -347,7 +372,7 @@ mod tests {
     fn test_search() {
         let mut board = Board::from_fen(STARTING_FEN);
         let mut data = SearchData::default();
-        let best_move = search(&mut data, 5, &mut board);
+        let best_move = search(&mut data, 5, &mut board, -INFINITY, INFINITY);
         if let Some(m) = best_move {
             println!("Best move: {}", m.0);
         }
@@ -407,7 +432,7 @@ mod tests {
         let _ = board.make_move(Move::new(E4, F4, QuietMove));
 
         let mut data = SearchData::default();
-        let (m, score) = search(&mut data, 3, &mut board).unwrap();
+        let (m, score) = search(&mut data, 3, &mut board, -INFINITY, INFINITY).unwrap();
         println!(
             "{:?}\nCurrent Hash: {}",
             board.game_history, board.board_state.hash
@@ -422,7 +447,7 @@ mod tests {
         let mut data = SearchData::default();
         let mut board =
             Board::from_fen("r1b4r/p1p1q3/1bppk3/4pp2/3PP1Q1/2P1R3/PP3PPP/RN4K1 w - - 0 18");
-        let best_move = search(&mut data, 1, &mut board);
+        let best_move = search(&mut data, 1, &mut board, -INFINITY, INFINITY);
         println!("Best Move: {}", best_move.unwrap().0);
         assert_eq!(
             Move::new(Square::G4, Square::F5, MoveKind::Capture),
@@ -434,7 +459,7 @@ mod tests {
     fn test_mate_in_four() {
         let mut data = SearchData::default();
         let mut board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36");
-        let best_move = search(&mut data, 4, &mut board);
+        let best_move = search(&mut data, 4, &mut board, -INFINITY, INFINITY);
         println!("Best Move: {}", best_move.unwrap().0);
         assert_eq!(
             Move::new(Square::F6, Square::G4, MoveKind::QuietMove),

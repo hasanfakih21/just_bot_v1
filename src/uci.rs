@@ -106,7 +106,7 @@ pub fn go(args: &str, board: &mut Board) {
         "depth" => {
             let depth = args.trim().parse::<usize>().unwrap();
             let mut data = SearchData::new(SearchKind::Depth(depth));
-            let best_move = search(&mut data, depth, board);
+            let best_move = search(&mut data, depth, board, -INFINITY, INFINITY);
             if let Some((m, i)) = best_move {
                 println!("info score cp {i}");
                 println!("bestmove {m}");

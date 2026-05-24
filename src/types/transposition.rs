@@ -96,7 +96,7 @@ impl Default for TranspositionTable {
 mod tests {
     use crate::{
         board::Board,
-        search::{data::SearchData, search},
+        search::{data::SearchData, search}, types::INFINITY,
     };
 
     #[test]
@@ -104,7 +104,7 @@ mod tests {
         let mut board =
             Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
         let mut data = SearchData::default();
-        if let Some((best_move, score)) = search(&mut data, 3, &mut board) {
+        if let Some((best_move, score)) = search(&mut data, 3, &mut board, -INFINITY, INFINITY) {
             let hash = board.board_state.hash;
             let entry = board.tt.get_entry(hash);
 
@@ -116,7 +116,7 @@ mod tests {
 
             let _ = board.make_move(best_move);
             let mut data = SearchData::default();
-            let _ = search(&mut data, 2, &mut board);
+            let _ = search(&mut data, 2, &mut board, -INFINITY, INFINITY);
 
             let entry = board.tt.get_entry(hash);
 
