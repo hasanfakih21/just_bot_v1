@@ -34,8 +34,8 @@ impl Board {
 
 pub fn input_loop() {
     let mut board = Board::new();
-
     let mut input_buffer = String::new();
+
     loop {
         if std::io::stdin().read_line(&mut input_buffer).unwrap() == 0 {
             break;

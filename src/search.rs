@@ -125,6 +125,10 @@ pub fn negamax(
     data.clear_pv(ply);
 
     if board.board_state.half_move_clock > 4 {
+        //50 move rule
+        if board.board_state.half_move_clock >= 50 {
+            return 0;
+        }
         //We need to check history if positions were repeated only for the side to move.
         let count = board.detect_repetitions();
         if count >= 2 {
@@ -136,10 +140,18 @@ pub fn negamax(
     if let Some(e) = board.tt.get_entry(board.board_state.hash)
         && board.board_state.hash == e.get_key() && e.get_depth() >= depth
     {
+        let mut tt_score = e.get_score();
+        //Adjust mate scores
+        if tt_score == MATE_SCORE {
+            tt_score -= ply as i32;
+        } else if tt_score == -MATE_SCORE {
+            tt_score += ply as i32;
+        }
+        
         match e.get_bound() {
-            Bound::Exact => return e.get_score(),
-            Bound::Lower => if e.get_score() >= beta {return e.get_score()}
-            Bound::Upper => if e.get_score() < alpha {return e.get_score()}
+            Bound::Exact => return tt_score,
+            Bound::Lower => if tt_score >= beta {return tt_score}
+            Bound::Upper => if tt_score < alpha {return tt_score}
         }
     }
 
@@ -179,9 +191,17 @@ pub fn negamax(
 
             if score >= beta {
                 if let Some(m) = best_move {
+                    let mut tt_score = best_score;
+                    //Adjust mate scores
+                    if tt_score >= MATE_CUTOFF {
+                        tt_score = MATE_SCORE;
+                    }
+                    else if tt_score <= -MATE_CUTOFF {
+                        tt_score = -MATE_SCORE;
+                    }
                     board
                         .tt
-                        .add_entry(m, best_score, Bound::Lower, board.board_state.hash, depth);
+                        .add_entry(m, tt_score, Bound::Lower, board.board_state.hash, depth);
                 }
                 return best_score;
             }
@@ -194,16 +214,24 @@ pub fn negamax(
 
     if legal_moves == 0 {
         if board.is_king_in_attack(board.board_state.side_to_move) {
-            return -9000 + ply as i32;
+            return -MATE_SCORE + ply as i32;
         } else {
             return 0;
         }
     }
 
     if let Some(m) = best_move {
+        let mut tt_score = best_score;
+        //Adjust mate scores
+        if tt_score >= MATE_CUTOFF {
+            tt_score = MATE_SCORE;
+        }
+        else if tt_score <= -MATE_CUTOFF {
+            tt_score = -MATE_SCORE;
+        }
         board
             .tt
-            .add_entry(m, best_score, bound, board.board_state.hash, depth);
+            .add_entry(m, tt_score, bound, board.board_state.hash, depth);
     }
 
     best_score
@@ -212,6 +240,9 @@ pub fn negamax(
 pub fn quiesce(data: &mut SearchData, board: &mut Board, mut alpha: i32, beta: i32, _ply: usize) -> i32 {
     data.add_nodes(1);
     let static_eval = board.evaluate();
+    // if board.is_king_in_attack(board.board_state.side_to_move) {
+    //     return search_checks(data, board, alpha, beta, _ply);
+    // }
 
     if board.board_state.half_move_clock > 4 {
         //We need to check history if positions were repeated only for the side to move.
@@ -294,7 +325,7 @@ pub fn search_checks(data: &mut SearchData, board: &mut Board, mut alpha: i32, b
 
     if legal_moves == 0 {
         if board.is_king_in_attack(board.board_state.side_to_move) {
-            return -9000 + ply as i32;
+            return -MATE_SCORE + ply as i32;
         } else {
             return 0;
         }
@@ -498,5 +529,47 @@ mod tests {
             Move::new(Square::F6, Square::G4, MoveKind::QuietMove),
             best_move.unwrap().0
         );
+    }
+
+    #[test]
+    fn test_pv_line() {
+        use Square::*;
+        use MoveKind::*;
+
+        let mut data = SearchData::new(SearchKind::Normal(100000000000, 0));
+        let mut board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36");
+        let best_move = search(&mut data, 8, &mut board, -INFINITY, INFINITY);
+        println!("PV: {}", data.get_pv());
+        let mut pv_line = MoveList::new();
+        pv_line.push(Move::new(F6, G4, QuietMove));
+        pv_line.push(Move::new(H2, G1, QuietMove));
+        pv_line.push(Move::new(H4, F2, QuietMove));
+        pv_line.push(Move::new(G1, H1, QuietMove));
+        pv_line.push(Move::new(F2, E1, QuietMove));
+        pv_line.push(Move::new(D3, F1, QuietMove));  
+        pv_line.push(Move::new(E1, F1, Capture));
+
+        assert_eq!(pv_line.to_string(), data.get_pv().to_string());
+
+        println!("Best Move: {}", best_move.unwrap().0);
+        assert_eq!(
+            Move::new(Square::F6, Square::G4, MoveKind::QuietMove),
+            best_move.unwrap().0
+        );
+    }
+
+    #[test]
+    fn test_bugged_position() {
+        let mut board = Board::from_fen("6k1/5pp1/7p/8/5Pn1/2R4P/B5P1/4qQ1K b - - 6 39");
+        println!("Hash: {}", board.board_state.hash);
+        //Position hash: 6128121706435820836
+
+        board = Board::from_fen("6k1/5pp1/7p/8/5Pn1/2RQ3P/B4qP1/6K1 w - - 3 38");
+        println!("Hash 2: {}", board.board_state.hash);
+        //Position hash: 16381162810209017462
+
+        board = Board::from_fen("6k1/5pp1/7p/8/5Pnq/2RQ3P/B5P1/6K1 b - - 2 37");
+        println!("Hash 3: {}", board.board_state.hash);
+        //Position hash: 3246015867840709621
     }
 }
