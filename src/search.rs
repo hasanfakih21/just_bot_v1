@@ -1,4 +1,4 @@
-use std::{cmp::Reverse, time::Instant};
+use std::cmp::Reverse;
 
 use crate::board::Board;
 use crate::board::movegen::MoveGenKind;
@@ -30,7 +30,6 @@ pub fn search_runner(board: &mut Board, kind: SearchKind) -> Option<(Move, i32)>
     let mut data = SearchData::new(kind);
 
     //Initialize with move from first depth
-    println!("info depth {depth}");
     let mut best_move = search(&mut data, depth, board, -INFINITY, INFINITY);
     depth += 1;
 
@@ -41,9 +40,12 @@ pub fn search_runner(board: &mut Board, kind: SearchKind) -> Option<(Move, i32)>
     let mut alpha_fail = 0;
     let mut beta_fail = 0;
 
+    //All infos belonging to the pv should be sent together e.g. info depth 2 score cp 214 time 1242 nodes 2124 nps 34928 pv e2e4 e7e5 g1f3
+    println!("info depth {} time {} score cp {} nodes {} nps {} pv {}", depth - 1, data.elapsed().as_millis(), score, data.get_total_nodes_searched(), data.nodes_per_second(), data.get_pv()); 
+
     //Iterative Deepening
     loop {
-        println!("info depth {depth}");
+        //println!("info depth {depth}");
         let deeper_move = search(&mut data, depth, board, alpha_window, beta_window);
         let new_score = deeper_move.unwrap().1;
         if new_score <= alpha_window { //Failed Low
@@ -59,8 +61,7 @@ pub fn search_runner(board: &mut Board, kind: SearchKind) -> Option<(Move, i32)>
         depth += 1;
 
         if data.over_limit() {
-            println!("Searched for {}ms", data.elapsed().as_millis());
-            println!("Time limit was {}", data.get_time_limit());
+            //println!("info time {}", data.elapsed().as_millis());
             break;
         }
 
@@ -70,6 +71,7 @@ pub fn search_runner(board: &mut Board, kind: SearchKind) -> Option<(Move, i32)>
         beta_fail = 0;
         alpha_window = score - (100/4);
         beta_window = score + (100/4);
+        println!("info depth {} time {} score cp {} nodes {} nps {} pv {}", depth - 1, data.elapsed().as_millis(), score, data.get_total_nodes_searched(), data.nodes_per_second(), data.get_pv());
     }
 
     best_move
@@ -79,24 +81,18 @@ pub fn search(data: &mut SearchData, depth: usize, board: &mut Board, alpha: i32
     //Root Search
     let mut best_score = -10000;
     let mut best_move: Option<(Move, i32)> = None;
-    let mut total_nodes = 1;
-    let ply = 1;
+    let ply = 0;
+    data.clear_pv(0);
 
-    let clock = Instant::now();
     for m in order_moves(board).iter() {
         if board.make_move(*m).is_ok() {
-            let mut nodes = 0;
-
-            let score = -negamax(data, depth - 1, board, -beta, -alpha, &mut nodes, ply + 1);
-            total_nodes += nodes;
-            println!("info nodes {total_nodes}");
-            let nps = total_nodes as f64 / clock.elapsed().as_secs_f64();
-            println!("info nps {:.0}", nps);
+            let score = -negamax(data, depth - 1, board, -beta, -alpha, ply + 1);
             board.unmake_move();
-            println!("{m}: {score}");
+            //println!("{m}: {score}");
             if score >= best_score {
                 best_score = score;
                 best_move = Some((*m, score));
+                data.add_pv_move(*m, ply);
             }
         }
     }
@@ -109,64 +105,24 @@ pub fn search(data: &mut SearchData, depth: usize, board: &mut Board, alpha: i32
     best_move
 }
 
-pub fn search_checks(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32, ply: u8) -> i32 {
-    let mut best_score = -INFINITY;
-    let mut legal_moves = 0;
-
-    *nodes += 1;
-
-    if !board.king_in_check() {
-        return quiesce(board, alpha, beta, nodes, ply);
-    }
-
-
-    for m in order_moves(board).iter() {
-        if board.make_move(*m).is_ok() {
-            legal_moves += 1;
-            let score = -search_checks(board, -beta, -alpha, nodes, ply + 1);
-            board.unmake_move();
-
-            if score >= beta {
-                return score;
-            }
-            if score > best_score {
-                best_score = score;
-            }
-            if score > alpha {
-                alpha = score;
-            }
-        }
-    }
-
-    if legal_moves == 0 {
-        if board.is_king_in_attack(board.board_state.side_to_move) {
-            return -9000 + ply as i32;
-        } else {
-            return 0;
-        }
-    }
-
-    best_score
-}
-
 pub fn negamax(
     data: &mut SearchData,
     depth: usize,
     board: &mut Board,
     mut alpha: i32,
     beta: i32,
-    nodes: &mut i32,
-    ply: u8,
+    ply: usize,
 ) -> i32 {
     if depth == 0 {
         if board.king_in_check() {
-            return search_checks(board, alpha, beta, nodes, ply);
+            return search_checks(data, board, alpha, beta, ply);
         } else {
-            return quiesce(board, alpha, beta, nodes, ply); //Horizon Node
+            return quiesce(data, board, alpha, beta, ply); //Horizon Node
         }
     }
 
-    *nodes += 1;
+    data.add_nodes(1);
+    data.clear_pv(ply);
 
     if board.board_state.half_move_clock > 4 {
         //We need to check history if positions were repeated only for the side to move.
@@ -200,11 +156,11 @@ pub fn negamax(
             //PVS
             if legal_moves == 1 {
                 //First Move
-                score = -negamax(data, depth - 1, board, -beta, -alpha, nodes, ply + 1);
+                score = -negamax(data, depth - 1, board, -beta, -alpha, ply + 1);
             } else {
-                score = -negamax(data, depth - 1, board, -alpha - 1, -alpha, nodes, ply + 1);
+                score = -negamax(data, depth - 1, board, -alpha - 1, -alpha, ply + 1);
                 if score > alpha && score < beta {
-                    score = -negamax(data, depth - 1, board, -beta, -alpha, nodes, ply + 1); //We want to search again
+                    score = -negamax(data, depth - 1, board, -beta, -alpha, ply + 1); //We want to search again
                 }
             }
 
@@ -213,6 +169,7 @@ pub fn negamax(
             if score > alpha {
                 bound = Bound::Exact;
                 alpha = score;
+                data.add_pv_move(*m, ply);
             }
 
             if score > best_score {
@@ -237,7 +194,7 @@ pub fn negamax(
 
     if legal_moves == 0 {
         if board.is_king_in_attack(board.board_state.side_to_move) {
-            return -9000 - depth as i32;
+            return -9000 + ply as i32;
         } else {
             return 0;
         }
@@ -252,9 +209,9 @@ pub fn negamax(
     best_score
 }
 
-pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32, _ply: u8) -> i32 {
+pub fn quiesce(data: &mut SearchData, board: &mut Board, mut alpha: i32, beta: i32, _ply: usize) -> i32 {
+    data.add_nodes(1);
     let static_eval = board.evaluate();
-    *nodes += 1;
 
     if board.board_state.half_move_clock > 4 {
         //We need to check history if positions were repeated only for the side to move.
@@ -277,7 +234,7 @@ pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32, _p
 
     for m in order_noisy_moves(board).iter() {
         if board.make_move(*m).is_ok() {
-            let score = -quiesce(board, -beta, -alpha, nodes, _ply + 1);
+            let score = -quiesce(data, board, -beta, -alpha, _ply + 1);
             board.unmake_move();
 
             if score >= beta {
@@ -304,6 +261,44 @@ pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32, _p
     //         .tt
     //         .add_entry(m, best_score, bound, board.board_state.hash, 0);
     // }
+
+    best_score
+}
+
+pub fn search_checks(data: &mut SearchData, board: &mut Board, mut alpha: i32, beta: i32, ply: usize) -> i32 {
+    let mut best_score = -INFINITY;
+    let mut legal_moves = 0;
+
+    data.add_nodes(1);
+    if !board.king_in_check() {
+        return quiesce(data, board, alpha, beta, ply);
+    }
+
+    for m in order_moves(board).iter() {
+        if board.make_move(*m).is_ok() {
+            legal_moves += 1;
+            let score = -search_checks(data, board, -beta, -alpha, ply + 1);
+            board.unmake_move();
+
+            if score >= beta {
+                return score;
+            }
+            if score > best_score {
+                best_score = score;
+            }
+            if score > alpha {
+                alpha = score;
+            }
+        }
+    }
+
+    if legal_moves == 0 {
+        if board.is_king_in_attack(board.board_state.side_to_move) {
+            return -9000 + ply as i32;
+        } else {
+            return 0;
+        }
+    }
 
     best_score
 }

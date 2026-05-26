@@ -107,8 +107,8 @@ pub fn go(args: &str, board: &mut Board) {
             let depth = args.trim().parse::<usize>().unwrap();
             let mut data = SearchData::new(SearchKind::Depth(depth));
             let best_move = search(&mut data, depth, board, -INFINITY, INFINITY);
-            if let Some((m, i)) = best_move {
-                println!("info score cp {i}");
+            if let Some((m, _)) = best_move {
+                //println!("info score cp {i}");
                 println!("bestmove {m}");
             }
         }
@@ -142,24 +142,24 @@ pub fn go(args: &str, board: &mut Board) {
                 Side::Black => search_runner(board, SearchKind::Normal(*btime, *binc)),
             };
 
-            if let Some((m, i)) = best_move {
-                println!("info score cp {i}");
+            if let Some((m, _)) = best_move {
+                //println!("info score cp {i}");
                 println!("bestmove {m}");
             }
         }
         "movetime" => {
             let time = args.trim().parse::<u128>().unwrap();
             let best_move = search_runner(board, SearchKind::Exact(time));
-            if let Some((m, i)) = best_move {
-                println!("info score cp {i}");
+            if let Some((m, _)) = best_move {
+                //println!("info score cp {i}");
                 println!("bestmove {m}");
             }
         }
         _ => {
             //eprintln!("Not a valid go argument!")
             let best_move = search_runner(board, SearchKind::Exact(5000));
-            if let Some((m, i)) = best_move {
-                println!("info score cp {i}");
+            if let Some((m, _)) = best_move {
+                //println!("info score cp {i}");
                 println!("bestmove {m}");
             }
         }
