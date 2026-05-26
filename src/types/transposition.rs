@@ -4,7 +4,7 @@ const TT_SIZE: usize = 64;
 const MEGABYTE: usize = 1024 * 1024;
 const ENTRIES: usize = TT_SIZE * MEGABYTE / std::mem::size_of::<Option<Entry>>();
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Bound {
     Exact,
     Upper,

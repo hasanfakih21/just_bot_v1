@@ -11,6 +11,8 @@ pub struct MoveList {
     len: usize,
 }
 
+pub struct MoveListAddError;
+
 impl MoveList {
     pub fn new() -> Self {
         Self {
@@ -22,6 +24,32 @@ impl MoveList {
     pub fn push(&mut self, m: Move) {
         self.inner[self.len].write(m);
         self.len += 1;
+    }
+
+    pub fn replace(&mut self, m: Move, index: usize) -> Result<(), MoveListAddError> {
+        if index < self.len {
+            self.inner[index].write(m);
+            Ok(())
+        } else {
+            Err(MoveListAddError)
+        }
+    }
+
+    pub fn get(&self, index: usize) -> &Move {
+        debug_assert!(index < self.len); 
+        unsafe {self.inner[index].assume_init_ref()}
+    }
+
+    pub fn push_front(&mut self, m: Move) {
+        for i in 0..self.len {
+            unsafe {self.inner[i + 1].write(self.inner[i].assume_init());}   
+        }
+        self.len += 1;
+        self.inner[0].write(m);
+    }
+
+    pub fn clear(&mut self) {
+        self.len = 0;
     }
 
     pub fn pop(&mut self) -> Option<Move> {
@@ -72,7 +100,7 @@ impl Display for MoveList {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut output = String::new();
         for m in self.iter() {
-            output = format!("{output}{m}, ");
+            output = format!("{output}{m} ");
         }
 
         write!(f, "{output}")
@@ -217,5 +245,22 @@ impl MoveKind {
             self,
             Capture | NPromCapture | BPromCapture | RPromCapture | QPromCapture | EnPassant
         )
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use crate::{board::{Board, movegen::MoveGenKind}, types::{Move, MoveKind, STARTING_FEN, Square}};
+
+    #[test]
+    fn test_move_list() {
+        let board = Board::from_fen(STARTING_FEN);
+        let mut move_list = board.generate_moves(MoveGenKind::All);
+        assert_eq!(move_list.len(), 20);
+        let m = Move::new(Square::A1, Square::A3, MoveKind::QuietMove);
+        move_list.push_front(m);
+        println!("{move_list}");
+        assert_eq!(*move_list.get(0), m);
+        assert_eq!(move_list.len(), 21);
     }
 }
