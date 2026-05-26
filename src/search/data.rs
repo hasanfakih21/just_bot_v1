@@ -1,11 +1,14 @@
 use std::time::{Duration, Instant};
 
+use crate::types::{Move, MoveList};
+
 #[derive(Debug)]
 pub struct SearchData {
     nodes_searched: usize,
     time: Instant,
     depth: usize,
     time_limit: u128,
+    pv: Vec<MoveList>,
 }
 
 #[derive(Debug)]
@@ -29,8 +32,9 @@ impl SearchData {
                 SearchKind::Normal(remaining_time, increment) => {
                     (remaining_time / 20) + (increment / 2)
                 }
-                SearchKind::Exact(thinking_time) => thinking_time,
-            }, //Simple time managment strategy: remaining time/20 + increment/2
+                SearchKind::Exact(thinking_time) => thinking_time, //Simple time managment strategy: remaining time/20 + increment/2
+            }, 
+            pv: vec![MoveList::new(); 256],
         }
     }
 
@@ -54,12 +58,32 @@ impl SearchData {
         self.nodes_searched
     }
 
+    pub fn get_pv(&self) -> &MoveList {
+        &self.pv[0]
+    }
+
     pub fn add_nodes(&mut self, nodes: usize) {
         self.nodes_searched += nodes;
     }
 
     pub fn increase_depth(&mut self) {
         self.depth += 1;
+    }
+
+    pub fn nodes_per_second(&self) -> f32 {
+        self.get_total_nodes_searched() as f32 / self.elapsed().as_secs_f32()
+    }
+
+    pub fn add_pv_move(&mut self, m: Move, ply: usize) {
+        self.pv[ply].clear();
+        self.pv[ply].push(m); 
+        for child_m in self.pv[ply + 1].clone().iter() {
+            self.pv[ply].push(*child_m);
+        }
+    }
+
+    pub fn clear_pv(&mut self, ply: usize) {
+        self.pv[ply].clear();
     }
 }
 
