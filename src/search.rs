@@ -7,6 +7,8 @@ use crate::types::*;
 
 pub mod data;
 
+pub const FAIL_INCREMENTS: [i32; 5] = [25, 50, 150, 300, INFINITY];
+
 impl Board {
     pub fn detect_repetitions(&self) -> usize {
         let half_moves = self.board_state.half_move_clock as usize;
@@ -29,13 +31,33 @@ pub fn search_runner(board: &mut Board, kind: SearchKind) -> Option<(Move, i32)>
 
     //Initialize with move from first depth
     println!("info depth {depth}");
-    let mut best_move = search(&mut data, depth, board);
+    let mut best_move = search(&mut data, depth, board, -INFINITY, INFINITY);
     depth += 1;
+
+    //Aspiration Window
+    let mut score = best_move.unwrap().1;
+    let mut alpha_window = score - (100 / 4);
+    let mut beta_window = score + (100 / 4);
+    let mut alpha_fail = 0;
+    let mut beta_fail = 0;
 
     //Iterative Deepening
     loop {
         println!("info depth {depth}");
-        let deeper_move = search(&mut data, depth, board);
+        let deeper_move = search(&mut data, depth, board, alpha_window, beta_window);
+        let new_score = deeper_move.unwrap().1;
+        if new_score <= alpha_window {
+            //Failed Low
+            alpha_window -= FAIL_INCREMENTS[alpha_fail];
+            alpha_fail += 1;
+            continue;
+        } else if new_score > beta_window {
+            //Failed High
+            beta_window += FAIL_INCREMENTS[beta_fail];
+            beta_fail += 1;
+            continue;
+        }
+
         depth += 1;
 
         if data.over_limit() {
@@ -45,12 +67,23 @@ pub fn search_runner(board: &mut Board, kind: SearchKind) -> Option<(Move, i32)>
         }
 
         best_move = deeper_move;
+        score = new_score;
+        alpha_fail = 0;
+        beta_fail = 0;
+        alpha_window = score - (100 / 4);
+        beta_window = score + (100 / 4);
     }
 
     best_move
 }
 
-pub fn search(data: &mut SearchData, depth: usize, board: &mut Board) -> Option<(Move, i32)> {
+pub fn search(
+    data: &mut SearchData,
+    depth: usize,
+    board: &mut Board,
+    alpha: i32,
+    beta: i32,
+) -> Option<(Move, i32)> {
     //Root Search
     let mut best_score = -10000;
     let mut best_move: Option<(Move, i32)> = None;
@@ -62,7 +95,7 @@ pub fn search(data: &mut SearchData, depth: usize, board: &mut Board) -> Option<
         if board.make_move(*m).is_ok() {
             let mut nodes = 0;
 
-            let score = -negamax(data, depth - 1, board, -10000, 10000, &mut nodes, ply + 1);
+            let score = -negamax(data, depth - 1, board, -beta, -alpha, &mut nodes, ply + 1);
             total_nodes += nodes;
             println!("info nodes {total_nodes}");
             let nps = total_nodes as f64 / clock.elapsed().as_secs_f64();
@@ -84,6 +117,51 @@ pub fn search(data: &mut SearchData, depth: usize, board: &mut Board) -> Option<
     best_move
 }
 
+pub fn search_checks(
+    board: &mut Board,
+    mut alpha: i32,
+    beta: i32,
+    nodes: &mut i32,
+    ply: u8,
+) -> i32 {
+    let mut best_score = -INFINITY;
+    let mut legal_moves = 0;
+
+    *nodes += 1;
+
+    if !board.king_in_check() {
+        return quiesce(board, alpha, beta, nodes, ply);
+    }
+
+    for m in order_moves(board).iter() {
+        if board.make_move(*m).is_ok() {
+            legal_moves += 1;
+            let score = -search_checks(board, -beta, -alpha, nodes, ply + 1);
+            board.unmake_move();
+
+            if score >= beta {
+                return score;
+            }
+            if score > best_score {
+                best_score = score;
+            }
+            if score > alpha {
+                alpha = score;
+            }
+        }
+    }
+
+    if legal_moves == 0 {
+        if board.is_king_in_attack(board.board_state.side_to_move) {
+            return -9000 + ply as i32;
+        } else {
+            return 0;
+        }
+    }
+
+    best_score
+}
+
 pub fn negamax(
     data: &mut SearchData,
     depth: usize,
@@ -94,7 +172,11 @@ pub fn negamax(
     ply: u8,
 ) -> i32 {
     if depth == 0 {
-        return quiesce(board, alpha, beta, nodes, ply); //Horizon Node
+        if board.king_in_check() {
+            return search_checks(board, alpha, beta, nodes, ply);
+        } else {
+            return quiesce(board, alpha, beta, nodes, ply); //Horizon Node
+        }
     }
 
     *nodes += 1;
@@ -109,12 +191,21 @@ pub fn negamax(
 
     //TT Cutoffs only if depth of entry is greater or equal to the depth of the current node
     if let Some(e) = board.tt.get_entry(board.board_state.hash)
-        && board.board_state.hash == e.get_key() && e.get_depth() >= depth
+        && board.board_state.hash == e.get_key()
+        && e.get_depth() >= depth
     {
         match e.get_bound() {
             Bound::Exact => return e.get_score(),
-            Bound::Lower => if e.get_score() >= beta {return e.get_score()}
-            Bound::Upper => if e.get_score() < alpha {return e.get_score()}
+            Bound::Lower => {
+                if e.get_score() >= beta {
+                    return e.get_score();
+                }
+            }
+            Bound::Upper => {
+                if e.get_score() < alpha {
+                    return e.get_score();
+                }
+            }
         }
     }
 
@@ -206,13 +297,7 @@ pub fn quiesce(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32, _p
         alpha = best_score;
     }
 
-    let move_list = if board.king_in_check() {
-        order_moves(board)
-    } else {
-        order_noisy_moves(board)
-    };
-
-    for m in move_list.iter() {
+    for m in order_noisy_moves(board).iter() {
         if board.make_move(*m).is_ok() {
             let score = -quiesce(board, -beta, -alpha, nodes, _ply + 1);
             board.unmake_move();
@@ -347,7 +432,7 @@ mod tests {
     fn test_search() {
         let mut board = Board::from_fen(STARTING_FEN);
         let mut data = SearchData::default();
-        let best_move = search(&mut data, 5, &mut board);
+        let best_move = search(&mut data, 5, &mut board, -INFINITY, INFINITY);
         if let Some(m) = best_move {
             println!("Best move: {}", m.0);
         }
@@ -407,7 +492,7 @@ mod tests {
         let _ = board.make_move(Move::new(E4, F4, QuietMove));
 
         let mut data = SearchData::default();
-        let (m, score) = search(&mut data, 3, &mut board).unwrap();
+        let (m, score) = search(&mut data, 3, &mut board, -INFINITY, INFINITY).unwrap();
         println!(
             "{:?}\nCurrent Hash: {}",
             board.game_history, board.board_state.hash
@@ -422,7 +507,7 @@ mod tests {
         let mut data = SearchData::default();
         let mut board =
             Board::from_fen("r1b4r/p1p1q3/1bppk3/4pp2/3PP1Q1/2P1R3/PP3PPP/RN4K1 w - - 0 18");
-        let best_move = search(&mut data, 1, &mut board);
+        let best_move = search(&mut data, 1, &mut board, -INFINITY, INFINITY);
         println!("Best Move: {}", best_move.unwrap().0);
         assert_eq!(
             Move::new(Square::G4, Square::F5, MoveKind::Capture),
@@ -434,7 +519,7 @@ mod tests {
     fn test_mate_in_four() {
         let mut data = SearchData::default();
         let mut board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36");
-        let best_move = search(&mut data, 4, &mut board);
+        let best_move = search(&mut data, 4, &mut board, -INFINITY, INFINITY);
         println!("Best Move: {}", best_move.unwrap().0);
         assert_eq!(
             Move::new(Square::F6, Square::G4, MoveKind::QuietMove),
