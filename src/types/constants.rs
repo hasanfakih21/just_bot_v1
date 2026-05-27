@@ -28,3 +28,5 @@ pub const KING_SIDE_ROOK_BLACK: Square = Square::H8;
 pub const QUEEN_SIDE_ROOK_BLACK: Square = Square::A8;
 
 pub const INFINITY: i32 = 100000;
+pub const MATE_SCORE: i32 = 9000;
+pub const TIMEOUT_SCORE: i32 = 111111;

@@ -34,8 +34,9 @@ impl Board {
 
 pub fn input_loop() {
     let mut board = Board::new();
-
+    let mut data = SearchData::default();
     let mut input_buffer = String::new();
+
     loop {
         if std::io::stdin().read_line(&mut input_buffer).unwrap() == 0 {
             break;
@@ -47,8 +48,11 @@ pub fn input_loop() {
             "position" => position(args, &mut board),
             "uci" => uci(),
             "isready" => println!("readyok"),
-            "ucinewgame" => board = Board::from_fen(STARTING_FEN),
-            "go" => go(args, &mut board),
+            "ucinewgame" => {
+                board = Board::from_fen(STARTING_FEN);
+                data = SearchData::default();
+            },
+            "go" => go(args, &mut board, &mut data),
             "quit" => break,
             _ => eprintln!("Not a valid command"),
         }
@@ -94,7 +98,7 @@ pub fn position(args: &str, board: &mut Board) {
     //println!("{board}");
 }
 
-pub fn go(args: &str, board: &mut Board) {
+pub fn go(args: &str, board: &mut Board, data: &mut SearchData) {
     if args.trim().is_empty() {
         eprintln!("Need to provide a valid argument!");
         return;
@@ -105,8 +109,7 @@ pub fn go(args: &str, board: &mut Board) {
     match command.trim() {
         "depth" => {
             let depth = args.trim().parse::<usize>().unwrap();
-            let mut data = SearchData::new(SearchKind::Depth(depth));
-            let best_move = search(&mut data, depth, board, -INFINITY, INFINITY);
+            let best_move = search(data, depth, board, -INFINITY, INFINITY);
             if let Some((m, i)) = best_move {
                 println!("info score cp {i}");
                 println!("bestmove {m}");
@@ -137,11 +140,12 @@ pub fn go(args: &str, board: &mut Board) {
             let winc = times.get(2).unwrap_or(&0);
             let binc = times.get(3).unwrap_or(&0);
 
-            let best_move = match board.board_state.side_to_move {
-                Side::White => search_runner(board, SearchKind::Normal(*wtime, *winc)),
-                Side::Black => search_runner(board, SearchKind::Normal(*btime, *binc)),
+            match board.board_state.side_to_move {
+                Side::White => data.set_limit(SearchKind::Normal(*wtime, *winc)), 
+                Side::Black => data.set_limit(SearchKind::Normal(*btime, *binc)),
             };
 
+            let best_move = search_runner(board, data);
             if let Some((m, i)) = best_move {
                 println!("info score cp {i}");
                 println!("bestmove {m}");
@@ -149,7 +153,8 @@ pub fn go(args: &str, board: &mut Board) {
         }
         "movetime" => {
             let time = args.trim().parse::<u128>().unwrap();
-            let best_move = search_runner(board, SearchKind::Exact(time));
+            data.set_limit(SearchKind::Exact(time));
+            let best_move = search_runner(board, data);
             if let Some((m, i)) = best_move {
                 println!("info score cp {i}");
                 println!("bestmove {m}");
@@ -157,7 +162,7 @@ pub fn go(args: &str, board: &mut Board) {
         }
         _ => {
             //eprintln!("Not a valid go argument!")
-            let best_move = search_runner(board, SearchKind::Exact(5000));
+            let best_move = search_runner(board, data);
             if let Some((m, i)) = best_move {
                 println!("info score cp {i}");
                 println!("bestmove {m}");
@@ -188,6 +193,6 @@ pub mod tests {
     #[test]
     fn test_parse_times() {
         let mut board = Board::from_fen(STARTING_FEN);
-        go("wtime 5000 btime 5000 winc 0 binc 0", &mut board);
+        go("wtime 5000 btime 5000 winc 0 binc 0", &mut board, &mut SearchData::default());
     }
 }

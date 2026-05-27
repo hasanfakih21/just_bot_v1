@@ -1,11 +1,14 @@
 use std::time::{Duration, Instant};
 
+use crate::types::TranspositionTable;
+
 #[derive(Debug)]
 pub struct SearchData {
     nodes_searched: usize,
     time: Instant,
     depth: usize,
     time_limit: u128,
+    pub tt: TranspositionTable,
 }
 
 #[derive(Debug)]
@@ -27,10 +30,11 @@ impl SearchData {
             time_limit: match kind {
                 SearchKind::Depth(_) => 0,
                 SearchKind::Normal(remaining_time, increment) => {
-                    (remaining_time / 20) + (increment / 2)
+                    (remaining_time / 20) + (increment / 2) //Simple time managment strategy: remaining time/20 + increment/2
                 }
                 SearchKind::Exact(thinking_time) => thinking_time,
-            }, //Simple time managment strategy: remaining time/20 + increment/2
+            }, 
+            tt: TranspositionTable::new(),
         }
     }
 
@@ -60,6 +64,24 @@ impl SearchData {
 
     pub fn increase_depth(&mut self) {
         self.depth += 1;
+    }
+
+    pub fn start_time(&mut self) {
+        self.time = Instant::now();
+    }
+
+    pub fn set_limit(&mut self, kind: SearchKind) {
+            self.time_limit = match kind {
+                SearchKind::Depth(_) => 0,
+                SearchKind::Normal(remaining_time, increment) => {
+                    (remaining_time / 20) + (increment / 2) //Simple time managment strategy: remaining time/20 + increment/2
+                }
+                SearchKind::Exact(thinking_time) => thinking_time,
+            } 
+    }
+
+    pub fn clear_table(&mut self) {
+        self.tt.clear();
     }
 }
 
