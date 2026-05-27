@@ -66,7 +66,14 @@ impl TranspositionTable {
         TranspositionTable(vec![None; ENTRIES])
     }
 
-    pub fn add_entry(&mut self, best_move: Move, score: i32, bound: Bound, hash: u64, depth: usize) {
+    pub fn add_entry(
+        &mut self,
+        best_move: Move,
+        score: i32,
+        bound: Bound,
+        hash: u64,
+        depth: usize,
+    ) {
         let entry = Entry::new(hash, best_move, score, bound, depth);
         if let Some(e) = self.get_entry(hash) {
             if depth > e.get_depth() {
@@ -96,7 +103,8 @@ impl Default for TranspositionTable {
 mod tests {
     use crate::{
         board::Board,
-        search::{data::SearchData, search}, types::INFINITY,
+        search::{data::SearchData, search},
+        types::INFINITY,
     };
 
     #[test]

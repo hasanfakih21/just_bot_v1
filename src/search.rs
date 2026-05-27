@@ -36,8 +36,8 @@ pub fn search_runner(board: &mut Board, kind: SearchKind) -> Option<(Move, i32)>
 
     //Aspiration Window
     let mut score = best_move.unwrap().1;
-    let mut alpha_window = score - (100/4);
-    let mut beta_window = score + (100/4);
+    let mut alpha_window = score - (100 / 4);
+    let mut beta_window = score + (100 / 4);
     let mut alpha_fail = 0;
     let mut beta_fail = 0;
 
@@ -46,11 +46,13 @@ pub fn search_runner(board: &mut Board, kind: SearchKind) -> Option<(Move, i32)>
         println!("info depth {depth}");
         let deeper_move = search(&mut data, depth, board, alpha_window, beta_window);
         let new_score = deeper_move.unwrap().1;
-        if new_score <= alpha_window { //Failed Low
+        if new_score <= alpha_window {
+            //Failed Low
             alpha_window -= FAIL_INCREMENTS[alpha_fail];
             alpha_fail += 1;
             continue;
-        } else if new_score > beta_window { //Failed High
+        } else if new_score > beta_window {
+            //Failed High
             beta_window += FAIL_INCREMENTS[beta_fail];
             beta_fail += 1;
             continue;
@@ -68,14 +70,20 @@ pub fn search_runner(board: &mut Board, kind: SearchKind) -> Option<(Move, i32)>
         score = new_score;
         alpha_fail = 0;
         beta_fail = 0;
-        alpha_window = score - (100/4);
-        beta_window = score + (100/4);
+        alpha_window = score - (100 / 4);
+        beta_window = score + (100 / 4);
     }
 
     best_move
 }
 
-pub fn search(data: &mut SearchData, depth: usize, board: &mut Board, alpha: i32, beta: i32) -> Option<(Move, i32)> {
+pub fn search(
+    data: &mut SearchData,
+    depth: usize,
+    board: &mut Board,
+    alpha: i32,
+    beta: i32,
+) -> Option<(Move, i32)> {
     //Root Search
     let mut best_score = -10000;
     let mut best_move: Option<(Move, i32)> = None;
@@ -109,7 +117,13 @@ pub fn search(data: &mut SearchData, depth: usize, board: &mut Board, alpha: i32
     best_move
 }
 
-pub fn search_checks(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i32, ply: u8) -> i32 {
+pub fn search_checks(
+    board: &mut Board,
+    mut alpha: i32,
+    beta: i32,
+    nodes: &mut i32,
+    ply: u8,
+) -> i32 {
     let mut best_score = -INFINITY;
     let mut legal_moves = 0;
 
@@ -118,7 +132,6 @@ pub fn search_checks(board: &mut Board, mut alpha: i32, beta: i32, nodes: &mut i
     if !board.king_in_check() {
         return quiesce(board, alpha, beta, nodes, ply);
     }
-
 
     for m in order_moves(board).iter() {
         if board.make_move(*m).is_ok() {
@@ -178,12 +191,21 @@ pub fn negamax(
 
     //TT Cutoffs only if depth of entry is greater or equal to the depth of the current node
     if let Some(e) = board.tt.get_entry(board.board_state.hash)
-        && board.board_state.hash == e.get_key() && e.get_depth() >= depth
+        && board.board_state.hash == e.get_key()
+        && e.get_depth() >= depth
     {
         match e.get_bound() {
             Bound::Exact => return e.get_score(),
-            Bound::Lower => if e.get_score() >= beta {return e.get_score()}
-            Bound::Upper => if e.get_score() < alpha {return e.get_score()}
+            Bound::Lower => {
+                if e.get_score() >= beta {
+                    return e.get_score();
+                }
+            }
+            Bound::Upper => {
+                if e.get_score() < alpha {
+                    return e.get_score();
+                }
+            }
         }
     }
 
