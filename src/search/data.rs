@@ -38,8 +38,6 @@ impl SearchData {
                 SearchKind::Exact(thinking_time) => thinking_time, //Simple time managment strategy: remaining time/20 + increment/2
             }, 
             pv: vec![MoveList::new(); 256],
-                SearchKind::Exact(thinking_time) => thinking_time,
-            }, 
             tt: TranspositionTable::new(),
         }
     }
