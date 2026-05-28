@@ -58,7 +58,6 @@ pub struct Board {
 
     pub board_state: BoardState,
     pub state_stack: Vec<BoardState>,
-    pub tt: TranspositionTable,
     pub game_history: Vec<u64>,
 }
 
@@ -83,7 +82,6 @@ impl Board {
 
             state_stack: Vec::new(),
             board_state: BoardState::new(),
-            tt: TranspositionTable::new(),
             game_history: Vec::new(),
         };
 

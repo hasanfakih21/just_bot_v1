@@ -66,7 +66,14 @@ impl TranspositionTable {
         TranspositionTable(vec![None; ENTRIES])
     }
 
-    pub fn add_entry(&mut self, best_move: Move, score: i32, bound: Bound, hash: u64, depth: usize) {
+    pub fn add_entry(
+        &mut self,
+        best_move: Move,
+        score: i32,
+        bound: Bound,
+        hash: u64,
+        depth: usize,
+    ) {
         let entry = Entry::new(hash, best_move, score, bound, depth);
         if let Some(e) = self.get_entry(hash) {
             if depth > e.get_depth() {
@@ -84,6 +91,10 @@ impl TranspositionTable {
     pub fn get_best_move(&self, hash: u64) -> Option<Move> {
         self.0[index(hash)].as_ref().map(|e| e.get_best_move())
     }
+
+    pub fn clear(&mut self) {
+        self.0 = vec![None; ENTRIES];
+    }
 }
 
 impl Default for TranspositionTable {
@@ -96,7 +107,8 @@ impl Default for TranspositionTable {
 mod tests {
     use crate::{
         board::Board,
-        search::{data::SearchData, search}, types::INFINITY,
+        search::{data::SearchData, search},
+        types::INFINITY,
     };
 
     #[test]
@@ -106,7 +118,7 @@ mod tests {
         let mut data = SearchData::default();
         if let Some((best_move, score)) = search(&mut data, 3, &mut board, -INFINITY, INFINITY) {
             let hash = board.board_state.hash;
-            let entry = board.tt.get_entry(hash);
+            let entry = data.tt.get_entry(hash);
 
             let m = entry.as_ref().unwrap().get_best_move();
             let s = entry.as_ref().unwrap().get_score();
@@ -115,10 +127,9 @@ mod tests {
             assert_eq!(score, s);
 
             let _ = board.make_move(best_move);
-            let mut data = SearchData::default();
             let _ = search(&mut data, 2, &mut board, -INFINITY, INFINITY);
 
-            let entry = board.tt.get_entry(hash);
+            let entry = data.tt.get_entry(hash);
 
             let m = entry.as_ref().unwrap().get_best_move();
             let s = entry.as_ref().unwrap().get_score();

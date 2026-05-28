@@ -2,7 +2,7 @@ use std::cmp::Reverse;
 
 use crate::board::Board;
 use crate::board::movegen::MoveGenKind;
-use crate::search::data::{SearchData, SearchKind};
+use crate::search::data::SearchData;
 use crate::types::*;
 
 pub mod data;
@@ -25,18 +25,20 @@ impl Board {
     }
 }
 
-pub fn search_runner(board: &mut Board, kind: SearchKind) -> Option<(Move, i32)> {
+pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, i32)> {
+    data.start_time();
+    data.clear_table();
     let mut depth = 1;
-    let mut data = SearchData::new(kind);
 
     //Initialize with move from first depth
-    let mut best_move = search(&mut data, depth, board, -INFINITY, INFINITY);
+    println!("info depth {depth}");
+    let mut best_move = search(data, depth, board, -INFINITY, INFINITY);
     depth += 1;
 
     //Aspiration Window
     let mut score = best_move.unwrap().1;
-    let mut alpha_window = score - (100/4);
-    let mut beta_window = score + (100/4);
+    let mut alpha_window = score - (100 / 4);
+    let mut beta_window = score + (100 / 4);
     let mut alpha_fail = 0;
     let mut beta_fail = 0;
 
@@ -45,25 +47,27 @@ pub fn search_runner(board: &mut Board, kind: SearchKind) -> Option<(Move, i32)>
 
     //Iterative Deepening
     loop {
-        //println!("info depth {depth}");
-        let deeper_move = search(&mut data, depth, board, alpha_window, beta_window);
+        println!("info depth {depth}");
+        let deeper_move = search(data, depth, board, alpha_window, beta_window);
+        if data.over_limit() {
+            println!("Searched for {}ms", data.elapsed().as_millis());
+            println!("Time limit was {}", data.get_time_limit());
+            break;
+        }
         let new_score = deeper_move.unwrap().1;
-        if new_score <= alpha_window { //Failed Low
+        if new_score <= alpha_window {
+            //Failed Low
             alpha_window -= FAIL_INCREMENTS[alpha_fail];
             alpha_fail += 1;
             continue;
-        } else if new_score > beta_window { //Failed High
+        } else if new_score > beta_window {
+            //Failed High
             beta_window += FAIL_INCREMENTS[beta_fail];
             beta_fail += 1;
             continue;
         }
 
         depth += 1;
-
-        if data.over_limit() {
-            //println!("info time {}", data.elapsed().as_millis());
-            break;
-        }
 
         best_move = deeper_move;
         score = new_score;
@@ -77,18 +81,25 @@ pub fn search_runner(board: &mut Board, kind: SearchKind) -> Option<(Move, i32)>
     best_move
 }
 
-pub fn search(data: &mut SearchData, depth: usize, board: &mut Board, alpha: i32, beta: i32) -> Option<(Move, i32)> {
+pub fn search(
+    data: &mut SearchData,
+    depth: usize,
+    board: &mut Board,
+    alpha: i32,
+    beta: i32,
+) -> Option<(Move, i32)> {
     //Root Search
-    let mut best_score = -10000;
+    let mut best_score = -INFINITY;
     let mut best_move: Option<(Move, i32)> = None;
     let ply = 0;
     data.clear_pv(0);
 
-    for m in order_moves(board).iter() {
+    let clock = Instant::now();
+    for m in order_moves(board, data).iter() {
         if board.make_move(*m).is_ok() {
             let score = -negamax(data, depth - 1, board, -beta, -alpha, ply + 1);
             board.unmake_move();
-            //println!("{m}: {score}");
+            println!("{m}: {score}");
             if score >= best_score {
                 best_score = score;
                 best_move = Some((*m, score));
@@ -98,11 +109,60 @@ pub fn search(data: &mut SearchData, depth: usize, board: &mut Board, alpha: i32
     }
 
     if let Some((m, s)) = best_move {
-        board
+        data
             .tt
             .add_entry(m, s, Bound::Exact, board.board_state.hash, depth);
     }
     best_move
+}
+
+pub fn search_checks(
+    data: &mut SearchData,
+    board: &mut Board,
+    mut alpha: i32,
+    beta: i32,
+    nodes: &mut i32,
+    ply: u8,
+) -> i32 {
+    let mut best_score = -INFINITY;
+    let mut legal_moves = 0;
+
+    *nodes += 1;
+
+    if !board.king_in_check() {
+        return quiesce(data, board, alpha, beta, nodes, ply);
+    }
+
+    for m in order_moves(board, data).iter() {
+        if board.make_move(*m).is_ok() {
+            legal_moves += 1;
+            let score = -search_checks(data, board, -beta, -alpha, nodes, ply + 1);
+            if data.over_limit() {
+                return TIMEOUT_SCORE;
+            }
+            board.unmake_move();
+
+            if score >= beta {
+                return score;
+            }
+            if score > best_score {
+                best_score = score;
+            }
+            if score > alpha {
+                alpha = score;
+            }
+        }
+    }
+
+    if legal_moves == 0 {
+        if board.is_king_in_attack(board.board_state.side_to_move) {
+            return -MATE_SCORE + ply as i32;
+        } else {
+            return 0;
+        }
+    }
+
+    best_score
 }
 
 pub fn negamax(
@@ -115,9 +175,9 @@ pub fn negamax(
 ) -> i32 {
     if depth == 0 {
         if board.king_in_check() {
-            return search_checks(data, board, alpha, beta, ply);
+            return search_checks(data, board, alpha, beta, nodes, ply);
         } else {
-            return quiesce(data, board, alpha, beta, ply); //Horizon Node
+            return quiesce(data, board, alpha, beta, nodes, ply); //Horizon Node
         }
     }
 
@@ -156,11 +216,11 @@ pub fn negamax(
     }
 
     let mut legal_moves = 0;
-    let mut best_score = -10000;
+    let mut best_score = -INFINITY;
     let mut best_move: Option<Move> = None;
     let mut bound = Bound::Upper; //Fail-high means score is atleast this good so lower-bound/Fail-low means the score is an upper bound
 
-    for m in order_moves(board).iter() {
+    for m in order_moves(board, data).iter() {
         if board.make_move(*m).is_ok() {
             legal_moves += 1;
             let mut score;
@@ -177,6 +237,9 @@ pub fn negamax(
             }
 
             board.unmake_move();
+            if data.over_limit() {
+                return TIMEOUT_SCORE;
+            }
 
             if score > alpha {
                 bound = Bound::Exact;
@@ -203,10 +266,6 @@ pub fn negamax(
                         .tt
                         .add_entry(m, tt_score, Bound::Lower, board.board_state.hash, depth);
                 }
-                return best_score;
-            }
-
-            if data.over_limit() {
                 return best_score;
             }
         }
@@ -263,10 +322,13 @@ pub fn quiesce(data: &mut SearchData, board: &mut Board, mut alpha: i32, beta: i
         alpha = best_score;
     }
 
-    for m in order_noisy_moves(board).iter() {
-        if board.make_move(*m).is_ok() {
-            let score = -quiesce(data, board, -beta, -alpha, _ply + 1);
+    for m in order_moves(board, data).iter() {
+        if !m.get_kind().is_quiet() && board.make_move(*m).is_ok() {
+            let score = -quiesce(data, board, -beta, -alpha, nodes, _ply + 1);
             board.unmake_move();
+            if data.over_limit() {
+                return TIMEOUT_SCORE;
+            }
 
             if score >= beta {
                 // if let Some(m) = best_move {
@@ -334,7 +396,7 @@ pub fn search_checks(data: &mut SearchData, board: &mut Board, mut alpha: i32, b
     best_score
 }
 
-pub fn order_noisy_moves(board: &mut Board) -> MoveList {
+pub fn order_moves(board: &mut Board, data: &mut SearchData) -> MoveList {
     //We want to sort the moves based on most valuable victim / least valuable attacker
     //Sort captures based on (attacked piece value - attacking piece value)
     let mut full_list = MoveList::new();
@@ -342,51 +404,7 @@ pub fn order_noisy_moves(board: &mut Board) -> MoveList {
     let mut best_move: Option<Move> = None;
 
     //Want to add the best move from the transposition table if it exists to the beginning of the list
-    if let Some(e) = board.tt.get_entry(board.board_state.hash)
-        && board.board_state.hash == e.get_key()
-    {
-        let bm = e.get_best_move();
-        full_list.push(bm);
-        best_move = Some(bm);
-    }
-
-    captures.iter_mut().into_slice().sort_by_key(|m| {
-        let attacker = board.get_piece_at_square(m.get_from()).unwrap().1;
-        let victim = match m.get_kind() {
-            MoveKind::EnPassant => {
-                board
-                    .get_piece_at_square(Square::from(m.get_to() as usize ^ 8))
-                    .unwrap()
-                    .1
-            }
-            _ => board.get_piece_at_square(m.get_to()).unwrap().1,
-        };
-        Reverse(victim.value() - attacker.value())
-    });
-
-    let pawn_promos = board.generate_moves(MoveGenKind::NonCapturePromotions);
-
-    for m in captures.iter().chain(pawn_promos.iter()) {
-        if let Some(bm) = best_move
-            && *m == bm
-        {
-            continue;
-        }
-        full_list.push(*m);
-    }
-
-    full_list
-}
-
-pub fn order_moves(board: &mut Board) -> MoveList {
-    //We want to sort the moves based on most valuable victim / least valuable attacker
-    //Sort captures based on (attacked piece value - attacking piece value)
-    let mut full_list = MoveList::new();
-    let mut captures: MoveList = board.generate_moves(MoveGenKind::Captures);
-    let mut best_move: Option<Move> = None;
-
-    //Want to add the best move from the transposition table if it exists to the beginning of the list
-    if let Some(e) = board.tt.get_entry(board.board_state.hash)
+    if let Some(e) = data.tt.get_entry(board.board_state.hash)
         && board.board_state.hash == e.get_key()
     {
         let bm = e.get_best_move();
@@ -445,14 +463,14 @@ mod tests {
     #[test]
     fn test_order_moves() {
         let mut board = Board::from_fen(STARTING_FEN);
-        let move_list = order_moves(&mut board);
+        let move_list = order_moves(&mut board, &mut SearchData::default());
         println!("{board}");
         println!("{move_list}");
         println!();
 
         let mut board =
             Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1");
-        let move_list = order_moves(&mut board);
+        let move_list = order_moves(&mut board, &mut SearchData::default());
 
         println!("{board}");
         println!("{move_list}");
@@ -466,7 +484,7 @@ mod tests {
 
         let mut board =
             Board::from_fen("rnbq1rk1/pN1p1ppp/4n2b/2p1p3/N1BP3R/2P2Q2/PP3PPP/2B1K2R w K - 0 1");
-        let move_list = order_moves(&mut board);
+        let move_list = order_moves(&mut board, &mut SearchData::default());
 
         println!("{board}");
         for m in move_list.iter() {
