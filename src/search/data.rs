@@ -1,4 +1,3 @@
-use std::array::from_fn;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::search::time::{TimeManager, TimeSettings};
@@ -10,7 +9,7 @@ use crate::types::TranspositionTable;
 pub struct SearchData {
     playing_as: Side,
     depth: usize,
-    pv: [MoveList; 256],
+    pv: Vec<MoveList>,
     total_nodes: AtomicUsize,
 
     pub tt: TranspositionTable,
@@ -25,7 +24,7 @@ impl SearchData {
         SearchData {
             playing_as: Side::White,
             depth: 0,
-            pv: from_fn(|_| MoveList::new()),
+            pv: vec![MoveList::new(); 128],
             tt: TranspositionTable::new(),
             time: TimeManager::new(),
             total_nodes: AtomicUsize::new(0),
@@ -93,7 +92,7 @@ impl SearchData {
     }
 
     pub fn reset_pv(&mut self) {
-        self.pv = from_fn(|_| MoveList::new());
+        self.pv = vec![MoveList::new(); 128];
     }
 }
 
