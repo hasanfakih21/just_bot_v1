@@ -15,6 +15,10 @@ impl Board {
         let half_moves = self.board_state.half_move_clock as usize;
         let mut count = 0;
 
+        if self.game_history.len() < half_moves {
+            return 0
+        }
+
         let last_halfmove_ply = self.game_history.len() - half_moves;
         for position in self.game_history[last_halfmove_ply..].iter() {
             if self.board_state.hash == *position {
@@ -30,7 +34,7 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
     data.clear_node_count();
     data.reset_pv();
     data.start_time();
-    data.clear_table();
+    //data.clear_table(); //Clears Transposition Table
     let mut depth = 1;
 
     //Initialize with move from first depth
@@ -59,6 +63,7 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
     loop {
         let deeper_move = search(data, depth, board, alpha_window, beta_window);
         if data.over_limit() {
+            println!("Searched for: {}ms\nTime Limit: {}ms", data.time.elapsed().as_millis(), data.time.get_limit());
             break;
         }
         let new_score = deeper_move.unwrap().1;
@@ -113,6 +118,9 @@ pub fn search(
         if board.make_move(*m).is_ok() {
             let score = -negamax(data, depth - 1, board, -beta, -alpha, ply + 1);
             board.unmake_move();
+            if data.over_limit() {
+                return None;
+            }
             //println!("{m}: {score}");
             if score >= best_score {
                 best_score = score;
