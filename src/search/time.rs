@@ -6,25 +6,26 @@ use crate::types::Side;
 pub struct TimeManager {
     pub clock: Instant,
     pub settings: TimeSettings,
+    pub limit: Limit,
 }
 
 #[derive(Debug)]
 pub struct TimeSettings {
-    pub wtime: u128,
-    pub btime: u128,
-    pub winc: u128,
-    pub binc: u128,
+    pub wtime: u64,
+    pub btime: u64,
+    pub winc: u64,
+    pub binc: u64,
     pub movestogo: usize,
     pub depth: usize,
     pub nodes: usize,
     pub mate: usize,
-    pub movetime: u128,
+    pub movetime: u64,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum Limit {
-    Time(u128),
-    Exact(u128),
-    Depth(u128),
+    Time(u64),
+    Depth(u64),
 }
 
 impl Default for TimeSettings {
@@ -45,18 +46,11 @@ impl Default for TimeSettings {
 
 impl TimeManager {
     pub fn new() -> TimeManager {
-        TimeManager { clock: Instant::now(), settings: TimeSettings::default() } 
+        TimeManager { clock: Instant::now(), settings: TimeSettings::default(), limit: Limit::Time(1000) } 
     }
 
-    pub fn reset_clock(&mut self) {
+    pub fn reset_clock(&mut self, side: Side) {
         self.clock = Instant::now();
-    }
-
-    pub fn elapsed(&self) -> Duration {
-        self.clock.elapsed()
-    }
-
-    pub fn over_limit(&self, side: Side) -> bool {
         let remaining_time;
         let increment;
         
@@ -71,19 +65,22 @@ impl TimeManager {
             }
         }
 
-        let mut time_limit = (remaining_time / 20) + (increment / 2); //Simple time managment strategy: remaining time/20 + increment/2
-        if time_limit <= 500 {
-            time_limit = (remaining_time / 2) + increment;
+        self.limit = Limit::Time((remaining_time / 20) + (increment / 2)); //Simple time managment strategy: remaining time/20 + increment/2
+    }
+
+    pub fn elapsed(&self) -> Duration {
+        self.clock.elapsed()
+    }
+
+    pub fn get_limit(&self) -> u64 {
+        match self.limit {
+            Limit::Time(t) => t,
+            Limit::Depth(d) => d,
         }
-        let over_limit = self.elapsed().as_millis() >= time_limit; 
+    }
 
-        //For debugging//
-        // if over_limit {
-        //     println!("Searched for {}ms", self.elapsed().as_millis());
-        //     println!("Time limit was {}", time_limit);
-        // }
-
-        over_limit
+    pub fn over_limit(&self) -> bool {
+        self.elapsed().as_millis() as u64 > self.get_limit() + 20 //So it uses the same time as an older version that didn't stop exactly over the limit
     }
 }
 
