@@ -344,6 +344,18 @@ impl Board {
         }
         move_list
     }
+
+    pub fn append_moves(&self, kind: MoveGenKind, move_list: &mut MoveList) {
+        self.gen_pawn_moves(move_list, kind);
+        self.gen_knight_moves(move_list, kind);
+        self.gen_bishop_moves(move_list, kind);
+        self.gen_rook_moves(move_list, kind);
+        self.gen_queen_moves(move_list, kind);
+        self.gen_king_moves(move_list, kind);
+        if matches!(kind, MoveGenKind::All | MoveGenKind::Quiet) {
+            self.gen_castling_moves(move_list)
+        }
+    }
 }
 
 #[cfg(test)]

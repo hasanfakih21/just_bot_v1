@@ -1,5 +1,4 @@
 use crate::board::Board;
-use crate::board::movegen::MoveGenKind;
 use crate::search::data::SearchData;
 use crate::search::movepicker::MovePicker;
 use crate::types::*;
@@ -62,7 +61,7 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
     //Iterative Deepening
     loop {
         let deeper_move = search(data, depth, board, alpha_window, beta_window);
-        if data.over_limit() {
+        if data.over_limit() || depth >= MAX_DEPTH {
             println!(
                 "Searched for: {}ms\nTime Limit: {}ms",
                 data.time.elapsed().as_millis(),
@@ -119,10 +118,9 @@ pub fn search(
     let ply = 0;
     data.clear_pv(0);
 
-    let mut move_picker = MovePicker::new(board, data, MoveGenKind::All);
-    move_picker.score_noisy_moves(board);
+    let mut move_picker = MovePicker::new(board, data);
 
-    for m in move_picker {
+    while let Some(m) = move_picker.next(board, false) {
         if board.make_move(m).is_ok() {
             let score = -negamax(data, depth - 1, board, -beta, -alpha, ply + 1);
             board.unmake_move();
@@ -209,10 +207,9 @@ pub fn negamax(
     let mut best_move: Option<Move> = None;
     let mut bound = Bound::Upper; //Fail-high means score is atleast this good so lower-bound/Fail-low means the score is an upper bound
 
-    let mut move_picker = MovePicker::new(board, data, MoveGenKind::All);
-    move_picker.score_noisy_moves(board);
+    let mut move_picker = MovePicker::new(board, data);
 
-    for m in move_picker {
+    while let Some(m) = move_picker.next(board, false) {
         if board.make_move(m).is_ok() {
             legal_moves += 1;
             let mut score;
@@ -316,10 +313,9 @@ pub fn quiesce(
         alpha = best_score;
     }
 
-    let mut move_picker = MovePicker::new(board, data, MoveGenKind::Noisy);
-    move_picker.score_noisy_moves(board);
+    let mut move_picker = MovePicker::new(board, data);
 
-    for m in move_picker {
+    while let Some(m) = move_picker.next(board, true) {
         if board.make_move(m).is_ok() {
             let score = -quiesce(data, board, -beta, -alpha, _ply + 1);
             board.unmake_move();
@@ -370,10 +366,9 @@ pub fn search_checks(
         return quiesce(data, board, alpha, beta, ply);
     }
 
-    let mut move_picker = MovePicker::new(board, data, MoveGenKind::All);
-    move_picker.score_noisy_moves(board);
+    let mut move_picker = MovePicker::new(board, data);
 
-    for m in move_picker {
+    while let Some(m) = move_picker.next(board, false) {
         if board.make_move(m).is_ok() {
             legal_moves += 1;
             let score = -search_checks(data, board, -beta, -alpha, ply + 1);
@@ -424,9 +419,8 @@ mod tests {
     fn test_order_moves() {
         let board =
             Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1");
-        let mut move_picker = MovePicker::new(&board, &SearchData::default(), MoveGenKind::All);
-        move_picker.score_noisy_moves(&board);
-        let first_move = move_picker.next().unwrap();
+        let mut move_picker = MovePicker::new(&board, &SearchData::default());
+        let first_move = move_picker.next(&board, false).unwrap();
 
         assert_eq!(
             first_move,
@@ -435,9 +429,8 @@ mod tests {
 
         let board =
             Board::from_fen("rnbq1rk1/pN1p1ppp/4n2b/2p1p3/N1BP3R/2P2Q2/PP3PPP/2B1K2R w K - 0 1");
-        let mut move_picker = MovePicker::new(&board, &SearchData::default(), MoveGenKind::All);
-        move_picker.score_noisy_moves(&board);
-        let first_move = move_picker.next().unwrap();
+        let mut move_picker = MovePicker::new(&board, &SearchData::default());
+        let first_move = move_picker.next(&board, false).unwrap();
 
         assert_eq!(
             first_move,

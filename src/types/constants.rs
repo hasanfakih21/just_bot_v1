@@ -31,3 +31,5 @@ pub const INFINITY: i32 = 100000;
 pub const MATE_SCORE: i32 = 9000;
 pub const MATE_CUTOFF: i32 = 8900;
 pub const TIMEOUT_SCORE: i32 = 111111;
+
+pub const MAX_DEPTH: usize = 128;
