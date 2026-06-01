@@ -180,7 +180,8 @@ pub fn negamax(
     //TT Cutoffs only if depth of entry is greater or equal to the depth of the current node
     if let Some(e) = data.tt.get_entry(board.board_state.hash)
         && board.board_state.hash == e.get_key()
-        && e.get_depth() >= depth && e.get_score().abs() < MATE_CUTOFF //Mate scores need to be properly adjusted for cutoffs
+        && e.get_depth() >= depth
+        && e.get_score().abs() < MATE_CUTOFF //Mate scores need to be properly adjusted for cutoffs
     {
         let tt_score = e.get_score();
 
