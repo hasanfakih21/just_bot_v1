@@ -73,7 +73,7 @@ impl MovePicker {
 
         if self.status == Status::Quiet
             && !self.moves.is_empty() && !quiesce {
-                return Some(self.best_move());
+                return Some(self.moves.pop().unwrap().mv);
             }
         
         None

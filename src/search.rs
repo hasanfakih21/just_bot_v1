@@ -71,13 +71,13 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
             break;
         }
         let new_score = deeper_move.unwrap().1;
-        if new_score < alpha_window {
+        if new_score <= alpha_window {
             //Failed Low
             //println!("Failed Low Score: {new_score} Window: {alpha_window} Depth: {depth}");
             alpha_window -= FAIL_INCREMENTS[alpha_fail];
             alpha_fail += 1;
             continue;
-        } else if new_score > beta_window {
+        } else if new_score >= beta_window {
             //Failed High
             //println!("Failed High Score: {new_score} Window {beta_window} Depth: {depth}");
             beta_window += FAIL_INCREMENTS[beta_fail];
@@ -155,7 +155,7 @@ pub fn negamax(
     ply: usize,
 ) -> i32 {
     if depth == 0 {
-        if board.is_king_in_attack(board.board_state.side_to_move) {
+        if board.king_in_check() {
             return search_checks(data, board, alpha, beta, ply);
         } else {
             return quiesce(data, board, alpha, beta, ply); //Horizon Node
@@ -351,7 +351,7 @@ pub fn search_checks(
         }
     }
 
-    if !board.is_king_in_attack(board.board_state.side_to_move) {
+    if !board.king_in_check() {
         return quiesce(data, board, alpha, beta, ply);
     }
 
