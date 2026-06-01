@@ -1,49 +1,34 @@
-use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use crate::search::time::{TimeManager, TimeSettings};
+use crate::types::{Move, MoveList, Side};
+
+use crate::types::TranspositionTable;
 
 #[derive(Debug)]
 pub struct SearchData {
-    nodes_searched: usize,
-    time: Instant,
+    playing_as: Side,
     depth: usize,
-    time_limit: u128,
-}
+    pv: Vec<MoveList>,
+    total_nodes: AtomicUsize,
 
-#[derive(Debug)]
-pub enum SearchKind {
-    Depth(usize),
-    Exact(u128),
-    Normal(u128, u128),
+    pub tt: TranspositionTable,
+    pub time: TimeManager,
 }
 
 #[derive(Debug)]
 pub struct SearchCancelled;
 
 impl SearchData {
-    pub fn new(kind: SearchKind) -> Self {
+    pub fn new() -> Self {
         SearchData {
-            nodes_searched: 0,
-            time: Instant::now(),
+            playing_as: Side::White,
             depth: 0,
-            time_limit: match kind {
-                SearchKind::Depth(_) => 0,
-                SearchKind::Normal(remaining_time, increment) => {
-                    (remaining_time / 20) + (increment / 2)
-                }
-                SearchKind::Exact(thinking_time) => thinking_time,
-            }, //Simple time managment strategy: remaining time/20 + increment/2
+            pv: vec![MoveList::new(); 128],
+            tt: TranspositionTable::new(),
+            time: TimeManager::new(),
+            total_nodes: AtomicUsize::new(0),
         }
-    }
-
-    pub fn elapsed(&self) -> Duration {
-        self.time.elapsed()
-    }
-
-    pub fn over_limit(&self) -> bool {
-        self.elapsed().as_millis() >= self.time_limit - 2 //Some buffer room
-    }
-
-    pub fn get_time_limit(&self) -> u128 {
-        self.time_limit
     }
 
     pub fn get_searched_depth(&self) -> usize {
@@ -51,20 +36,68 @@ impl SearchData {
     }
 
     pub fn get_total_nodes_searched(&self) -> usize {
-        self.nodes_searched
+        self.total_nodes.load(Ordering::Acquire)
     }
 
-    pub fn add_nodes(&mut self, nodes: usize) {
-        self.nodes_searched += nodes;
+    pub fn get_pv(&self) -> &MoveList {
+        &self.pv[0]
+    }
+
+    pub fn add_nodes(&self, nodes: usize) {
+        self.total_nodes.fetch_add(nodes, Ordering::Relaxed);
     }
 
     pub fn increase_depth(&mut self) {
         self.depth += 1;
     }
+
+    pub fn nodes_per_second(&self) -> usize {
+        (self.get_total_nodes_searched() as f32 / self.time.elapsed().as_secs_f32()) as usize
+    }
+
+    pub fn start_time(&mut self) {
+        self.time.reset_clock(self.playing_as);
+    }
+
+    pub fn add_pv_move(&mut self, m: Move, ply: usize) {
+        self.pv[ply].clear();
+        self.pv[ply].push(m);
+        for child_m in self.pv[ply + 1].clone().iter() {
+            self.pv[ply].push(child_m.mv);
+        }
+    }
+
+    pub fn clear_pv(&mut self, ply: usize) {
+        self.pv[ply].clear();
+    }
+
+    pub fn clear_table(&mut self) {
+        self.tt.clear();
+    }
+
+    pub fn get_time_settings(&mut self) -> &mut TimeSettings {
+        &mut self.time.settings
+    }
+
+    pub fn over_limit(&self) -> bool {
+        self.time.over_limit()
+    }
+
+    pub fn set_playing_as(&mut self, side: Side) {
+        self.playing_as = side;
+    }
+
+    pub fn clear_node_count(&self) {
+        self.total_nodes.store(0, Ordering::Release);
+    }
+
+    pub fn reset_pv(&mut self) {
+        self.pv = vec![MoveList::new(); 128];
+    }
 }
 
 impl Default for SearchData {
     fn default() -> Self {
-        Self::new(SearchKind::Exact(5000))
+        Self::new()
     }
 }

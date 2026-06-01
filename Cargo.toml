@@ -3,4 +3,9 @@ name = "justbot"
 version = "0.1.0"
 edition = "2024"
 
+[profile.release]
+lto = "fat"
+panic = "abort"
+codegen-units = 1
+
 [dependencies]

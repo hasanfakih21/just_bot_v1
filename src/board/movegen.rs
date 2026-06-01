@@ -344,6 +344,18 @@ impl Board {
         }
         move_list
     }
+
+    pub fn append_moves(&self, kind: MoveGenKind, move_list: &mut MoveList) {
+        self.gen_pawn_moves(move_list, kind);
+        self.gen_knight_moves(move_list, kind);
+        self.gen_bishop_moves(move_list, kind);
+        self.gen_rook_moves(move_list, kind);
+        self.gen_queen_moves(move_list, kind);
+        self.gen_king_moves(move_list, kind);
+        if matches!(kind, MoveGenKind::All | MoveGenKind::Quiet) {
+            self.gen_castling_moves(move_list)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -429,7 +441,7 @@ mod tests {
         let board = Board::from_fen("1K6/3pp3/4R3/7p/2n5/4b3/PPP1P1P1/6k1 w - - 0 1");
         let captures = board.generate_moves(MoveGenKind::Captures);
         for m in captures.iter() {
-            println!("{m}");
+            println!("{}", m.mv);
         }
         assert_eq!(captures.len(), 2);
         println!();
@@ -437,7 +449,7 @@ mod tests {
         let board = Board::from_fen("1K6/3pp3/4R3/7p/2n5/4b3/PPP1P1P1/6k1 b - - 0 1");
         let captures = board.generate_moves(MoveGenKind::Captures);
         for m in captures.iter() {
-            println!("{m}");
+            println!("{}", m.mv);
         }
         assert_eq!(captures.len(), 3);
         println!();
@@ -445,7 +457,7 @@ mod tests {
         let board = Board::from_fen(STARTING_FEN);
         let all = board.generate_moves(MoveGenKind::All);
         for m in all.iter() {
-            println!("{m}");
+            println!("{}", m.mv);
         }
         println!();
 
