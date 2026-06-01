@@ -106,6 +106,7 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
     Some(best_move)
 }
 
+//Root Search
 pub fn search(
     data: &mut SearchData,
     depth: usize,
@@ -113,7 +114,6 @@ pub fn search(
     alpha: i32,
     beta: i32,
 ) -> Option<(Move, i32)> {
-    //Root Search
     let mut best_score = -INFINITY;
     let mut best_move: Option<(Move, i32)> = None;
     let ply = 0;
@@ -199,7 +199,7 @@ pub fn negamax(
     }
 
     //Null Move Pruning
-    if !board.king_in_check() {
+    if !board.king_in_check() && !board.only_king_and_pawns() {
         let r = 4; 
         board.make_null_move();
         let null_move_score = -negamax(data, depth.saturating_sub(r), board, -beta, -(beta - 1), ply + 1);

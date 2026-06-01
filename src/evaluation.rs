@@ -1,6 +1,6 @@
 use crate::board::Board;
 use crate::board::movegen::MoveGenKind;
-use crate::types::{Piece, Side, Square};
+use crate::types::{BitBoard, Piece, Side, Square};
 
 //Tables from https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
 #[rustfmt::skip]
@@ -212,6 +212,12 @@ impl Board {
 
         false
     }
+
+    //Only checks for the current side to move
+    pub fn only_king_and_pawns(&self) -> bool {
+        let side = self.board_state.side_to_move;
+        self.get_piece_bb(side, Piece::Bishop) | self.get_piece_bb(side, Piece::Knight) | self.get_piece_bb(side, Piece::Queen) | self.get_piece_bb(side, Piece::Rook) == BitBoard(0)
+    }
 }
 
 #[cfg(test)]
@@ -232,5 +238,13 @@ mod tests {
 
         board.place_piece(Side::Black, Piece::Queen, Square::E5);
         assert_eq!(-500, board.get_material_evaluation());
+    }
+
+    #[test]
+    fn test_only_king_and_pawn_check() {
+        let board = Board::from_fen("8/8/8/8/p7/P7/1k6/3K4 b - - 16 65");
+        assert!(board.only_king_and_pawns());
+        let board = Board::from_fen("8/r4pK1/5Rp1/6k1/p6p/P6P/6P1/8 w - - 2 50");
+        assert!(!board.only_king_and_pawns());
     }
 }
