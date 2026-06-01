@@ -198,6 +198,17 @@ pub fn negamax(
         }
     }
 
+    //Null Move Pruning
+    if !board.king_in_check() {
+        let r = 4; 
+        board.make_null_move();
+        let null_move_score = -negamax(data, depth.saturating_sub(r), board, -beta, -(beta - 1), ply + 1);
+        board.unmake_move();
+        if null_move_score >= beta {
+            return null_move_score
+        }
+    }
+
     let mut legal_moves = 0;
     let mut best_score = -INFINITY;
     let mut best_move: Option<Move> = None;
