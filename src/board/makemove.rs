@@ -208,6 +208,16 @@ impl Board {
     pub fn king_in_check(&self) -> bool {
         self.is_king_in_attack(Side::White) || self.is_king_in_attack(Side::Black)
     }
+
+    pub fn make_null_move(&mut self) {
+        self.copy_state();
+        self.board_state.side_to_move = self.board_state.side_to_move.other();
+        self.board_state.hash ^= ZOBRIST.get_side_num();
+        self.game_history.push(self.board_state.hash);
+        if self.board_state.side_to_move == Side::White {
+            self.board_state.full_move += 1
+        }
+    }
 }
 
 #[cfg(test)]
@@ -319,5 +329,21 @@ mod tests {
         assert!(board.make_move(m).is_ok());
         assert!(!board.board_state.castling_rights.can_king_side(Side::White));
         println!("{board}");
+    }
+
+    #[test]
+    fn test_null_move() { 
+        let mut board =
+            Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP2pPPP/R1B2R1K b - - 1 17");
+        println!("{board}");
+
+        let original = Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP2pPPP/R1B2R1K b - - 1 17");
+
+        board.make_null_move();
+        assert_eq!(board.board_state.side_to_move, Side::White);
+        println!("{board}");
+        board.unmake_move();
+
+        assert_eq!(board, original);
     }
 }

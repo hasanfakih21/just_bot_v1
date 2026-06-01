@@ -7,7 +7,7 @@ pub mod makemove;
 pub mod movegen;
 pub mod parser;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BoardState {
     pub board_pieces: [BitBoard; 12],
     pub pieces_on_squares: [Option<(Side, Piece)>; 64],
@@ -46,6 +46,7 @@ impl Default for BoardState {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Board {
     pub bishop_masks: [BitBoard; 64],
     pub rook_masks: [BitBoard; 64],

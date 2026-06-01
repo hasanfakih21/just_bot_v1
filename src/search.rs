@@ -7,8 +7,6 @@ pub mod data;
 pub mod movepicker;
 pub mod time;
 
-pub const FAIL_INCREMENTS: [i32; 5] = [25, 50, 150, 300, INFINITY];
-
 impl Board {
     //Needs fixing
     pub fn detect_repetitions(&self) -> usize {
@@ -42,10 +40,10 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
 
     //Aspiration Window
     let mut score = best_move.1;
-    let mut alpha_window = score - (100 / 4);
-    let mut beta_window = score + (100 / 4);
-    let mut alpha_fail = 0;
-    let mut beta_fail = 0;
+    let mut alpha_window = 25;
+    let mut beta_window = 25;
+    let mut alpha = score - alpha_window;
+    let mut beta = score + beta_window;
 
     //All infos belonging to the pv should be sent together e.g. info depth 2 score cp 214 time 1242 nodes 2124 nps 34928 pv e2e4 e7e5 g1f3
     println!(
@@ -61,7 +59,7 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
 
     //Iterative Deepening
     loop {
-        let deeper_move = search(data, depth, board, alpha_window, beta_window);
+        let deeper_move = search(data, depth, board, alpha, beta);
         if data.over_limit() || depth >= MAX_DEPTH - 1 {
             println!(
                 "Searched for: {}ms\nTime Limit: {}ms",
@@ -71,17 +69,17 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
             break;
         }
         let new_score = deeper_move.unwrap().1;
-        if new_score <= alpha_window {
+        if new_score <= alpha {
             //Failed Low
-            //println!("Failed Low Score: {new_score} Window: {alpha_window} Depth: {depth}");
-            alpha_window -= FAIL_INCREMENTS[alpha_fail];
-            alpha_fail += 1;
+            //println!("Failed Low Score: {new_score} Window: {alpha_window} Alpha: {alpha} Depth: {depth}");
+            alpha_window *= 2;
+            alpha -= alpha_window;
             continue;
-        } else if new_score >= beta_window {
+        } else if new_score >= beta {
             //Failed High
-            //println!("Failed High Score: {new_score} Window {beta_window} Depth: {depth}");
-            beta_window += FAIL_INCREMENTS[beta_fail];
-            beta_fail += 1;
+            //println!("Failed High Score: {new_score} Window {beta_window} Beta: {beta} Depth: {depth}");
+            beta_window *= 2;
+            beta += beta_window;
             continue;
         }
 
@@ -89,10 +87,10 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
 
         best_move = deeper_move?;
         score = new_score;
-        alpha_fail = 0;
-        beta_fail = 0;
-        alpha_window = score - (100 / 4);
-        beta_window = score + (100 / 4);
+        alpha_window = 25;
+        beta_window = 25;
+        alpha = score - alpha_window;
+        beta = score + beta_window;
         println!(
             "info depth {} time {} score cp {} nodes {} nps {} pv {} hashfull {}",
             depth - 1,
@@ -533,14 +531,14 @@ mod tests {
         let mut board = Board::from_fen("6k1/2p5/4R1pp/1p1r4/pP1p4/P5PP/2P2P2/6K1 b - - 0 32");
         let _ = search_runner(&mut board, &mut data);
         println!();
-        // let best_move1 = search_runner(&mut board, &mut data);
-        // println!();
-        // let best_move2 = search_runner(&mut board, &mut data);
-        // println!();
-        // let best_move3 = search_runner(&mut board, &mut data);
-        // println!();
-        // let best_move4 = search_runner(&mut board, &mut data);
-        // println!();
+        let _ = search_runner(&mut board, &mut data);
+        println!();
+        let _ = search_runner(&mut board, &mut data);
+        println!();
+        let _ = search_runner(&mut board, &mut data);
+        println!();
+        let _ = search_runner(&mut board, &mut data);
+        println!();
 
         assert!(!data.tt.0.iter().any(|i| {
             if let Some(e) = i {
