@@ -2,9 +2,9 @@ use crate::types::moves::Move;
 
 const TT_SIZE: usize = 64;
 const MEGABYTE: usize = 1024 * 1024;
-const ENTRIES: usize = TT_SIZE * MEGABYTE / std::mem::size_of::<Option<Entry>>();
+pub const ENTRIES: usize = TT_SIZE * MEGABYTE / std::mem::size_of::<Option<Entry>>();
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Bound {
     Exact,
     Upper,
@@ -59,22 +59,23 @@ const fn index(hash: u64) -> usize {
 }
 
 #[derive(Debug, Clone)]
-pub struct TranspositionTable(Vec<Option<Entry>>);
+pub struct TranspositionTable(pub Vec<Option<Entry>>);
 
 impl TranspositionTable {
     pub fn new() -> Self {
         TranspositionTable(vec![None; ENTRIES])
     }
 
-    pub fn add_entry(&mut self, best_move: Move, score: i32, bound: Bound, hash: u64, depth: usize) {
+    pub fn add_entry(
+        &mut self,
+        best_move: Move,
+        score: i32,
+        bound: Bound,
+        hash: u64,
+        depth: usize,
+    ) {
         let entry = Entry::new(hash, best_move, score, bound, depth);
-        if let Some(e) = self.get_entry(hash) {
-            if depth > e.get_depth() {
-                self.0[index(hash)] = Some(entry);
-            }
-        } else {
-            self.0[index(hash)] = Some(entry);
-        }
+        self.0[index(hash)] = Some(entry);
     }
 
     pub fn get_entry(&self, hash: u64) -> &Option<Entry> {
@@ -83,6 +84,14 @@ impl TranspositionTable {
 
     pub fn get_best_move(&self, hash: u64) -> Option<Move> {
         self.0[index(hash)].as_ref().map(|e| e.get_best_move())
+    }
+
+    pub fn clear(&mut self) {
+        self.0 = vec![None; ENTRIES];
+    }
+
+    pub fn hashfull(&self) -> usize {
+        self.0.iter().take(1000).filter(|e| e.is_some()).count()
     }
 }
 
@@ -97,6 +106,7 @@ mod tests {
     use crate::{
         board::Board,
         search::{data::SearchData, search},
+        types::INFINITY,
     };
 
     #[test]
@@ -104,9 +114,9 @@ mod tests {
         let mut board =
             Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
         let mut data = SearchData::default();
-        if let Some((best_move, score)) = search(&mut data, 3, &mut board) {
+        if let Some((best_move, score)) = search(&mut data, 3, &mut board, -INFINITY, INFINITY) {
             let hash = board.board_state.hash;
-            let entry = board.tt.get_entry(hash);
+            let entry = data.tt.get_entry(hash);
 
             let m = entry.as_ref().unwrap().get_best_move();
             let s = entry.as_ref().unwrap().get_score();
@@ -115,10 +125,9 @@ mod tests {
             assert_eq!(score, s);
 
             let _ = board.make_move(best_move);
-            let mut data = SearchData::default();
-            let _ = search(&mut data, 2, &mut board);
+            let _ = search(&mut data, 2, &mut board, -INFINITY, INFINITY);
 
-            let entry = board.tt.get_entry(hash);
+            let entry = data.tt.get_entry(hash);
 
             let m = entry.as_ref().unwrap().get_best_move();
             let s = entry.as_ref().unwrap().get_score();

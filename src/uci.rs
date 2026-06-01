@@ -2,8 +2,8 @@ use std::time::Instant;
 
 use crate::board::Board;
 use crate::board::movegen::MoveGenKind;
-use crate::search::data::{SearchData, SearchKind};
-use crate::search::{search, search_runner};
+use crate::search::data::SearchData;
+use crate::search::search_runner;
 use crate::types::*;
 
 impl Board {
@@ -23,9 +23,11 @@ impl Board {
 
         let move_list = self.generate_moves(MoveGenKind::All);
         if let Some(m) = move_list.iter().find(|e| {
-            e.get_from() == from && e.get_to() == to && e.get_promoted_piece() == promotion_piece
+            e.mv.get_from() == from
+                && e.mv.get_to() == to
+                && e.mv.get_promoted_piece() == promotion_piece
         }) {
-            Ok(*m)
+            Ok(m.mv)
         } else {
             Err("Invalid move string")
         }
@@ -33,9 +35,10 @@ impl Board {
 }
 
 pub fn input_loop() {
-    let mut board = Board::new();
-
+    let mut board = Board::from_fen(STARTING_FEN);
+    let mut data = SearchData::default();
     let mut input_buffer = String::new();
+
     loop {
         if std::io::stdin().read_line(&mut input_buffer).unwrap() == 0 {
             break;
@@ -47,9 +50,30 @@ pub fn input_loop() {
             "position" => position(args, &mut board),
             "uci" => uci(),
             "isready" => println!("readyok"),
-            "ucinewgame" => board = Board::from_fen(STARTING_FEN),
-            "go" => go(args, &mut board),
+            "ucinewgame" => {
+                board = Board::from_fen(STARTING_FEN);
+                data = SearchData::default();
+            }
+            "go" => {
+                data.set_playing_as(board.board_state.side_to_move);
+                if let Some((m, _)) = go(args, &mut board, &mut data) {
+                    println!("bestmove {m}");
+                }
+            }
             "quit" => break,
+            "perft" => {
+                if let Ok(depth) = args.trim().parse::<usize>() {
+                    let clock = Instant::now();
+                    let nodes_count = crate::perft::perft(depth, &mut board);
+                    println!(
+                        "Number of nodes: {nodes_count}\nTime: {}ms",
+                        clock.elapsed().as_millis()
+                    );
+                } else {
+                    eprintln!("Enter a valid depth!")
+                }
+            }
+            "d" => println!("{board}"),
             _ => eprintln!("Not a valid command"),
         }
 
@@ -91,78 +115,52 @@ pub fn position(args: &str, board: &mut Board) {
             }
         }
     }
-    //println!("{board}");
 }
 
-pub fn go(args: &str, board: &mut Board) {
-    if args.trim().is_empty() {
-        eprintln!("Need to provide a valid argument!");
-        return;
-    }
-
+pub fn go(args: &str, board: &mut Board, data: &mut SearchData) -> Option<(Move, i32)> {
     let (command, args) = args.split_once(" ").unwrap_or((args, ""));
+    if args.is_empty() {
+        return search_runner(board, data);
+    }
 
     match command.trim() {
         "depth" => {
-            let depth = args.trim().parse::<usize>().unwrap();
-            let mut data = SearchData::new(SearchKind::Depth(depth));
-            let best_move = search(&mut data, depth, board);
-            if let Some((m, i)) = best_move {
-                println!("info score cp {i}");
-                println!("bestmove {m}");
-            }
-        }
-        "perft" => {
-            println!("{args}");
-            if let Ok(depth) = args.trim().parse::<usize>() {
-                let clock = Instant::now();
-                let nodes_count = crate::perft::perft(depth, board);
-                println!(
-                    "Number of nodes: {nodes_count}\nTime: {}ms",
-                    clock.elapsed().as_millis()
-                );
-            } else {
-                eprintln!("Enter a valid depth!")
-            }
+            let (depth, args) = args.split_once(" ").unwrap_or((args, ""));
+            data.get_time_settings().depth = depth.trim().parse().unwrap_or(0);
+            go(args, board, data)
         }
         "wtime" => {
             //Example: go wtime 900000 btime 900000 winc 0 binc 0
-            let args: Vec<&str> = args.split_ascii_whitespace().collect();
-            let times: Vec<u128> = args.iter().filter_map(|e| e.parse::<u128>().ok()).collect();
-
-            println!("{:?}", times);
-            let wtime = times.first().unwrap_or(&300000);
-            let btime = times.get(1).unwrap_or(&300000);
-
-            let winc = times.get(2).unwrap_or(&0);
-            let binc = times.get(3).unwrap_or(&0);
-
-            let best_move = match board.board_state.side_to_move {
-                Side::White => search_runner(board, SearchKind::Normal(*wtime, *winc)),
-                Side::Black => search_runner(board, SearchKind::Normal(*btime, *binc)),
-            };
-
-            if let Some((m, i)) = best_move {
-                println!("info score cp {i}");
-                println!("bestmove {m}");
-            }
+            let (wtime, args) = args.split_once(" ").unwrap_or((args, ""));
+            data.get_time_settings().wtime = wtime.trim().parse().unwrap_or(500);
+            go(args, board, data)
+        }
+        "btime" => {
+            let (btime, args) = args.split_once(" ").unwrap_or((args, ""));
+            data.get_time_settings().btime = btime.trim().parse().unwrap_or(500);
+            go(args, board, data)
+        }
+        "winc" => {
+            let (winc, args) = args.split_once(" ").unwrap_or((args, ""));
+            data.get_time_settings().winc = winc.trim().parse().unwrap_or(0);
+            go(args, board, data)
+        }
+        "binc" => {
+            let (binc, args) = args.split_once(" ").unwrap_or((args, ""));
+            data.get_time_settings().binc = binc.trim().parse().unwrap_or(0);
+            go(args, board, data)
+        }
+        "movestogo" => {
+            let (movestogo, args) = args.split_once(" ").unwrap_or((args, ""));
+            data.get_time_settings().movestogo = movestogo.trim().parse().unwrap_or(0);
+            go(args, board, data)
         }
         "movetime" => {
-            let time = args.trim().parse::<u128>().unwrap();
-            let best_move = search_runner(board, SearchKind::Exact(time));
-            if let Some((m, i)) = best_move {
-                println!("info score cp {i}");
-                println!("bestmove {m}");
-            }
+            let (movetime, args) = args.split_once(" ").unwrap_or((args, ""));
+            data.get_time_settings().movetime = movetime.trim().parse().unwrap_or(0);
+            go(args, board, data)
         }
-        _ => {
-            //eprintln!("Not a valid go argument!")
-            let best_move = search_runner(board, SearchKind::Exact(5000));
-            if let Some((m, i)) = best_move {
-                println!("info score cp {i}");
-                println!("bestmove {m}");
-            }
-        }
+        _ => go(args, board, data),
     }
 }
 
@@ -174,6 +172,8 @@ pub fn uci() {
 
 #[cfg(test)]
 pub mod tests {
+    use std::{sync::Arc, thread};
+
     use super::*;
     use crate::types::constants::STARTING_FEN;
 
@@ -188,6 +188,45 @@ pub mod tests {
     #[test]
     fn test_parse_times() {
         let mut board = Board::from_fen(STARTING_FEN);
-        go("wtime 5000 btime 5000 winc 0 binc 0", &mut board);
+        go(
+            "wtime 5000 btime 5000 winc 0 binc 0",
+            &mut board,
+            &mut SearchData::default(),
+        );
+    }
+
+    #[test]
+    fn test_parse_go() {
+        let mut board = Board::from_fen(STARTING_FEN);
+        let mut data = SearchData::default();
+        let bm = go(
+            "wtime 5000 btime 5000 winc 5 binc 8 movetime 100",
+            &mut board,
+            &mut data,
+        );
+        println!(
+            "{:?}\nBestmove: {}",
+            data.get_time_settings(),
+            bm.unwrap().0
+        );
+    }
+
+    #[test]
+    fn test_thread() {
+        let data = Arc::new(SearchData::default());
+        let mut handles = vec![];
+        {
+            let data = Arc::clone(&data);
+            let handle = thread::spawn(move || {
+                data.add_nodes(1);
+            });
+            handles.push(handle);
+        }
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        println!("Result: {}", data.get_total_nodes_searched());
     }
 }
