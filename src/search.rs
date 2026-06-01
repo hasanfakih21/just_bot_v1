@@ -10,6 +10,7 @@ pub mod time;
 pub const FAIL_INCREMENTS: [i32; 5] = [25, 50, 150, 300, INFINITY];
 
 impl Board {
+    //Needs fixing
     pub fn detect_repetitions(&self) -> usize {
         let half_moves = self.board_state.half_move_clock as usize;
         let mut count = 0;
@@ -61,7 +62,7 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
     //Iterative Deepening
     loop {
         let deeper_move = search(data, depth, board, alpha_window, beta_window);
-        if data.over_limit() || depth >= MAX_DEPTH {
+        if data.over_limit() || depth >= MAX_DEPTH - 1 {
             println!(
                 "Searched for: {}ms\nTime Limit: {}ms",
                 data.time.elapsed().as_millis(),
@@ -70,13 +71,15 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
             break;
         }
         let new_score = deeper_move.unwrap().1;
-        if new_score <= alpha_window {
+        if new_score < alpha_window {
             //Failed Low
+            //println!("Failed Low Score: {new_score} Window: {alpha_window} Depth: {depth}");
             alpha_window -= FAIL_INCREMENTS[alpha_fail];
             alpha_fail += 1;
             continue;
         } else if new_score > beta_window {
             //Failed High
+            //println!("Failed High Score: {new_score} Window {beta_window} Depth: {depth}");
             beta_window += FAIL_INCREMENTS[beta_fail];
             beta_fail += 1;
             continue;
@@ -152,7 +155,7 @@ pub fn negamax(
     ply: usize,
 ) -> i32 {
     if depth == 0 {
-        if board.king_in_check() {
+        if board.is_king_in_attack(board.board_state.side_to_move) {
             return search_checks(data, board, alpha, beta, ply);
         } else {
             return quiesce(data, board, alpha, beta, ply); //Horizon Node
@@ -164,7 +167,7 @@ pub fn negamax(
 
     if board.board_state.half_move_clock > 4 {
         //50 move rule
-        if board.board_state.half_move_clock >= 50 {
+        if board.board_state.half_move_clock >= 100 {
             return 0;
         }
         //We need to check history if positions were repeated only for the side to move.
@@ -177,15 +180,9 @@ pub fn negamax(
     //TT Cutoffs only if depth of entry is greater or equal to the depth of the current node
     if let Some(e) = data.tt.get_entry(board.board_state.hash)
         && board.board_state.hash == e.get_key()
-        && e.get_depth() >= depth
+        && e.get_depth() >= depth && e.get_score().abs() < MATE_CUTOFF //Mate scores need to be properly adjusted for cutoffs
     {
-        let mut tt_score = e.get_score();
-        //Adjust mate scores
-        if tt_score == MATE_SCORE {
-            tt_score -= ply as i32;
-        } else if tt_score == -MATE_SCORE {
-            tt_score += ply as i32;
-        }
+        let tt_score = e.get_score();
 
         match e.get_bound() {
             Bound::Exact => return tt_score,
@@ -243,13 +240,7 @@ pub fn negamax(
 
             if score >= beta {
                 if let Some(m) = best_move {
-                    let mut tt_score = best_score;
-                    //Adjust mate scores
-                    if tt_score >= MATE_CUTOFF {
-                        tt_score = MATE_SCORE;
-                    } else if tt_score <= -MATE_CUTOFF {
-                        tt_score = -MATE_SCORE;
-                    }
+                    let tt_score = best_score;
                     data.tt
                         .add_entry(m, tt_score, Bound::Lower, board.board_state.hash, depth);
                 }
@@ -267,13 +258,7 @@ pub fn negamax(
     }
 
     if let Some(m) = best_move {
-        let mut tt_score = best_score;
-        //Adjust mate scores
-        if tt_score >= MATE_CUTOFF {
-            tt_score = MATE_SCORE;
-        } else if tt_score <= -MATE_CUTOFF {
-            tt_score = -MATE_SCORE;
-        }
+        let tt_score = best_score;
         data.tt
             .add_entry(m, tt_score, bound, board.board_state.hash, depth);
     }
@@ -293,14 +278,6 @@ pub fn quiesce(
     // if board.is_king_in_attack(board.board_state.side_to_move) {
     //     return search_checks(data, board, alpha, beta, _ply);
     // }
-
-    if board.board_state.half_move_clock > 4 {
-        //We need to check history if positions were repeated only for the side to move.
-        let count = board.detect_repetitions();
-        if count >= 2 {
-            return 0;
-        }
-    }
 
     let mut best_score = static_eval;
     //let mut bound = Bound::Upper;
@@ -362,7 +339,19 @@ pub fn search_checks(
     let mut legal_moves = 0;
     data.add_nodes(1);
 
-    if !board.king_in_check() {
+    if board.board_state.half_move_clock > 4 {
+        //50 move rule
+        if board.board_state.half_move_clock >= 100 {
+            return 0;
+        }
+        //We need to check history if positions were repeated only for the side to move.
+        let count = board.detect_repetitions();
+        if count >= 2 {
+            return 0;
+        }
+    }
+
+    if !board.is_king_in_attack(board.board_state.side_to_move) {
         return quiesce(data, board, alpha, beta, ply);
     }
 

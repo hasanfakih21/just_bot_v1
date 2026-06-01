@@ -42,7 +42,11 @@ impl MovePicker {
     pub fn next(&mut self, board: &Board, quiesce: bool) -> Option<Move> {
         if self.status == Status::HashMove {
             self.status = Status::FirstNoisy;
-            return self.tt_move
+            if quiesce && !self.tt_move.unwrap().get_kind().is_quiet() {
+                return self.tt_move
+            } else if !quiesce {
+                return self.tt_move;
+            }
         }
 
         if self.status == Status::FirstNoisy {
