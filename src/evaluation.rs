@@ -238,7 +238,7 @@ impl Board {
         let distance = distance(curr_king_square, opp_king_square);
 
         //Bonus for CMD of opposite king + (max distance - actual distance)
-        (cmd + (7 - distance)) as i32
+        ((15.0 * cmd as f32) + 5.0 * (7 - distance) as f32) as i32
     }
 
     pub const fn get_king_square(&self, side: Side) -> Square {
@@ -337,5 +337,24 @@ mod tests {
 
         assert_eq!(7, distance(square_1, square_2));        
         assert_eq!(14, manhattan_distance(square_1, square_2));
+    }
+
+    #[test]
+    fn test_mop_up() {
+        let board = Board::from_fen("2K2R2/8/8/8/8/8/8/3k4 w - - 0 1"); 
+        assert_eq!(board.total_material_value(), Piece::Rook.value());
+        println!("{}", board.mop_up());
+        println!("{}", board.evaluate());
+        let first_bonus = board.mop_up();
+        let first_score = board.evaluate();
+
+        let board = Board::from_fen("5R2/8/8/8/8/2K5/8/3k4 w - - 0 1");
+        println!("{}", board.mop_up());
+        println!("{}", board.evaluate());
+        let second_bonus = board.mop_up();
+        let second_score = board.evaluate();
+
+        assert!(second_bonus > first_bonus);
+        assert!(second_score > first_score);
     }
 }
