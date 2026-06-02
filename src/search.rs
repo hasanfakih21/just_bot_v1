@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use crate::board::Board;
 use crate::search::data::SearchData;
 use crate::search::movepicker::MovePicker;
@@ -28,6 +30,21 @@ impl Board {
     }
 }
 
+pub trait NodeType {
+    const PV: bool;
+}
+
+pub struct PV;
+pub struct NonPV;
+
+impl NodeType for PV {
+    const PV: bool = true;
+}
+
+impl NodeType for NonPV {
+    const PV: bool = false;
+}
+
 pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, i32)> {
     data.clear_node_count();
     data.reset_pv();
@@ -35,7 +52,7 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
     let mut depth = 1;
 
     //Initialize with move from first depth
-    let mut best_move = search(data, depth, board, -INFINITY, INFINITY)?;
+    let mut best_move = search_root(data, depth, board, -INFINITY, INFINITY)?;
     depth += 1;
 
     //Aspiration Window
@@ -59,7 +76,7 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
 
     //Iterative Deepening
     loop {
-        let deeper_move = search(data, depth, board, alpha, beta);
+        let deeper_move = search_root(data, depth, board, alpha, beta);
         if data.over_limit() || depth >= MAX_DEPTH - 1 {
             println!(
                 "Searched for: {}ms\nTime Limit: {}ms",
@@ -107,7 +124,7 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
 }
 
 //Root Search
-pub fn search(
+pub fn search_root (
     data: &mut SearchData,
     depth: usize,
     board: &mut Board,
@@ -120,15 +137,21 @@ pub fn search(
     data.clear_pv(0);
 
     let mut move_picker = MovePicker::new(board, data);
+    let mut legal_moves = 0;
 
     while let Some(m) = move_picker.next(board, false) {
         if board.make_move(m).is_ok() {
-            let score = -negamax(data, depth - 1, board, -beta, -alpha, ply + 1);
+            legal_moves += 1;
+            let score = if legal_moves == 1 {
+                -search::<PV>(data, depth - 1, board, -beta, -alpha, ply + 1)
+            } else {
+                -search::<NonPV>(data, depth - 1, board, -beta, -alpha, ply + 1)
+            };
             board.unmake_move();
             if data.over_limit() {
                 return None;
             }
-            //println!("{m}: {score}");
+            println!("{m}: {score}");
             if score >= best_score {
                 best_score = score;
                 best_move = Some((m, score));
@@ -144,7 +167,7 @@ pub fn search(
     best_move
 }
 
-pub fn negamax(
+pub fn search<Node: NodeType> (
     data: &mut SearchData,
     depth: usize,
     board: &mut Board,
@@ -177,6 +200,7 @@ pub fn negamax(
 
     //TT Cutoffs only if depth of entry is greater or equal to the depth of the current node
     if let Some(e) = data.tt.get_entry(board.board_state.hash)
+        && !Node::PV
         && board.board_state.hash == e.get_key()
         && e.get_depth() >= depth
         && e.get_score().abs() < MATE_CUTOFF //Mate scores need to be properly adjusted for cutoffs
@@ -199,10 +223,10 @@ pub fn negamax(
     }
 
     //Null Move Pruning
-    if !board.king_in_check() && !board.only_king_and_pawns() {
+    if !Node::PV && !board.king_in_check() && !board.only_king_and_pawns() {
         let r = 4; 
         board.make_null_move();
-        let null_move_score = -negamax(data, depth.saturating_sub(r), board, -beta, -(beta - 1), ply + 1);
+        let null_move_score = -search::<NonPV>(data, depth.saturating_sub(r), board, -beta, -(beta - 1), ply + 1);
         board.unmake_move();
         if null_move_score >= beta {
             return null_move_score
@@ -224,11 +248,23 @@ pub fn negamax(
             //PVS
             if legal_moves == 1 {
                 //First Move
-                score = -negamax(data, depth - 1, board, -beta, -alpha, ply + 1);
+                score = -search::<PV>(data, depth - 1, board, -beta, -alpha, ply + 1);
             } else {
-                score = -negamax(data, depth - 1, board, -alpha - 1, -alpha, ply + 1);
+                //Late Move Reductions
+                if depth > 3 && !Node::PV { 
+                    let reduction = (0.99 + f32::ln(depth as f32) * f32::ln(legal_moves as f32)) / PI; //https://www.chessprogramming.org/Late_Move_Reductions Obsidian formula
+                    //println!("Depth: {} Reduction: {}", depth, reduction);
+                    let reduced_depth = depth.saturating_sub(reduction as usize);
+                    score = -search::<NonPV>(data, reduced_depth, board, -alpha - 1, -alpha, ply);
+                    if score > alpha && reduced_depth < depth {
+                        score = -search::<NonPV>(data, depth - 1, board, -alpha - 1, -alpha, ply + 1);
+                    }
+                } else {
+                    score = -search::<NonPV>(data, depth - 1, board, -alpha - 1, -alpha, ply + 1);
+                }
+
                 if score > alpha && score < beta {
-                    score = -negamax(data, depth - 1, board, -beta, -alpha, ply + 1); //We want to search again
+                    score = -search::<PV>(data, depth - 1, board, -beta, -alpha, ply + 1); //We want to search again
                 }
             }
 
@@ -408,7 +444,7 @@ mod tests {
     fn test_search() {
         let mut board = Board::from_fen(STARTING_FEN);
         let mut data = SearchData::default();
-        let best_move = search(&mut data, 5, &mut board, -INFINITY, INFINITY);
+        let best_move = search_root(&mut data, 5, &mut board, -INFINITY, INFINITY);
         if let Some(m) = best_move {
             println!("Best move: {}", m.0);
         }
@@ -452,7 +488,7 @@ mod tests {
         let _ = board.make_move(Move::new(E4, F4, QuietMove));
 
         let mut data = SearchData::default();
-        let (m, score) = search(&mut data, 3, &mut board, -INFINITY, INFINITY).unwrap();
+        let (m, score) = search_root(&mut data, 3, &mut board, -INFINITY, INFINITY).unwrap();
         println!(
             "{:?}\nCurrent Hash: {}",
             board.game_history, board.board_state.hash
@@ -468,7 +504,7 @@ mod tests {
         let mut board =
             Board::from_fen("r1b4r/p1p1q3/1bppk3/4pp2/3PP1Q1/2P1R3/PP3PPP/RN4K1 w - - 0 18");
         data.set_playing_as(board.board_state.side_to_move);
-        let best_move = search(&mut data, 1, &mut board, -INFINITY, INFINITY);
+        let best_move = search_root(&mut data, 1, &mut board, -INFINITY, INFINITY);
         println!("Best Move: {}", best_move.unwrap().0);
         assert_eq!(
             Move::new(Square::G4, Square::F5, MoveKind::Capture),
@@ -481,7 +517,7 @@ mod tests {
         let mut data = SearchData::default();
         let mut board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36");
         data.set_playing_as(board.board_state.side_to_move);
-        let best_move = search(&mut data, 4, &mut board, -INFINITY, INFINITY);
+        let best_move = search_root(&mut data, 4, &mut board, -INFINITY, INFINITY);
         println!("Best Move: {}", best_move.unwrap().0);
         assert_eq!(
             Move::new(Square::F6, Square::G4, MoveKind::QuietMove),
@@ -499,8 +535,9 @@ mod tests {
         data.set_playing_as(board.board_state.side_to_move);
         data.get_time_settings().btime = 1000000;
         data.start_time();
-        let best_move = search(&mut data, 7, &mut board, -INFINITY, INFINITY);
+        let best_move = search_root(&mut data, 7, &mut board, -INFINITY, INFINITY);
         println!("PV: {}", data.get_pv());
+        println!("Eval: {}", best_move.unwrap().1);
         let mut pv_line = MoveList::new();
         pv_line.push(Move::new(F6, G4, QuietMove));
         pv_line.push(Move::new(H2, G1, QuietMove));

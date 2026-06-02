@@ -229,6 +229,7 @@ impl Board {
         self.get_piece_bb(side, Piece::Bishop) | self.get_piece_bb(side, Piece::Knight) | self.get_piece_bb(side, Piece::Queen) | self.get_piece_bb(side, Piece::Rook) == BitBoard(0)
     }
 
+    //Still needs more work and testing
     pub fn mop_up(&self) -> i32 {
         let current_side = self.board_state.side_to_move;
         let opp_king_square = self.get_king_square(current_side.other());
