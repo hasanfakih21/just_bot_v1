@@ -31,22 +31,21 @@ impl MovePicker {
                 None
             },
             status: if let Some(e) = data.tt.get_entry(board.board_state.hash)
-                && board.board_state.hash == e.get_key() {
-                    Status::HashMove
-                } else {
-                    Status::FirstNoisy
-                }
-        } 
+                && board.board_state.hash == e.get_key()
+            {
+                Status::HashMove
+            } else {
+                Status::FirstNoisy
+            },
+        }
     }
 
     pub fn next(&mut self, board: &Board, quiesce: bool) -> Option<Move> {
         if self.status == Status::HashMove {
             self.status = Status::FirstNoisy;
-            if quiesce && !self.tt_move.unwrap().get_kind().is_quiet() {
-                return self.tt_move
-            } else if !quiesce {
+            if !quiesce || !self.tt_move.unwrap().get_kind().is_quiet() {
                 return self.tt_move;
-            }
+            } 
         }
 
         if self.status == Status::FirstNoisy {
@@ -55,7 +54,7 @@ impl MovePicker {
             self.score_noisy_moves(board);
             self.status = Status::Noisy;
             if !self.moves.is_empty() {
-                return Some(self.best_move())
+                return Some(self.best_move());
             }
         }
 
@@ -67,15 +66,14 @@ impl MovePicker {
                     self.remove_tt_move();
                 }
             } else {
-                return Some(self.best_move())
+                return Some(self.best_move());
             }
         }
 
-        if self.status == Status::Quiet
-            && !self.moves.is_empty() && !quiesce {
-                return Some(self.moves.pop().unwrap().mv);
-            }
-        
+        if self.status == Status::Quiet && !self.moves.is_empty() && !quiesce {
+            return Some(self.moves.pop().unwrap().mv);
+        }
+
         None
     }
 
@@ -95,7 +93,7 @@ impl MovePicker {
         let mut best_score = i32::MIN;
 
         for (index, entry) in self.moves.iter().enumerate() {
-            let entry_score = entry.score.unwrap_or(i32::MIN); 
+            let entry_score = entry.score.unwrap_or(i32::MIN);
             if entry_score >= best_score {
                 best_score = entry_score;
                 best_index = index;

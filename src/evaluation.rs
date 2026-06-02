@@ -1,6 +1,8 @@
+use std::cmp::max;
+
 use crate::board::Board;
 use crate::board::movegen::MoveGenKind;
-use crate::types::{Piece, Side, Square};
+use crate::types::{BitBoard, Piece, Side, Square};
 
 //Tables from https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
 #[rustfmt::skip]
@@ -173,17 +175,25 @@ impl Board {
             - self.board_state.material_value[side.other() as usize]
     }
 
-    pub const fn evaluate(&self) -> i32 {
-        self.get_material_evaluation() + self.get_piece_square_evaluation()
+    pub fn evaluate(&self) -> i32 {
+        let mut mop_up_bonus = 0;
+        //If only KQK or Lower then should mop up
+        if self.total_material_value() <= 900 && self.get_material_evaluation() > 0 {
+            mop_up_bonus = self.mop_up();
+        }
+
+        self.get_material_evaluation() + self.get_piece_square_evaluation() + mop_up_bonus
+    }
+
+    pub const fn total_material_value(&self) -> i32 {
+        self.board_state.material_value[Side::White as usize] + self.board_state.material_value[Side::Black as usize]
     }
 
     pub fn get_piece_square_score(&mut self, piece: Piece, square: Square, side: Side) -> i32 {
         let mg_table = MG_TABLE_ARRAY[piece as usize];
         let eg_table = EG_TABLE_ARRAY[piece as usize];
 
-        let total_material_value = (self.board_state.material_value[side as usize]
-            + self.board_state.material_value[side.other() as usize])
-            .min(MAX_MATERIAL_VALUE);
+        let total_material_value = self.total_material_value().min(MAX_MATERIAL_VALUE);
         let mg_weight: f32 = total_material_value as f32 / MAX_MATERIAL_VALUE as f32;
         let eg_weight: f32 = 1.0 - mg_weight;
 
@@ -212,6 +222,59 @@ impl Board {
 
         false
     }
+
+    //Only checks for the current side to move
+    pub fn only_king_and_pawns(&self) -> bool {
+        let side = self.board_state.side_to_move;
+        self.get_piece_bb(side, Piece::Bishop) | self.get_piece_bb(side, Piece::Knight) | self.get_piece_bb(side, Piece::Queen) | self.get_piece_bb(side, Piece::Rook) == BitBoard(0)
+    }
+
+    pub fn mop_up(&self) -> i32 {
+        let current_side = self.board_state.side_to_move;
+        let opp_king_square = self.get_king_square(current_side.other());
+        let curr_king_square = self.get_king_square(current_side);
+
+        let cmd = cmd(opp_king_square);
+        let distance = distance(curr_king_square, opp_king_square);
+
+        //Bonus for CMD of opposite king + (max distance - actual distance)
+        ((15.0 * cmd as f32) + 5.0 * (7 - distance) as f32) as i32
+    }
+
+    pub const fn get_king_square(&self, side: Side) -> Square {
+        self.get_piece_bb(side, Piece::King).least_sig_bit().unwrap()
+    }
+}
+
+//https://www.chessprogramming.org/Center_Manhattan-Distance
+pub const fn cmd(square: Square) -> usize {
+    let (mut file, mut rank) = square.to_rank_and_file();
+
+    file ^= (file.wrapping_sub(4)) >> 8;
+    rank ^= (rank.wrapping_sub(4)) >> 8;
+
+    file.wrapping_add(rank) & 7
+}
+
+pub const fn manhattan_distance(square_1: Square, square_2: Square) -> usize {
+    let (rank1, file1) = square_1.to_rank_and_file();
+    let (rank2, file2) = square_2.to_rank_and_file();
+
+    let rank_distance = rank2.abs_diff(rank1);
+    let file_distance = file2.abs_diff(file1);
+
+    rank_distance + file_distance
+}
+
+//Chebyshev Distance
+pub fn distance(square_1: Square, square_2: Square) -> usize {
+    let (rank1, file1) = square_1.to_rank_and_file();
+    let (rank2, file2) = square_2.to_rank_and_file();
+
+    let rank_distance = rank2.abs_diff(rank1);
+    let file_distance = file2.abs_diff(file1);
+
+    max(rank_distance, file_distance)
 }
 
 #[cfg(test)]
@@ -232,5 +295,66 @@ mod tests {
 
         board.place_piece(Side::Black, Piece::Queen, Square::E5);
         assert_eq!(-500, board.get_material_evaluation());
+    }
+
+    #[test]
+    fn test_only_king_and_pawn_check() {
+        let board = Board::from_fen("8/8/8/8/p7/P7/1k6/3K4 b - - 16 65");
+        assert!(board.only_king_and_pawns());
+        let board = Board::from_fen("8/r4pK1/5Rp1/6k1/p6p/P6P/6P1/8 w - - 2 50");
+        assert!(!board.only_king_and_pawns());
+    }
+
+    #[test]
+    fn test_cmd() {
+        let square = Square::A8;
+
+        for rank in 0..8 {
+            for file in 0..8 {
+                let square = Square::from_rank_and_file(rank, file);
+                print!("{} ", cmd(square));
+            }
+            println!()
+        }
+
+        assert_eq!(6, cmd(square));
+    }
+
+    #[test]
+    fn test_distances() {
+        let square_1 = Square::A8;
+        let square_2 = Square::A4;
+
+        assert_eq!(4, distance(square_1, square_2));        
+
+        let square_1 = Square::B4;
+        let square_2 = Square::A4;
+
+        assert_eq!(1, distance(square_1, square_2));        
+
+        let square_1 = Square::H8;
+        let square_2 = Square::A1;
+
+        assert_eq!(7, distance(square_1, square_2));        
+        assert_eq!(14, manhattan_distance(square_1, square_2));
+    }
+
+    #[test]
+    fn test_mop_up() {
+        let board = Board::from_fen("2K2R2/8/8/8/8/8/8/3k4 w - - 0 1"); 
+        assert_eq!(board.total_material_value(), Piece::Rook.value());
+        println!("{}", board.mop_up());
+        println!("{}", board.evaluate());
+        let first_bonus = board.mop_up();
+        let first_score = board.evaluate();
+
+        let board = Board::from_fen("5R2/8/8/8/8/2K5/8/3k4 w - - 0 1");
+        println!("{}", board.mop_up());
+        println!("{}", board.evaluate());
+        let second_bonus = board.mop_up();
+        let second_score = board.evaluate();
+
+        assert!(second_bonus > first_bonus);
+        assert!(second_score > first_score);
     }
 }

@@ -64,7 +64,7 @@ impl Castling {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CastlingRights(pub u8);
 
 impl CastlingRights {
