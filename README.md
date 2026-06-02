@@ -21,11 +21,14 @@ cargo build --release
 - Basic UCI compatibility
 - Transposition Tables with Hash Moves
 - Alpha-Beta search
-- Material and Piece Square evaluation
+- Material and Tapered Piece Square evaluation
 - Quiescence Search
 - Iterative Deepening
 - Time management
 - Principal Variation Search
+- Null Move Pruning
+- MVV-LVA
+- Aspiration Windows
 
 ## Acknowledgments
 - [Chess Programming Wiki](https://www.chessprogramming.org/Main_Page)
