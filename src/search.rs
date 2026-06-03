@@ -267,7 +267,6 @@ pub fn search<Node: NodeType> (
                 score = -search::<PV>(data, depth - 1, board, -beta, -alpha, ply + 1);
             }
                     
-
             board.unmake_move();
             if data.over_limit() {
                 return TIMEOUT_SCORE;

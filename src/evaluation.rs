@@ -178,14 +178,14 @@ impl Board {
     pub fn evaluate(&self) -> i32 {
         let mut mop_up_bonus = 0;
         //If only KQK or Lower then should mop up
-        if self.mop_up_pos() {
+        if self.is_mop_up_pos() {
             mop_up_bonus = self.mop_up();
         }
 
         self.get_material_evaluation() + self.get_piece_square_evaluation() + mop_up_bonus
     }
 
-    pub const fn mop_up_pos(&self) -> bool {
+    pub const fn is_mop_up_pos(&self) -> bool {
         self.total_material_value() <= 900 && self.get_material_evaluation() > 0
     }
 
