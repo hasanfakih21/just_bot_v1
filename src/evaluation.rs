@@ -178,11 +178,15 @@ impl Board {
     pub fn evaluate(&self) -> i32 {
         let mut mop_up_bonus = 0;
         //If only KQK or Lower then should mop up
-        if self.total_material_value() <= 900 && self.get_material_evaluation() > 0 {
+        if self.is_mop_up_pos() {
             mop_up_bonus = self.mop_up();
         }
 
         self.get_material_evaluation() + self.get_piece_square_evaluation() + mop_up_bonus
+    }
+
+    pub const fn is_mop_up_pos(&self) -> bool {
+        self.total_material_value() <= 900 && self.get_material_evaluation() > 0
     }
 
     pub const fn total_material_value(&self) -> i32 {
@@ -229,6 +233,7 @@ impl Board {
         self.get_piece_bb(side, Piece::Bishop) | self.get_piece_bb(side, Piece::Knight) | self.get_piece_bb(side, Piece::Queen) | self.get_piece_bb(side, Piece::Rook) == BitBoard(0)
     }
 
+    //Still needs more work and testing
     pub fn mop_up(&self) -> i32 {
         let current_side = self.board_state.side_to_move;
         let opp_king_square = self.get_king_square(current_side.other());
