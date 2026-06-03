@@ -157,6 +157,7 @@ pub fn search_root (
             }
             //println!("{m}: {score}"); //Debug Print
             if score >= best_score {
+                data.add_pv_move(m, ply);
                 best_score = score;
                 best_move = Some((m, score));
             }
@@ -164,7 +165,6 @@ pub fn search_root (
     }
 
     if let Some((m, s)) = best_move {
-        data.add_pv_move(m, ply);
         data.tt
             .add_entry(m, s, Bound::Exact, board.board_state.hash, depth);
     }
@@ -247,30 +247,26 @@ pub fn search<Node: NodeType> (
     while let Some(m) = move_picker.next(board, false) {
         if board.make_move(m).is_ok() {
             legal_moves += 1;
-            let mut score;
+            let mut score = best_score;
 
-            //PVS
-            if legal_moves == 1 {
-                //First Move
-                score = -search::<PV>(data, depth - 1, board, -beta, -alpha, ply + 1);
-            } else {
-                //Late Move Reductions
-                if depth > 3 { 
-                    let reduction = (0.99 + f32::ln(depth as f32) * f32::ln(legal_moves as f32)) / PI; //https://www.chessprogramming.org/Late_Move_Reductions Obsidian formula
-                    //println!("Depth: {} Reduction: {}", depth, reduction);
-                    let reduced_depth = (depth - 1).saturating_sub(reduction as usize);
-                    score = -search::<NonPV>(data, reduced_depth, board, -alpha - 1, -alpha, ply);
-                    if score > alpha && reduced_depth < depth - 1 {
-                        score = -search::<NonPV>(data, depth - 1, board, -alpha - 1, -alpha, ply + 1);
-                    }
-                } else {
+            //PVS 
+            //Late Move Reductions
+            if depth > 3 && !Node::PV { 
+                let reduction = (0.99 + f32::ln(depth as f32) * f32::ln(legal_moves as f32)) / PI; //https://www.chessprogramming.org/Late_Move_Reductions Obsidian formula
+                //println!("Depth: {} Reduction: {}", depth, reduction);
+                let reduced_depth = (depth - 1).saturating_sub(reduction as usize);
+                score = -search::<NonPV>(data, reduced_depth, board, -alpha - 1, -alpha, ply + 1);
+                if score > alpha && reduced_depth < depth - 1 {
                     score = -search::<NonPV>(data, depth - 1, board, -alpha - 1, -alpha, ply + 1);
                 }
-
-                if score > alpha && score < beta {
-                    score = -search::<PV>(data, depth - 1, board, -beta, -alpha, ply + 1); //We want to search again
-                }
+            } else if !Node::PV || legal_moves > 1 {
+                score = -search::<NonPV>(data, depth - 1, board, -alpha - 1, -alpha, ply + 1);
             }
+
+            if Node::PV && (legal_moves == 1 || score > alpha) {
+                score = -search::<PV>(data, depth - 1, board, -beta, -alpha, ply + 1);
+            }
+                    
 
             board.unmake_move();
             if data.over_limit() {
@@ -279,6 +275,7 @@ pub fn search<Node: NodeType> (
 
             if score > alpha {
                 bound = Bound::Exact;
+                data.add_pv_move(m, ply);
                 alpha = score;
             }
 
@@ -307,10 +304,6 @@ pub fn search<Node: NodeType> (
     }
 
     if let Some(m) = best_move {
-        if Node::PV {
-            data.add_pv_move(m, ply);
-        }
-
         let tt_score = best_score;
         data.tt
             .add_entry(m, tt_score, bound, board.board_state.hash, depth);
