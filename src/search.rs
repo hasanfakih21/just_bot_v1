@@ -32,17 +32,26 @@ impl Board {
 
 pub trait NodeType {
     const PV: bool;
+    const ROOT: bool;
 }
 
 pub struct PV;
+pub struct Root;
 pub struct NonPV;
 
 impl NodeType for PV {
     const PV: bool = true;
+    const ROOT: bool = false;
 }
 
 impl NodeType for NonPV {
     const PV: bool = false;
+    const ROOT: bool = false;
+}
+
+impl NodeType for Root {
+    const PV: bool = true;
+    const ROOT: bool = true;
 }
 
 pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, i32)> {
@@ -137,30 +146,25 @@ pub fn search_root (
     data.clear_pv(0);
 
     let mut move_picker = MovePicker::new(board, data);
-    let mut legal_moves = 0;
 
     while let Some(m) = move_picker.next(board, false) {
         if board.make_move(m).is_ok() {
-            legal_moves += 1;
-            let score = if legal_moves == 1 {
-                -search::<PV>(data, depth - 1, board, -beta, -alpha, ply + 1)
-            } else {
-                -search::<NonPV>(data, depth - 1, board, -beta, -alpha, ply + 1)
-            };
+            let score = -search::<PV>(data, depth - 1, board, -beta, -alpha, ply + 1);
+
             board.unmake_move();
             if data.over_limit() {
                 return None;
             }
-            println!("{m}: {score}");
+            //println!("{m}: {score}"); //Debug Print
             if score >= best_score {
                 best_score = score;
                 best_move = Some((m, score));
-                data.add_pv_move(m, ply);
             }
         }
     }
 
     if let Some((m, s)) = best_move {
+        data.add_pv_move(m, ply);
         data.tt
             .add_entry(m, s, Bound::Exact, board.board_state.hash, depth);
     }
@@ -251,12 +255,12 @@ pub fn search<Node: NodeType> (
                 score = -search::<PV>(data, depth - 1, board, -beta, -alpha, ply + 1);
             } else {
                 //Late Move Reductions
-                if depth > 3 && !Node::PV { 
+                if depth > 3 { 
                     let reduction = (0.99 + f32::ln(depth as f32) * f32::ln(legal_moves as f32)) / PI; //https://www.chessprogramming.org/Late_Move_Reductions Obsidian formula
                     //println!("Depth: {} Reduction: {}", depth, reduction);
-                    let reduced_depth = depth.saturating_sub(reduction as usize);
+                    let reduced_depth = (depth - 1).saturating_sub(reduction as usize);
                     score = -search::<NonPV>(data, reduced_depth, board, -alpha - 1, -alpha, ply);
-                    if score > alpha && reduced_depth < depth {
+                    if score > alpha && reduced_depth < depth - 1 {
                         score = -search::<NonPV>(data, depth - 1, board, -alpha - 1, -alpha, ply + 1);
                     }
                 } else {
@@ -276,7 +280,6 @@ pub fn search<Node: NodeType> (
             if score > alpha {
                 bound = Bound::Exact;
                 alpha = score;
-                data.add_pv_move(m, ply);
             }
 
             if score > best_score {
@@ -304,6 +307,10 @@ pub fn search<Node: NodeType> (
     }
 
     if let Some(m) = best_move {
+        if Node::PV {
+            data.add_pv_move(m, ply);
+        }
+
         let tt_score = best_score;
         data.tt
             .add_entry(m, tt_score, bound, board.board_state.hash, depth);
