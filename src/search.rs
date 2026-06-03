@@ -226,6 +226,18 @@ pub fn search<Node: NodeType> (
         }
     }
 
+    //Reverse Futillity Pruning (RFP)
+    if !board.king_in_check() 
+        && !Node::PV 
+        && depth < 7 
+    {
+        let eval = board.evaluate();
+        let margin = 150 * depth as i32;
+        if eval >= beta + margin {
+            return eval
+        }
+    }
+
     //Null Move Pruning
     if !Node::PV && !board.king_in_check() && !board.only_king_and_pawns() {
         let r = 4; 
@@ -320,14 +332,8 @@ pub fn quiesce(
 ) -> i32 {
     data.add_nodes(1);
     let static_eval = board.evaluate();
-    // if board.is_king_in_attack(board.board_state.side_to_move) {
-    //     return search_checks(data, board, alpha, beta, _ply);
-    // }
-
     let mut best_score = static_eval;
-    //let mut bound = Bound::Upper;
-    //let mut best_move: Option<Move> = None;
-
+    
     if best_score >= beta {
         return best_score;
     }
@@ -346,29 +352,16 @@ pub fn quiesce(
             }
 
             if score >= beta {
-                // if let Some(m) = best_move {
-                //     board
-                //         .tt
-                //         .add_entry(m, best_score, Bound::Lower, board.board_state.hash, 0);
-                // }
                 return score;
             }
             if score > best_score {
                 best_score = score;
-                //best_move = Some(*m);
             }
             if score > alpha {
                 alpha = score;
-                //bound = Bound::Exact;
             }
         }
     }
-
-    // if let Some(m) = best_move {
-    //     board
-    //         .tt
-    //         .add_entry(m, best_score, bound, board.board_state.hash, 0);
-    // }
 
     best_score
 }
