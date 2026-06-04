@@ -166,6 +166,11 @@ pub const EG_TABLE_ARRAY: [[i32; 64]; 6] = [
     EG_KING_TABLE,
 ];
 
+pub const MG_PIECE_VALUE: [i32; 6] = [82, 337, 365, 477, 1025, 0];
+pub const EG_PIECE_VALUE: [i32; 6] = [94, 281, 297, 512, 936, 0];
+
+pub const GAMEPHASE: [i32; 6] = [0, 1, 1, 2, 4, 0];
+
 pub const MAX_MATERIAL_VALUE: i32 = 8000;
 
 impl Board {
@@ -182,7 +187,7 @@ impl Board {
             mop_up_bonus = self.mop_up();
         }
 
-        self.get_material_evaluation() + self.get_piece_square_evaluation() + mop_up_bonus
+        self.get_piece_square_evaluation() + mop_up_bonus
     }
 
     pub const fn is_mop_up_pos(&self) -> bool {
@@ -190,29 +195,42 @@ impl Board {
     }
 
     pub const fn total_material_value(&self) -> i32 {
-        self.board_state.material_value[Side::White as usize] + self.board_state.material_value[Side::Black as usize]
+        self.board_state.material_value[Side::White as usize]
+            + self.board_state.material_value[Side::Black as usize]
     }
 
-    pub fn get_piece_square_score(&mut self, piece: Piece, square: Square, side: Side) -> i32 {
+    pub const fn get_mg_score(&self, piece: Piece, square: Square, side: Side) -> i32 {
         let mg_table = MG_TABLE_ARRAY[piece as usize];
-        let eg_table = EG_TABLE_ARRAY[piece as usize];
-
-        let total_material_value = self.total_material_value().min(MAX_MATERIAL_VALUE);
-        let mg_weight: f32 = total_material_value as f32 / MAX_MATERIAL_VALUE as f32;
-        let eg_weight: f32 = 1.0 - mg_weight;
-
         let index = match side {
-            Side::White => (square ^ Square::A8) as usize,
+            Side::White => square as usize ^ 56,
             Side::Black => square as usize,
         };
+        mg_table[index] + MG_PIECE_VALUE[piece as usize]
+    }
 
-        ((mg_table[index] as f32 * mg_weight) + (eg_table[index] as f32 * eg_weight)) as i32
+    pub const fn get_eg_score(&self, piece: Piece, square: Square, side: Side) -> i32 {
+        let eg_table = EG_TABLE_ARRAY[piece as usize];
+        let index = match side {
+            Side::White => square as usize ^ 56,
+            Side::Black => square as usize,
+        };
+        eg_table[index] + EG_PIECE_VALUE[piece as usize]
     }
 
     pub const fn get_piece_square_evaluation(&self) -> i32 {
         let side = self.board_state.side_to_move;
-        self.board_state.piece_square_value[side as usize]
-            - self.board_state.piece_square_value[side.other() as usize]
+
+        let mg_score = self.board_state.pq_mg_value[side as usize]
+            - self.board_state.pq_mg_value[side.other() as usize];
+        let eg_score = self.board_state.pq_eg_value[side as usize]
+            - self.board_state.pq_eg_value[side.other() as usize];
+
+        let mut mg_phase = self.board_state.game_phase;
+        if mg_phase > 24 {
+            mg_phase = 24;
+        }
+        let eg_phase = 24 - mg_phase;
+        (mg_score * mg_phase + eg_score * eg_phase) / 24
     }
 
     pub fn has_legal_move(&mut self) -> bool {
@@ -230,7 +248,11 @@ impl Board {
     //Only checks for the current side to move
     pub fn only_king_and_pawns(&self) -> bool {
         let side = self.board_state.side_to_move;
-        self.get_piece_bb(side, Piece::Bishop) | self.get_piece_bb(side, Piece::Knight) | self.get_piece_bb(side, Piece::Queen) | self.get_piece_bb(side, Piece::Rook) == BitBoard(0)
+        self.get_piece_bb(side, Piece::Bishop)
+            | self.get_piece_bb(side, Piece::Knight)
+            | self.get_piece_bb(side, Piece::Queen)
+            | self.get_piece_bb(side, Piece::Rook)
+            == BitBoard(0)
     }
 
     //Still needs more work and testing
@@ -247,7 +269,19 @@ impl Board {
     }
 
     pub const fn get_king_square(&self, side: Side) -> Square {
-        self.get_piece_bb(side, Piece::King).least_sig_bit().unwrap()
+        self.get_piece_bb(side, Piece::King)
+            .least_sig_bit()
+            .unwrap()
+    }
+
+    pub fn piece_activity_score(&self, side: Side) -> i32 {
+        let attacks = self.get_all_attacks(side);
+        attacks.count_bits() as i32 * 3
+    }
+
+    pub fn piece_acitivty_evaluation(&self) -> i32 {
+        let side = self.board_state.side_to_move;
+        self.piece_activity_score(side) - self.piece_activity_score(side.other())
     }
 }
 
@@ -330,23 +364,23 @@ mod tests {
         let square_1 = Square::A8;
         let square_2 = Square::A4;
 
-        assert_eq!(4, distance(square_1, square_2));        
+        assert_eq!(4, distance(square_1, square_2));
 
         let square_1 = Square::B4;
         let square_2 = Square::A4;
 
-        assert_eq!(1, distance(square_1, square_2));        
+        assert_eq!(1, distance(square_1, square_2));
 
         let square_1 = Square::H8;
         let square_2 = Square::A1;
 
-        assert_eq!(7, distance(square_1, square_2));        
+        assert_eq!(7, distance(square_1, square_2));
         assert_eq!(14, manhattan_distance(square_1, square_2));
     }
 
     #[test]
     fn test_mop_up() {
-        let board = Board::from_fen("2K2R2/8/8/8/8/8/8/3k4 w - - 0 1"); 
+        let board = Board::from_fen("2K2R2/8/8/8/8/8/8/3k4 w - - 0 1");
         assert_eq!(board.total_material_value(), Piece::Rook.value());
         println!("{}", board.mop_up());
         println!("{}", board.evaluate());

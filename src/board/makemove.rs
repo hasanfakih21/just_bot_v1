@@ -332,12 +332,13 @@ mod tests {
     }
 
     #[test]
-    fn test_null_move() { 
+    fn test_null_move() {
         let mut board =
             Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP2pPPP/R1B2R1K b - - 1 17");
         println!("{board}");
 
-        let original = Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP2pPPP/R1B2R1K b - - 1 17");
+        let original =
+            Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP2pPPP/R1B2R1K b - - 1 17");
 
         board.make_null_move();
         assert_eq!(board.board_state.side_to_move, Side::White);

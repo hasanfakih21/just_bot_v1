@@ -1,5 +1,6 @@
 pub mod bitboard;
 pub mod constants;
+pub mod history;
 pub mod moves;
 pub mod pieces;
 pub mod sides;
@@ -9,6 +10,7 @@ pub mod zobrist;
 
 pub use bitboard::*;
 pub use constants::*;
+pub use history::*;
 pub use moves::*;
 pub use pieces::*;
 pub use sides::*;

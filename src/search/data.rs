@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::search::time::{TimeManager, TimeSettings};
-use crate::types::{Move, MoveList, Side};
+use crate::types::{History, Move, MoveList, Side};
 
 use crate::types::TranspositionTable;
 
@@ -14,6 +14,7 @@ pub struct SearchData {
 
     pub tt: TranspositionTable,
     pub time: TimeManager,
+    pub history: History,
 }
 
 #[derive(Debug)]
@@ -28,7 +29,12 @@ impl SearchData {
             tt: TranspositionTable::new(),
             time: TimeManager::new(),
             total_nodes: AtomicUsize::new(0),
+            history: History::new(),
         }
+    }
+
+    pub fn clear_history(&mut self) {
+        self.history = History::new();
     }
 
     pub fn get_searched_depth(&self) -> usize {

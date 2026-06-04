@@ -1,4 +1,5 @@
 use crate::attacks::*;
+use crate::evaluation::GAMEPHASE;
 use crate::magics::*;
 use crate::types::*;
 use std::fmt::Display;
@@ -15,8 +16,12 @@ pub struct BoardState {
     pub side_to_move: Side,
     pub enpassant: Option<Square>,
     pub castling_rights: CastlingRights,
+
     pub material_value: [i32; 2],
-    pub piece_square_value: [i32; 2],
+    pub pq_mg_value: [i32; 2],
+    pub pq_eg_value: [i32; 2],
+    pub game_phase: i32,
+
     pub half_move_clock: u8,
     pub full_move: usize,
     pub hash: u64,
@@ -31,8 +36,12 @@ impl BoardState {
             side_to_move: Side::White,
             enpassant: None,
             castling_rights: CastlingRights::new(),
+
             material_value: [0; 2],
-            piece_square_value: [0; 2],
+            pq_mg_value: [0; 2],
+            pq_eg_value: [0; 2],
+            game_phase: 0,
+
             half_move_clock: 0,
             full_move: 0,
             hash: 0,
@@ -106,22 +115,36 @@ impl Board {
     }
 
     pub fn place_piece(&mut self, side: Side, piece: Piece, square: Square) {
+        //Bitboards
         self.board_state.board_pieces[(piece as usize) + (side as usize * 6)].set_bit(square);
         self.board_state.board_occupancies[side as usize].set_bit(square);
+        //Mailbox
         self.board_state.pieces_on_squares[square as usize] = Some((side, piece));
+        //Material Eval
         self.board_state.material_value[side as usize] += piece.value();
-        self.board_state.piece_square_value[side as usize] +=
-            self.get_piece_square_score(piece, square, side);
+        //Piece Square Table
+        self.board_state.pq_mg_value[side as usize] += self.get_mg_score(piece, square, side);
+        self.board_state.pq_eg_value[side as usize] += self.get_eg_score(piece, square, side);
+        //Game Phase
+        self.board_state.game_phase += GAMEPHASE[piece as usize];
+        //Zobrist Hash
         self.board_state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
     }
 
     pub fn remove_piece(&mut self, side: Side, piece: Piece, square: Square) {
+        //Bitboards
         self.board_state.board_pieces[(piece as usize) + (side as usize * 6)].clear_bit(square);
         self.board_state.board_occupancies[side as usize].clear_bit(square);
+        //Mailbox
         self.board_state.pieces_on_squares[square as usize] = None;
+        //Material Eval
         self.board_state.material_value[side as usize] -= piece.value();
-        self.board_state.piece_square_value[side as usize] -=
-            self.get_piece_square_score(piece, square, side);
+        //Piece Square Table
+        self.board_state.pq_mg_value[side as usize] -= self.get_mg_score(piece, square, side);
+        self.board_state.pq_eg_value[side as usize] -= self.get_eg_score(piece, square, side);
+        //Game Phase
+        self.board_state.game_phase -= GAMEPHASE[piece as usize];
+        //Zobrist Hash
         self.board_state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
     }
 

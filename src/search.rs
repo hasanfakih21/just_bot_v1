@@ -1,5 +1,3 @@
-use std::f32::consts::PI;
-
 use crate::board::Board;
 use crate::search::data::SearchData;
 use crate::search::movepicker::MovePicker;
@@ -133,7 +131,7 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
 }
 
 //Root Search
-pub fn search_root (
+pub fn search_root(
     data: &mut SearchData,
     depth: usize,
     board: &mut Board,
@@ -147,7 +145,7 @@ pub fn search_root (
 
     let mut move_picker = MovePicker::new(board, data);
 
-    while let Some(m) = move_picker.next(board, false) {
+    while let Some(m) = move_picker.next(board, data, false) {
         if board.make_move(m).is_ok() {
             let score = -search::<PV>(data, depth - 1, board, -beta, -alpha, ply + 1);
 
@@ -171,7 +169,7 @@ pub fn search_root (
     best_move
 }
 
-pub fn search<Node: NodeType> (
+pub fn search<Node: NodeType>(
     data: &mut SearchData,
     depth: usize,
     board: &mut Board,
@@ -179,8 +177,10 @@ pub fn search<Node: NodeType> (
     beta: i32,
     ply: usize,
 ) -> i32 {
+    let in_check = board.king_in_check();
+
     if depth == 0 {
-        if board.king_in_check() {
+        if in_check {
             return search_checks(data, board, alpha, beta, ply);
         } else {
             return quiesce(data, board, alpha, beta, ply); //Horizon Node
@@ -207,7 +207,8 @@ pub fn search<Node: NodeType> (
         && !Node::PV
         && board.board_state.hash == e.get_key()
         && e.get_depth() >= depth
-        && e.get_score().abs() < MATE_CUTOFF //Mate scores need to be properly adjusted for cutoffs
+        && e.get_score().abs() < MATE_CUTOFF
+    //Mate scores need to be properly adjusted for cutoffs
     {
         let tt_score = e.get_score();
 
@@ -227,25 +228,29 @@ pub fn search<Node: NodeType> (
     }
 
     //Reverse Futillity Pruning (RFP)
-    if !board.king_in_check() 
-        && !Node::PV 
-        && depth < 7 
-    {
+    if !in_check && !Node::PV && depth < 7 {
         let eval = board.evaluate();
         let margin = 150 * depth as i32;
         if eval >= beta + margin {
-            return eval
+            return eval;
         }
     }
 
     //Null Move Pruning
-    if !Node::PV && !board.king_in_check() && !board.only_king_and_pawns() {
-        let r = 4; 
+    if !Node::PV && !in_check && !board.only_king_and_pawns() {
+        let r = 4;
         board.make_null_move();
-        let null_move_score = -search::<NonPV>(data, depth.saturating_sub(r), board, -beta, -(beta - 1), ply + 1);
+        let null_move_score = -search::<NonPV>(
+            data,
+            depth.saturating_sub(r),
+            board,
+            -beta,
+            -(beta - 1),
+            ply + 1,
+        );
         board.unmake_move();
         if null_move_score >= beta {
-            return null_move_score
+            return null_move_score;
         }
     }
 
@@ -255,17 +260,31 @@ pub fn search<Node: NodeType> (
     let mut bound = Bound::Upper; //Fail-high means score is atleast this good so lower-bound/Fail-low means the score is an upper bound
 
     let mut move_picker = MovePicker::new(board, data);
+    let mut quiets_searched = MoveList::new();
 
-    while let Some(m) = move_picker.next(board, false) {
+    while let Some(m) = move_picker.next(board, data, false) {
+        //Late Move Pruning (LMP)
+        if !in_check 
+            && best_score.abs() < MATE_CUTOFF
+            && m.get_kind().is_quiet()
+            && legal_moves > 6 + 2 * depth * depth {
+            continue;
+        }
+
         if board.make_move(m).is_ok() {
             legal_moves += 1;
             let mut score = best_score;
 
-            //PVS 
-            //Late Move Reductions
-            if depth > 3 && !Node::PV { 
-                let reduction = (0.99 + f32::ln(depth as f32) * f32::ln(legal_moves as f32)) / PI; //https://www.chessprogramming.org/Late_Move_Reductions Obsidian formula
-                //println!("Depth: {} Reduction: {}", depth, reduction);
+            //PVS
+            //Late Move Reductions (LMR)
+            if depth > 3 && !Node::PV {
+                //let reduction = (0.99 + f32::ln(depth as f32) * f32::ln(legal_moves as f32)) / PI; //https://www.chessprogramming.org/Late_Move_Reductions Obsidian formula
+                let mut reduction = 0.7844 + f32::ln(depth as f32) * f32::ln(legal_moves as f32);
+                if m.get_kind().is_quiet() {
+                    reduction /= 2.4696;
+                } else {
+                    reduction /= 3.0;
+                }
                 let reduced_depth = (depth - 1).saturating_sub(reduction as usize);
                 score = -search::<NonPV>(data, reduced_depth, board, -alpha - 1, -alpha, ply + 1);
                 if score > alpha && reduced_depth < depth - 1 {
@@ -278,7 +297,7 @@ pub fn search<Node: NodeType> (
             if Node::PV && (legal_moves == 1 || score > alpha) {
                 score = -search::<PV>(data, depth - 1, board, -beta, -alpha, ply + 1);
             }
-                    
+
             board.unmake_move();
             if data.over_limit() {
                 return TIMEOUT_SCORE;
@@ -296,12 +315,29 @@ pub fn search<Node: NodeType> (
             }
 
             if score >= beta {
+                //Add quiet moves to history
+                if m.get_kind().is_quiet() {
+                    let bonus = 300 * depth as i32 - 250;
+                    let side = board.board_state.side_to_move;
+                    data.history.update(side, m, bonus);
+                    //Add malus to previously searched quiet moves
+                    for e in quiets_searched.iter() {
+                        let quiet_move = e.mv;
+                        data.history.update(side, quiet_move, -bonus);
+                    }
+                }
+
                 if let Some(m) = best_move {
                     let tt_score = best_score;
                     data.tt
                         .add_entry(m, tt_score, Bound::Lower, board.board_state.hash, depth);
                 }
                 return best_score;
+            }
+
+            //Add searched quiet moves to list
+            if m.get_kind().is_quiet() {
+                quiets_searched.push(m);
             }
         }
     }
@@ -333,7 +369,7 @@ pub fn quiesce(
     data.add_nodes(1);
     let static_eval = board.evaluate();
     let mut best_score = static_eval;
-    
+
     if best_score >= beta {
         return best_score;
     }
@@ -343,7 +379,7 @@ pub fn quiesce(
 
     let mut move_picker = MovePicker::new(board, data);
 
-    while let Some(m) = move_picker.next(board, true) {
+    while let Some(m) = move_picker.next(board, data, true) {
         if board.make_move(m).is_ok() {
             let score = -quiesce(data, board, -beta, -alpha, _ply + 1);
             board.unmake_move();
@@ -395,7 +431,7 @@ pub fn search_checks(
 
     let mut move_picker = MovePicker::new(board, data);
 
-    while let Some(m) = move_picker.next(board, false) {
+    while let Some(m) = move_picker.next(board, data, false) {
         if board.make_move(m).is_ok() {
             legal_moves += 1;
             let score = -search_checks(data, board, -beta, -alpha, ply + 1);
@@ -447,7 +483,9 @@ mod tests {
         let board =
             Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1");
         let mut move_picker = MovePicker::new(&board, &SearchData::default());
-        let first_move = move_picker.next(&board, false).unwrap();
+        let first_move = move_picker
+            .next(&board, &SearchData::default(), false)
+            .unwrap();
 
         assert_eq!(
             first_move,
@@ -457,7 +495,9 @@ mod tests {
         let board =
             Board::from_fen("rnbq1rk1/pN1p1ppp/4n2b/2p1p3/N1BP3R/2P2Q2/PP3PPP/2B1K2R w K - 0 1");
         let mut move_picker = MovePicker::new(&board, &SearchData::default());
-        let first_move = move_picker.next(&board, false).unwrap();
+        let first_move = move_picker
+            .next(&board, &SearchData::default(), false)
+            .unwrap();
 
         assert_eq!(
             first_move,
