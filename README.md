@@ -21,7 +21,7 @@ cargo build --release
 - Basic UCI compatibility
 - Transposition Tables with Hash Moves
 - Alpha-Beta search
-- Material and Tapered Piece Square evaluation
+- PeSTO's Evaluation Function
 - Quiescence Search
 - Iterative Deepening
 - Time management
@@ -36,3 +36,4 @@ cargo build --release
 - [Chess Programming Wiki](https://www.chessprogramming.org/Main_Page)
 - [Maksim Korzh](https://www.youtube.com/watch?v=QUNP-UjujBM&list=PLmN0neTso3Jxh8ZIylk74JpwfiWNI76Cs) for helpful introductory videos, and where my magic numbers are from
 - [Reckless](https://github.com/codedeliveryservice/Reckless) and [Stockfish](https://github.com/official-stockfish/stockfish)
+- The very helpful members of the [Stockfish Discord Server](https://discord.com/invite/GWDRS3kU6R)
