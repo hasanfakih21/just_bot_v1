@@ -57,7 +57,6 @@ impl NodeType for Root {
 pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, i32)> {
     data.clear_node_count();
     data.reset_pv();
-    data.clear_history();
     data.start_time();
     let mut depth = 1;
 
@@ -261,6 +260,7 @@ pub fn search<Node: NodeType>(
     let mut bound = Bound::Upper; //Fail-high means score is atleast this good so lower-bound/Fail-low means the score is an upper bound
 
     let mut move_picker = MovePicker::new(board, data);
+    let mut quiets_searched = MoveList::new();
 
     while let Some(m) = move_picker.next(board, data, false) {
         if board.make_move(m).is_ok() {
@@ -303,8 +303,15 @@ pub fn search<Node: NodeType>(
 
             if score >= beta {
                 //Add quiet moves to history
-                if !m.get_kind().is_capture() {
-                    data.add_to_history(m, board.board_state.side_to_move, depth);
+                if m.get_kind().is_quiet() {
+                    let bonus = 300 * depth as i32 - 250;
+                    let side = board.board_state.side_to_move;
+                    data.history.update(side, m, bonus);
+                    //Add malus to previously searched quiet moves
+                    for e in quiets_searched.iter() {
+                        let quiet_move = e.mv;
+                        data.history.update(side, quiet_move, -bonus);
+                    }
                 }
 
                 if let Some(m) = best_move {
@@ -313,6 +320,11 @@ pub fn search<Node: NodeType>(
                         .add_entry(m, tt_score, Bound::Lower, board.board_state.hash, depth);
                 }
                 return best_score;
+            }
+
+            //Add searched quiet moves to list
+            if m.get_kind().is_quiet() {
+                quiets_searched.push(m);
             }
         }
     }

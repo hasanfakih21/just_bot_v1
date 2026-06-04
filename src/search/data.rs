@@ -33,15 +33,6 @@ impl SearchData {
         }
     }
 
-    pub fn add_to_history(&mut self, m: Move, side: Side, depth: usize) {
-        self.history.0[side as usize].0[m.get_from() as usize][m.get_to() as usize] +=
-            depth as i32 * depth as i32;
-    }
-
-    pub fn get_history(&self, m: Move, side: Side) -> i32 {
-        self.history.0[side as usize].0[m.get_from() as usize][m.get_to() as usize]
-    }
-
     pub fn clear_history(&mut self) {
         self.history = History::new();
     }

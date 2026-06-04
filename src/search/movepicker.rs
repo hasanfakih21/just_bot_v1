@@ -92,7 +92,7 @@ impl MovePicker {
     fn score_quiet_moves(&mut self, board: &Board, data: &SearchData) {
         for entry in self.moves.iter_mut() {
             let mv = entry.mv;
-            entry.score = Some(data.get_history(mv, board.board_state.side_to_move));
+            entry.score = Some(data.history.get(board.board_state.side_to_move, mv));
         }
     }
 
