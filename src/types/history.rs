@@ -1,0 +1,30 @@
+#[derive(Debug)]
+pub struct FromToHistory(pub [[i32; 64]; 64]);
+
+impl FromToHistory {
+    pub fn new() -> Self {
+        Self([[0; 64]; 64])
+    }
+}
+
+#[derive(Debug)]
+//[Side to Move][From][To]
+pub struct History(pub [FromToHistory; 2]);
+
+impl History {
+    pub fn new() -> Self {
+        History([FromToHistory::new(), FromToHistory::new()])
+    }
+}
+
+impl Default for FromToHistory {
+    fn default() -> Self {
+        FromToHistory::new()
+    }
+}
+
+impl Default for History {
+    fn default() -> Self {
+        History::new()
+    }
+}
