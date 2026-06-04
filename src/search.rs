@@ -57,6 +57,7 @@ impl NodeType for Root {
 pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, i32)> {
     data.clear_node_count();
     data.reset_pv();
+    data.clear_history();
     data.start_time();
     let mut depth = 1;
 
@@ -147,7 +148,7 @@ pub fn search_root (
 
     let mut move_picker = MovePicker::new(board, data);
 
-    while let Some(m) = move_picker.next(board, false) {
+    while let Some(m) = move_picker.next(board, data, false) {
         if board.make_move(m).is_ok() {
             let score = -search::<PV>(data, depth - 1, board, -beta, -alpha, ply + 1);
 
@@ -256,7 +257,7 @@ pub fn search<Node: NodeType> (
 
     let mut move_picker = MovePicker::new(board, data);
 
-    while let Some(m) = move_picker.next(board, false) {
+    while let Some(m) = move_picker.next(board, data, false) {
         if board.make_move(m).is_ok() {
             legal_moves += 1;
             let mut score = best_score;
@@ -296,6 +297,11 @@ pub fn search<Node: NodeType> (
             }
 
             if score >= beta {
+                //Add quiet moves to history
+                if !m.get_kind().is_capture() {
+                    data.add_to_history(m, board.board_state.side_to_move, depth);
+                }
+
                 if let Some(m) = best_move {
                     let tt_score = best_score;
                     data.tt
@@ -343,7 +349,7 @@ pub fn quiesce(
 
     let mut move_picker = MovePicker::new(board, data);
 
-    while let Some(m) = move_picker.next(board, true) {
+    while let Some(m) = move_picker.next(board, data, true) {
         if board.make_move(m).is_ok() {
             let score = -quiesce(data, board, -beta, -alpha, _ply + 1);
             board.unmake_move();
@@ -395,7 +401,7 @@ pub fn search_checks(
 
     let mut move_picker = MovePicker::new(board, data);
 
-    while let Some(m) = move_picker.next(board, false) {
+    while let Some(m) = move_picker.next(board, data, false) {
         if board.make_move(m).is_ok() {
             legal_moves += 1;
             let score = -search_checks(data, board, -beta, -alpha, ply + 1);
@@ -447,7 +453,7 @@ mod tests {
         let board =
             Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1");
         let mut move_picker = MovePicker::new(&board, &SearchData::default());
-        let first_move = move_picker.next(&board, false).unwrap();
+        let first_move = move_picker.next(&board, &SearchData::default(), false).unwrap();
 
         assert_eq!(
             first_move,
@@ -457,7 +463,7 @@ mod tests {
         let board =
             Board::from_fen("rnbq1rk1/pN1p1ppp/4n2b/2p1p3/N1BP3R/2P2Q2/PP3PPP/2B1K2R w K - 0 1");
         let mut move_picker = MovePicker::new(&board, &SearchData::default());
-        let first_move = move_picker.next(&board, false).unwrap();
+        let first_move = move_picker.next(&board, &SearchData::default(), false).unwrap();
 
         assert_eq!(
             first_move,

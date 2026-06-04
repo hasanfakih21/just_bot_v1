@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FromToHistory(pub [[i32; 64]; 64]);
 
 impl FromToHistory {
@@ -7,7 +7,7 @@ impl FromToHistory {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 //[Side to Move][From][To]
 pub struct History(pub [FromToHistory; 2]);
 

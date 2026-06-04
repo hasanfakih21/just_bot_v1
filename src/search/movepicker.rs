@@ -40,7 +40,7 @@ impl MovePicker {
         }
     }
 
-    pub fn next(&mut self, board: &Board, quiesce: bool) -> Option<Move> {
+    pub fn next(&mut self, board: &Board, data: &SearchData, quiesce: bool) -> Option<Move> {
         if self.status == Status::HashMove {
             self.status = Status::FirstNoisy;
             if !quiesce || !self.tt_move.unwrap().get_kind().is_quiet() {
@@ -64,6 +64,7 @@ impl MovePicker {
                 if !quiesce {
                     board.append_moves(MoveGenKind::Quiet, &mut self.moves);
                     self.remove_tt_move();
+                    self.score_quiet_moves(board, data);
                 }
             } else {
                 return Some(self.best_move());
@@ -71,7 +72,7 @@ impl MovePicker {
         }
 
         if self.status == Status::Quiet && !self.moves.is_empty() && !quiesce {
-            return Some(self.moves.pop().unwrap().mv);
+            return Some(self.best_move());
         }
 
         None
@@ -85,6 +86,13 @@ impl MovePicker {
             } else if mv.get_kind().is_queen_promotion() {
                 entry.score = Some(500);
             }
+        }
+    }
+
+    fn score_quiet_moves(&mut self, board: &Board, data: &SearchData) {
+        for entry in self.moves.iter_mut() {
+            let mv = entry.mv;
+            entry.score = Some(data.get_history(mv, board.board_state.side_to_move));
         }
     }
 
@@ -141,7 +149,7 @@ pub mod tests {
         let mut move_picker = MovePicker::new(&board, &SearchData::default());
         println!("{}", move_picker.moves);
         //println!("{:?}", move_picker);
-        while let Some(m) = move_picker.next(&board, true) {
+        while let Some(m) = move_picker.next(&board, &SearchData::default(), true) {
             println!("{m}");
         }
     }
