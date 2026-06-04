@@ -9,11 +9,11 @@ impl FromToHistory {
 
 #[derive(Debug, Clone)]
 //[Side to Move][From][To]
-pub struct History(pub [FromToHistory; 2]);
+pub struct History(pub Box<[FromToHistory; 2]>);
 
 impl History {
     pub fn new() -> Self {
-        History([FromToHistory::new(), FromToHistory::new()])
+        History(Box::new([FromToHistory::new(), FromToHistory::new()]))
     }
 }
 
