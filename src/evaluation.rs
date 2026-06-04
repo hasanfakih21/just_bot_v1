@@ -182,7 +182,7 @@ impl Board {
             mop_up_bonus = self.mop_up();
         }
 
-        self.get_material_evaluation() + self.get_piece_square_evaluation() + mop_up_bonus
+        self.get_material_evaluation() + self.get_piece_square_evaluation() + self.piece_acitivty_evaluation() + mop_up_bonus
     }
 
     pub const fn is_mop_up_pos(&self) -> bool {
@@ -248,6 +248,16 @@ impl Board {
 
     pub const fn get_king_square(&self, side: Side) -> Square {
         self.get_piece_bb(side, Piece::King).least_sig_bit().unwrap()
+    }
+
+    pub fn piece_activity_score(&self, side: Side) -> i32 {
+        let attacks = self.get_all_attacks(side);
+        attacks.count_bits() as i32 * 3
+    }
+
+    pub fn piece_acitivty_evaluation(&self) -> i32 {
+        let side = self.board_state.side_to_move;
+        self.piece_activity_score(side) - self.piece_activity_score(side.other())
     }
 }
 
