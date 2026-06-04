@@ -45,7 +45,7 @@ impl MovePicker {
             self.status = Status::FirstNoisy;
             if !quiesce || !self.tt_move.unwrap().get_kind().is_quiet() {
                 return self.tt_move;
-            } 
+            }
         }
 
         if self.status == Status::FirstNoisy {

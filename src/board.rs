@@ -138,7 +138,7 @@ impl Board {
         //Mailbox
         self.board_state.pieces_on_squares[square as usize] = None;
         //Material Eval
-        self.board_state.material_value[side as usize] -= piece.value(); 
+        self.board_state.material_value[side as usize] -= piece.value();
         //Piece Square Table
         self.board_state.pq_mg_value[side as usize] -= self.get_mg_score(piece, square, side);
         self.board_state.pq_eg_value[side as usize] -= self.get_eg_score(piece, square, side);

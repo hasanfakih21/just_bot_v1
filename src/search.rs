@@ -134,7 +134,7 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
 }
 
 //Root Search
-pub fn search_root (
+pub fn search_root(
     data: &mut SearchData,
     depth: usize,
     board: &mut Board,
@@ -172,7 +172,7 @@ pub fn search_root (
     best_move
 }
 
-pub fn search<Node: NodeType> (
+pub fn search<Node: NodeType>(
     data: &mut SearchData,
     depth: usize,
     board: &mut Board,
@@ -208,7 +208,8 @@ pub fn search<Node: NodeType> (
         && !Node::PV
         && board.board_state.hash == e.get_key()
         && e.get_depth() >= depth
-        && e.get_score().abs() < MATE_CUTOFF //Mate scores need to be properly adjusted for cutoffs
+        && e.get_score().abs() < MATE_CUTOFF
+    //Mate scores need to be properly adjusted for cutoffs
     {
         let tt_score = e.get_score();
 
@@ -228,25 +229,29 @@ pub fn search<Node: NodeType> (
     }
 
     //Reverse Futillity Pruning (RFP)
-    if !board.king_in_check() 
-        && !Node::PV 
-        && depth < 7 
-    {
+    if !board.king_in_check() && !Node::PV && depth < 7 {
         let eval = board.evaluate();
         let margin = 150 * depth as i32;
         if eval >= beta + margin {
-            return eval
+            return eval;
         }
     }
 
     //Null Move Pruning
     if !Node::PV && !board.king_in_check() && !board.only_king_and_pawns() {
-        let r = 4; 
+        let r = 4;
         board.make_null_move();
-        let null_move_score = -search::<NonPV>(data, depth.saturating_sub(r), board, -beta, -(beta - 1), ply + 1);
+        let null_move_score = -search::<NonPV>(
+            data,
+            depth.saturating_sub(r),
+            board,
+            -beta,
+            -(beta - 1),
+            ply + 1,
+        );
         board.unmake_move();
         if null_move_score >= beta {
-            return null_move_score
+            return null_move_score;
         }
     }
 
@@ -262,9 +267,9 @@ pub fn search<Node: NodeType> (
             legal_moves += 1;
             let mut score = best_score;
 
-            //PVS 
+            //PVS
             //Late Move Reductions
-            if depth > 3 && !Node::PV { 
+            if depth > 3 && !Node::PV {
                 let reduction = (0.99 + f32::ln(depth as f32) * f32::ln(legal_moves as f32)) / PI; //https://www.chessprogramming.org/Late_Move_Reductions Obsidian formula
                 //println!("Depth: {} Reduction: {}", depth, reduction);
                 let reduced_depth = (depth - 1).saturating_sub(reduction as usize);
@@ -279,7 +284,7 @@ pub fn search<Node: NodeType> (
             if Node::PV && (legal_moves == 1 || score > alpha) {
                 score = -search::<PV>(data, depth - 1, board, -beta, -alpha, ply + 1);
             }
-                    
+
             board.unmake_move();
             if data.over_limit() {
                 return TIMEOUT_SCORE;
@@ -339,7 +344,7 @@ pub fn quiesce(
     data.add_nodes(1);
     let static_eval = board.evaluate();
     let mut best_score = static_eval;
-    
+
     if best_score >= beta {
         return best_score;
     }
@@ -453,7 +458,9 @@ mod tests {
         let board =
             Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1");
         let mut move_picker = MovePicker::new(&board, &SearchData::default());
-        let first_move = move_picker.next(&board, &SearchData::default(), false).unwrap();
+        let first_move = move_picker
+            .next(&board, &SearchData::default(), false)
+            .unwrap();
 
         assert_eq!(
             first_move,
@@ -463,7 +470,9 @@ mod tests {
         let board =
             Board::from_fen("rnbq1rk1/pN1p1ppp/4n2b/2p1p3/N1BP3R/2P2Q2/PP3PPP/2B1K2R w K - 0 1");
         let mut move_picker = MovePicker::new(&board, &SearchData::default());
-        let first_move = move_picker.next(&board, &SearchData::default(), false).unwrap();
+        let first_move = move_picker
+            .next(&board, &SearchData::default(), false)
+            .unwrap();
 
         assert_eq!(
             first_move,
