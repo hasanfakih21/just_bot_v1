@@ -29,6 +29,8 @@ cargo build --release
 - Null Move Pruning
 - MVV-LVA
 - Aspiration Windows
+- Reverse Futility Pruning
+- Late Move Reductions
 
 ## Acknowledgments
 - [Chess Programming Wiki](https://www.chessprogramming.org/Main_Page)
