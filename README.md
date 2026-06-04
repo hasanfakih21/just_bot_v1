@@ -31,6 +31,7 @@ cargo build --release
 - Aspiration Windows
 - Reverse Futility Pruning
 - Late Move Reductions
+- Butterfly History
 
 ## Acknowledgments
 - [Chess Programming Wiki](https://www.chessprogramming.org/Main_Page)
