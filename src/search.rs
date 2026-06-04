@@ -1,5 +1,3 @@
-use std::f32::consts::PI;
-
 use crate::board::Board;
 use crate::search::data::SearchData;
 use crate::search::movepicker::MovePicker;
@@ -179,8 +177,10 @@ pub fn search<Node: NodeType>(
     beta: i32,
     ply: usize,
 ) -> i32 {
+    let in_check = board.king_in_check();
+
     if depth == 0 {
-        if board.king_in_check() {
+        if in_check {
             return search_checks(data, board, alpha, beta, ply);
         } else {
             return quiesce(data, board, alpha, beta, ply); //Horizon Node
@@ -228,7 +228,7 @@ pub fn search<Node: NodeType>(
     }
 
     //Reverse Futillity Pruning (RFP)
-    if !board.king_in_check() && !Node::PV && depth < 7 {
+    if !in_check && !Node::PV && depth < 7 {
         let eval = board.evaluate();
         let margin = 150 * depth as i32;
         if eval >= beta + margin {
@@ -237,7 +237,7 @@ pub fn search<Node: NodeType>(
     }
 
     //Null Move Pruning
-    if !Node::PV && !board.king_in_check() && !board.only_king_and_pawns() {
+    if !Node::PV && !in_check && !board.only_king_and_pawns() {
         let r = 4;
         board.make_null_move();
         let null_move_score = -search::<NonPV>(
@@ -263,15 +263,28 @@ pub fn search<Node: NodeType>(
     let mut quiets_searched = MoveList::new();
 
     while let Some(m) = move_picker.next(board, data, false) {
+        //Late Move Pruning (LMP)
+        if !in_check 
+            && best_score.abs() < MATE_CUTOFF
+            && m.get_kind().is_quiet()
+            && legal_moves > 6 + 2 * depth * depth {
+            continue;
+        }
+
         if board.make_move(m).is_ok() {
             legal_moves += 1;
             let mut score = best_score;
 
             //PVS
-            //Late Move Reductions
+            //Late Move Reductions (LMR)
             if depth > 3 && !Node::PV {
-                let reduction = (0.99 + f32::ln(depth as f32) * f32::ln(legal_moves as f32)) / PI; //https://www.chessprogramming.org/Late_Move_Reductions Obsidian formula
-                //println!("Depth: {} Reduction: {}", depth, reduction);
+                //let reduction = (0.99 + f32::ln(depth as f32) * f32::ln(legal_moves as f32)) / PI; //https://www.chessprogramming.org/Late_Move_Reductions Obsidian formula
+                let mut reduction = 0.7844 + f32::ln(depth as f32) * f32::ln(legal_moves as f32);
+                if m.get_kind().is_quiet() {
+                    reduction /= 2.4696;
+                } else {
+                    reduction /= 3.0;
+                }
                 let reduced_depth = (depth - 1).saturating_sub(reduction as usize);
                 score = -search::<NonPV>(data, reduced_depth, board, -alpha - 1, -alpha, ply + 1);
                 if score > alpha && reduced_depth < depth - 1 {
