@@ -363,24 +363,30 @@ pub fn quiesce(
     board: &mut Board,
     mut alpha: i32,
     beta: i32,
-    _ply: usize,
+    ply: usize,
 ) -> i32 {
     data.add_nodes(1);
-    let static_eval = board.evaluate();
-    let mut best_score = static_eval;
+    let in_check = board.king_in_check();
+    let mut best_score = if in_check {
+        -MATE_SCORE + ply as i32
+    } else {
+        board.evaluate()
+    };
 
     if best_score >= beta {
         return best_score;
     }
+
     if best_score > alpha {
         alpha = best_score;
     }
 
     let mut move_picker = MovePicker::new(board, data);
+    let skip_quiets = !in_check;
 
-    while let Some(m) = move_picker.next(board, data, true) {
+    while let Some(m) = move_picker.next(board, data, skip_quiets) {
         if board.make_move(m).is_ok() {
-            let score = -quiesce(data, board, -beta, -alpha, _ply + 1);
+            let score = -quiesce(data, board, -beta, -alpha, ply + 1);
             board.unmake_move();
             if data.over_limit() {
                 return TIMEOUT_SCORE;
@@ -389,9 +395,11 @@ pub fn quiesce(
             if score >= beta {
                 return score;
             }
+
             if score > best_score {
                 best_score = score;
             }
+
             if score > alpha {
                 alpha = score;
             }
