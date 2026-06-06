@@ -105,7 +105,7 @@ impl Default for TranspositionTable {
 mod tests {
     use crate::{
         board::Board,
-        search::{data::SearchData, search_root},
+        search::{Root, data::SearchData, search},
         types::INFINITY,
     };
 
@@ -114,28 +114,30 @@ mod tests {
         let mut board =
             Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
         let mut data = SearchData::default();
-        if let Some((best_move, score)) = search_root(&mut data, 3, &mut board, -INFINITY, INFINITY)
-        {
-            let hash = board.board_state.hash;
-            let entry = data.tt.get_entry(hash);
+        let score = search::<Root>(&mut data, 3, &mut board, -INFINITY, INFINITY, 0); 
 
-            let m = entry.as_ref().unwrap().get_best_move();
-            let s = entry.as_ref().unwrap().get_score();
+        let hash = board.board_state.hash;
+        let entry = data.tt.get_entry(hash);
 
-            assert_eq!(best_move, m);
-            assert_eq!(score, s);
+        let m = entry.as_ref().unwrap().get_best_move();
+        let s = entry.as_ref().unwrap().get_score();
 
-            let _ = board.make_move(best_move);
-            let _ = search_root(&mut data, 2, &mut board, -INFINITY, INFINITY);
+        let best_move = data.get_pv().get(0).mv;
 
-            let entry = data.tt.get_entry(hash);
+        assert_eq!(best_move, m);
+        assert_eq!(score, s);
 
-            let m = entry.as_ref().unwrap().get_best_move();
-            let s = entry.as_ref().unwrap().get_score();
+        let _ = board.make_move(best_move);
+        search::<Root>(&mut data, 2, &mut board, -INFINITY, INFINITY, 0);
 
-            assert_eq!(best_move, m);
-            assert_eq!(score, s);
-        }
+        let entry = data.tt.get_entry(hash);
+
+        let m = entry.as_ref().unwrap().get_best_move();
+        let s = entry.as_ref().unwrap().get_score();
+
+        assert_eq!(best_move, m);
+        assert_eq!(score, s);
+    
     }
 
     // #[test]

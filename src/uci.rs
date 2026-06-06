@@ -58,8 +58,8 @@ pub fn input_loop() {
                 data.time.clear_settings();
                 data.set_playing_as(board.board_state.side_to_move);
 
-                if let Some((m, _)) = go(args, &mut board, &mut data) {
-                    println!("bestmove {m}");
+                if let Some(e) = go(args, &mut board, &mut data) {
+                    println!("bestmove {}", e.mv);
                 }
             }
             "quit" => break,
@@ -119,7 +119,7 @@ pub fn position(args: &str, board: &mut Board) {
     }
 }
 
-pub fn go(args: &str, board: &mut Board, data: &mut SearchData) -> Option<(Move, i32)> {
+pub fn go(args: &str, board: &mut Board, data: &mut SearchData) -> Option<MoveEntry> {
     let (command, args) = args.split_once(" ").unwrap_or((args, ""));
     if args.is_empty() {
         return search_runner(board, data);
@@ -209,7 +209,7 @@ pub mod tests {
         println!(
             "{:?}\nBestmove: {}",
             data.get_time_settings(),
-            bm.unwrap().0
+            bm.unwrap().mv
         );
     }
 

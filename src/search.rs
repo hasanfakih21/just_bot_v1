@@ -55,7 +55,7 @@ impl NodeType for Root {
     const ROOT: bool = true;
 }
 
-pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, i32)> {
+pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<MoveEntry> {
     data.clear_node_count();
     data.reset_pv();
     data.start_time();
@@ -64,11 +64,12 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
     let mut depth = 1;
 
     //Initialize with move from first depth
-    let mut best_move = search_root(data, depth, board, -INFINITY, INFINITY)?;
+    let best_score = search::<Root>(data, depth, board, -INFINITY, INFINITY, 0);
+    let mut best_move = data.get_pv().get(0); 
     depth += 1;
 
     //Aspiration Window
-    let mut score = best_move.1;
+    let mut score = best_score;
     let mut alpha_window = 25;
     let mut beta_window = 25;
     let mut alpha = score - alpha_window;
@@ -88,7 +89,7 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
 
     //Iterative Deepening
     loop {
-        let deeper_move = search_root(data, depth, board, alpha, beta);
+        let deeper_move_score = search::<Root>(data, depth, board, alpha, beta, 0);
         if data.over_limit() || depth > data.time.depth_limit() {
             // println!(
             //     "\n\nSearched for: {}\nTime Limit: {}\nDepth Limit: {}",
@@ -99,7 +100,7 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
             break;
         }
 
-        let new_score = deeper_move.unwrap().1;
+        let new_score = deeper_move_score;
         if new_score <= alpha {
             //Failed Low
             alpha_window *= 2;
@@ -114,8 +115,8 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
 
         depth += 1;
 
-        best_move = deeper_move?;
         score = new_score;
+        best_move = data.get_pv().get(0);
         alpha_window = 25;
         beta_window = 25;
         alpha = score - alpha_window;
@@ -135,45 +136,6 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
     Some(best_move)
 }
 
-//Root Search
-pub fn search_root(
-    data: &mut SearchData,
-    depth: usize,
-    board: &mut Board,
-    alpha: i32,
-    beta: i32,
-) -> Option<(Move, i32)> {
-    let mut best_score = -INFINITY;
-    let mut best_move: Option<(Move, i32)> = None;
-    let ply = 0;
-    data.clear_pv(0);
-
-    let mut move_picker = MovePicker::new(board, data);
-
-    while let Some(m) = move_picker.next(board, data, false) {
-        if board.make_move(m).is_ok() {
-            let score = -search::<PV>(data, depth - 1, board, -beta, -alpha, ply + 1);
-
-            board.unmake_move();
-            if data.over_limit() {
-                return None;
-            }
-            //println!("{m}: {score}"); //Debug Print
-            if score >= best_score {
-                data.add_pv_move(m, ply);
-                best_score = score;
-                best_move = Some((m, score));
-            }
-        }
-    }
-
-    if let Some((m, s)) = best_move {
-        data.tt
-            .add_entry(m, s, Bound::Exact, board.board_state.hash, depth);
-    }
-    best_move
-}
-
 pub fn search<Node: NodeType>(
     data: &mut SearchData,
     depth: usize,
@@ -182,10 +144,8 @@ pub fn search<Node: NodeType>(
     beta: i32,
     ply: usize,
 ) -> i32 {
-    let in_check = board.king_in_check();
-
     if depth == 0 {
-        if in_check {
+        if board.king_in_check() {
             return search_checks(data, board, alpha, beta, ply);
         } else {
             return quiesce(data, board, alpha, beta, ply); //Horizon Node
@@ -193,9 +153,11 @@ pub fn search<Node: NodeType>(
     }
 
     data.add_nodes(1);
-    data.clear_pv(ply);
+    if Node::PV && !Node::ROOT {
+        data.clear_pv(ply);
+    }
 
-    if board.board_state.half_move_clock > 4 {
+    if board.board_state.half_move_clock > 4 && !Node::ROOT {
         //50 move rule
         if board.board_state.half_move_clock >= 100 {
             return 0;
@@ -231,6 +193,8 @@ pub fn search<Node: NodeType>(
             }
         }
     }
+
+    let in_check = board.king_in_check();
 
     //Reverse Futillity Pruning (RFP)
     if !in_check && !Node::PV && depth < 7 {
@@ -311,7 +275,7 @@ pub fn search<Node: NodeType>(
 
             if score > alpha {
                 bound = Bound::Exact;
-                data.add_pv_move(m, ply);
+                //data.add_pv_move(m, ply);
                 alpha = score;
             }
 
@@ -357,6 +321,10 @@ pub fn search<Node: NodeType>(
     }
 
     if let Some(m) = best_move {
+        if Node::PV {
+            data.add_pv_move(m, ply);
+        }
+
         let tt_score = best_score;
         data.tt
             .add_entry(m, tt_score, bound, board.board_state.hash, depth);
@@ -370,15 +338,10 @@ pub fn quiesce(
     board: &mut Board,
     mut alpha: i32,
     beta: i32,
-    ply: usize,
+    _ply: usize,
 ) -> i32 {
     data.add_nodes(1);
-    let in_check = board.king_in_check();
-    let mut best_score = if in_check {
-        -MATE_SCORE + ply as i32
-    } else {
-        board.evaluate()
-    };
+    let mut best_score = board.evaluate();
 
     if best_score >= beta {
         return best_score;
@@ -389,11 +352,10 @@ pub fn quiesce(
     }
 
     let mut move_picker = MovePicker::new(board, data);
-    let skip_quiets = !in_check;
 
-    while let Some(m) = move_picker.next(board, data, skip_quiets) {
+    while let Some(m) = move_picker.next(board, data, true) {
         if board.make_move(m).is_ok() {
-            let score = -quiesce(data, board, -beta, -alpha, ply + 1);
+            let score = -quiesce(data, board, -beta, -alpha, _ply + 1);
             board.unmake_move();
             if data.over_limit() {
                 return TIMEOUT_SCORE;

@@ -49,6 +49,10 @@ impl SearchData {
         &self.pv[0]
     }
 
+    pub fn get_best_move(&self) -> Move {
+        self.get_pv().get(0).mv
+    }
+
     pub fn add_nodes(&self, nodes: usize) {
         self.total_nodes.fetch_add(nodes, Ordering::Relaxed);
     }
