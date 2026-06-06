@@ -57,7 +57,7 @@ pub fn input_loop() {
             "go" => {
                 data.time.clear_settings();
                 data.set_playing_as(board.board_state.side_to_move);
-                
+
                 if let Some((m, _)) = go(args, &mut board, &mut data) {
                     println!("bestmove {m}");
                 }
@@ -128,7 +128,7 @@ pub fn go(args: &str, board: &mut Board, data: &mut SearchData) -> Option<(Move,
     match command.trim() {
         "depth" => {
             let (depth, args) = args.split_once(" ").unwrap_or((args, ""));
-            data.get_time_settings().depth = depth.trim().parse().unwrap_or(0);
+            data.get_time_settings().depth = depth.trim().parse().unwrap_or(MAX_DEPTH - 1);
             go(args, board, data)
         }
         "wtime" => {

@@ -90,6 +90,12 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
     loop {
         let deeper_move = search_root(data, depth, board, alpha, beta);
         if data.over_limit() || depth > data.time.depth_limit() {
+            // println!(
+            //     "\n\nSearched for: {}\nTime Limit: {}\nDepth Limit: {}",
+            //     data.time.elapsed().as_millis(),
+            //     data.time.time_limit(),
+            //     data.time.depth_limit()
+            // );
             break;
         }
 
@@ -263,10 +269,11 @@ pub fn search<Node: NodeType>(
 
     while let Some(m) = move_picker.next(board, data, false) {
         //Late Move Pruning (LMP)
-        if !in_check 
+        if !in_check
             && best_score.abs() < MATE_CUTOFF
             && m.get_kind().is_quiet()
-            && legal_moves > 6 + 2 * depth * depth {
+            && legal_moves > 6 + 2 * depth * depth
+        {
             continue;
         }
 

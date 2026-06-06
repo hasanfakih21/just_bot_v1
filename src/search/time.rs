@@ -37,7 +37,6 @@ impl Default for Limits {
     }
 }
 
-
 impl TimeManager {
     pub fn new() -> TimeManager {
         TimeManager {
@@ -71,18 +70,28 @@ impl TimeManager {
         }
 
         if remaining_time == 0 {
-            return
+            self.limits.time = 300000; //Default
+            return;
         }
 
         self.limits.time = (remaining_time / 20) + (increment / 2); //Simple time managment strategy: remaining time/20 + increment/2
     }
 
     pub fn set_depth_limit(&mut self) {
+        if self.settings.depth == 0 {
+            self.limits.depth = MAX_DEPTH - 1; //Default 
+            return;
+        }
+
         self.limits.depth = self.settings.depth;
     }
 
     pub fn depth_limit(&self) -> usize {
         self.limits.depth
+    }
+
+    pub fn time_limit(&self) -> u64 {
+        self.limits.time
     }
 
     pub fn elapsed(&self) -> Duration {

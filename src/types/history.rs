@@ -20,7 +20,10 @@ impl History {
 
     pub fn update(&mut self, side: Side, m: Move, bonus: i32) {
         let clamped_bonus = bonus.clamp(-MAX_HISTORY, MAX_HISTORY);
-        self.0[side as usize].0[m.get_from() as usize][m.get_to() as usize] += clamped_bonus  - self.0[side as usize].0[m.get_from() as usize][m.get_to() as usize] * clamped_bonus.abs() / MAX_HISTORY;
+        self.0[side as usize].0[m.get_from() as usize][m.get_to() as usize] += clamped_bonus
+            - self.0[side as usize].0[m.get_from() as usize][m.get_to() as usize]
+                * clamped_bonus.abs()
+                / MAX_HISTORY;
     }
 
     pub fn get(&self, side: Side, m: Move) -> i32 {
