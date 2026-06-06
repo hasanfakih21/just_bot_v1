@@ -49,6 +49,10 @@ impl SearchData {
         &self.pv[0]
     }
 
+    pub fn get_best_move(&self) -> Move {
+        self.get_pv().get(0).mv
+    }
+
     pub fn add_nodes(&self, nodes: usize) {
         self.total_nodes.fetch_add(nodes, Ordering::Relaxed);
     }
@@ -62,7 +66,8 @@ impl SearchData {
     }
 
     pub fn start_time(&mut self) {
-        self.time.reset_clock(self.playing_as);
+        self.time.set_time_limit(self.playing_as);
+        self.time.reset_clock();
     }
 
     pub fn add_pv_move(&mut self, m: Move, ply: usize) {
