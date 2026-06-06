@@ -1,15 +1,15 @@
 use std::time::{Duration, Instant};
 
-use crate::types::Side;
+use crate::types::{MAX_DEPTH, Side};
 
 #[derive(Debug)]
 pub struct TimeManager {
     pub clock: Instant,
     pub settings: TimeSettings,
-    pub limit: Limit,
+    pub limits: Limits,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct TimeSettings {
     pub wtime: u64,
     pub btime: u64,
@@ -23,38 +23,39 @@ pub struct TimeSettings {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum Limit {
-    Time(u64),
-    Depth(u64),
+pub struct Limits {
+    time: u64,
+    depth: usize,
 }
 
-impl Default for TimeSettings {
+impl Default for Limits {
     fn default() -> Self {
         Self {
-            wtime: 10000,
-            btime: 10000,
-            winc: 0,
-            binc: 0,
-            movestogo: 0,
-            depth: 0,
-            nodes: 0,
-            mate: 0,
-            movetime: 0,
+            time: 300000,
+            depth: MAX_DEPTH - 1,
         }
     }
 }
+
 
 impl TimeManager {
     pub fn new() -> TimeManager {
         TimeManager {
             clock: Instant::now(),
             settings: TimeSettings::default(),
-            limit: Limit::Time(1000),
+            limits: Limits::default(),
         }
     }
 
-    pub fn reset_clock(&mut self, side: Side) {
+    pub fn clear_settings(&mut self) {
+        self.settings = TimeSettings::default();
+    }
+
+    pub fn reset_clock(&mut self) {
         self.clock = Instant::now();
+    }
+
+    pub fn set_time_limit(&mut self, side: Side) {
         let remaining_time;
         let increment;
 
@@ -69,22 +70,27 @@ impl TimeManager {
             }
         }
 
-        self.limit = Limit::Time((remaining_time / 20) + (increment / 2)); //Simple time managment strategy: remaining time/20 + increment/2
+        if remaining_time == 0 {
+            return
+        }
+
+        self.limits.time = (remaining_time / 20) + (increment / 2); //Simple time managment strategy: remaining time/20 + increment/2
+    }
+
+    pub fn set_depth_limit(&mut self) {
+        self.limits.depth = self.settings.depth;
+    }
+
+    pub fn depth_limit(&self) -> usize {
+        self.limits.depth
     }
 
     pub fn elapsed(&self) -> Duration {
         self.clock.elapsed()
     }
 
-    pub fn get_limit(&self) -> u64 {
-        match self.limit {
-            Limit::Time(t) => t,
-            Limit::Depth(d) => d,
-        }
-    }
-
     pub fn over_limit(&self) -> bool {
-        self.elapsed().as_millis() as u64 > self.get_limit() + 20 //So it uses the same time as an older version that didn't stop exactly over the limit
+        self.elapsed().as_millis() as u64 > self.limits.time + 20 //So it uses the same time as an older version that didn't stop exactly over the limit
     }
 }
 

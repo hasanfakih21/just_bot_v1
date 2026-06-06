@@ -56,6 +56,8 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
     data.clear_node_count();
     data.reset_pv();
     data.start_time();
+    data.time.set_depth_limit();
+
     let mut depth = 1;
 
     //Initialize with move from first depth
@@ -84,24 +86,18 @@ pub fn search_runner(board: &mut Board, data: &mut SearchData) -> Option<(Move, 
     //Iterative Deepening
     loop {
         let deeper_move = search_root(data, depth, board, alpha, beta);
-        if data.over_limit() || depth >= MAX_DEPTH - 1 {
-            println!(
-                "Searched for: {}ms\nTime Limit: {}ms",
-                data.time.elapsed().as_millis(),
-                data.time.get_limit()
-            );
+        if data.over_limit() || depth > data.time.depth_limit() {
             break;
         }
+
         let new_score = deeper_move.unwrap().1;
         if new_score <= alpha {
             //Failed Low
-            //println!("Failed Low Score: {new_score} Window: {alpha_window} Alpha: {alpha} Depth: {depth}");
             alpha_window *= 2;
             alpha -= alpha_window;
             continue;
         } else if new_score >= beta {
             //Failed High
-            //println!("Failed High Score: {new_score} Window {beta_window} Beta: {beta} Depth: {depth}");
             beta_window *= 2;
             beta += beta_window;
             continue;

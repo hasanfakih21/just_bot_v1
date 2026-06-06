@@ -55,7 +55,9 @@ pub fn input_loop() {
                 data = SearchData::default();
             }
             "go" => {
+                data.time.clear_settings();
                 data.set_playing_as(board.board_state.side_to_move);
+                
                 if let Some((m, _)) = go(args, &mut board, &mut data) {
                     println!("bestmove {m}");
                 }

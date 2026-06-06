@@ -62,7 +62,8 @@ impl SearchData {
     }
 
     pub fn start_time(&mut self) {
-        self.time.reset_clock(self.playing_as);
+        self.time.set_time_limit(self.playing_as);
+        self.time.reset_clock();
     }
 
     pub fn add_pv_move(&mut self, m: Move, ply: usize) {
