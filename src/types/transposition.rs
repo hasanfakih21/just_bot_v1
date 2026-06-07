@@ -111,12 +111,14 @@ mod tests {
 
     #[test]
     fn test_transposition_table() {
-        let mut board =
+        let board =
             Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
         let mut data = SearchData::default();
-        let score = search::<Root>(&mut data, 3, &mut board, -INFINITY, INFINITY, 0); 
+        data.board = board;
 
-        let hash = board.board_state.hash;
+        let score = search::<Root>(&mut data, 3, -INFINITY, INFINITY, 0); 
+
+        let hash = data.board.board_state.hash;
         let entry = data.tt.get_entry(hash);
 
         let m = entry.as_ref().unwrap().get_best_move();
@@ -127,8 +129,8 @@ mod tests {
         assert_eq!(best_move, m);
         assert_eq!(score, s);
 
-        let _ = board.make_move(best_move);
-        search::<Root>(&mut data, 2, &mut board, -INFINITY, INFINITY, 0);
+        let _ = data.board.make_move(best_move);
+        search::<Root>(&mut data, 2, -INFINITY, INFINITY, 0);
 
         let entry = data.tt.get_entry(hash);
 

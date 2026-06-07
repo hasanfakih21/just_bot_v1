@@ -6,7 +6,6 @@ use crate::search::search_runner;
 use crate::types::*;
 
 pub fn input_loop() {
-    let mut board = Board::from_fen(STARTING_FEN);
     let mut data = SearchData::default();
     let mut input_buffer = String::new();
 
@@ -18,18 +17,17 @@ pub fn input_loop() {
         let (command, args) = input_buffer.split_once(" ").unwrap_or((&input_buffer, ""));
 
         match command.trim() {
-            "position" => position(args, &mut board),
+            "position" => position(args, &mut data.board),
             "uci" => uci(),
             "isready" => println!("readyok"),
             "ucinewgame" => {
-                board = Board::from_fen(STARTING_FEN);
                 data = SearchData::default();
             }
             "go" => {
                 data.time.clear_settings();
-                data.set_playing_as(board.board_state.side_to_move);
+                data.set_playing_as(data.board.board_state.side_to_move);
 
-                if let Some(e) = go(args, &mut board, &mut data) {
+                if let Some(e) = go(args, &mut data) {
                     println!("bestmove {}", e.mv);
                 }
             }
@@ -37,7 +35,7 @@ pub fn input_loop() {
             "perft" => {
                 if let Ok(depth) = args.trim().parse::<usize>() {
                     let clock = Instant::now();
-                    let nodes_count = crate::perft::perft(depth, &mut board);
+                    let nodes_count = crate::perft::perft(depth, &mut data.board);
                     println!(
                         "Number of nodes: {nodes_count}\nTime: {}ms",
                         clock.elapsed().as_millis()
@@ -46,7 +44,7 @@ pub fn input_loop() {
                     eprintln!("Enter a valid depth!")
                 }
             }
-            "d" => println!("{board}"),
+            "d" => println!("{}", data.board),
             _ => eprintln!("Not a valid command"),
         }
 
@@ -90,50 +88,50 @@ pub fn position(args: &str, board: &mut Board) {
     }
 }
 
-pub fn go(args: &str, board: &mut Board, data: &mut SearchData) -> Option<MoveEntry> {
+pub fn go(args: &str, data: &mut SearchData) -> Option<MoveEntry> {
     let (command, args) = args.split_once(" ").unwrap_or((args, ""));
     if args.is_empty() {
-        return search_runner(board, data);
+        return search_runner(data);
     }
 
     match command.trim() {
         "depth" => {
             let (depth, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().depth = depth.trim().parse().unwrap_or(MAX_DEPTH - 1);
-            go(args, board, data)
+            go(args, data)
         }
         "wtime" => {
             //Example: go wtime 900000 btime 900000 winc 0 binc 0
             let (wtime, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().wtime = wtime.trim().parse().unwrap_or(500);
-            go(args, board, data)
+            go(args, data)
         }
         "btime" => {
             let (btime, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().btime = btime.trim().parse().unwrap_or(500);
-            go(args, board, data)
+            go(args, data)
         }
         "winc" => {
             let (winc, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().winc = winc.trim().parse().unwrap_or(0);
-            go(args, board, data)
+            go(args, data)
         }
         "binc" => {
             let (binc, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().binc = binc.trim().parse().unwrap_or(0);
-            go(args, board, data)
+            go(args, data)
         }
         "movestogo" => {
             let (movestogo, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().movestogo = movestogo.trim().parse().unwrap_or(0);
-            go(args, board, data)
+            go(args, data)
         }
         "movetime" => {
             let (movetime, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().movetime = movetime.trim().parse().unwrap_or(0);
-            go(args, board, data)
+            go(args, data)
         }
-        _ => go(args, board, data),
+        _ => go(args, data),
     }
 }
 
@@ -160,21 +158,17 @@ pub mod tests {
 
     #[test]
     fn test_parse_times() {
-        let mut board = Board::from_fen(STARTING_FEN);
         go(
             "wtime 5000 btime 5000 winc 0 binc 0",
-            &mut board,
             &mut SearchData::default(),
         );
     }
 
     #[test]
     fn test_parse_go() {
-        let mut board = Board::from_fen(STARTING_FEN);
         let mut data = SearchData::default();
         let bm = go(
             "wtime 5000 btime 5000 winc 5 binc 8 movetime 100",
-            &mut board,
             &mut data,
         );
         println!(

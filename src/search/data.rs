@@ -1,7 +1,8 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use crate::board::Board;
 use crate::search::time::{TimeManager, TimeSettings};
-use crate::types::{History, Move, MoveList, Side};
+use crate::types::{History, Move, MoveList, STARTING_FEN, Side};
 
 use crate::types::TranspositionTable;
 
@@ -12,6 +13,7 @@ pub struct SearchData {
     pv: Vec<MoveList>,
     total_nodes: AtomicUsize,
 
+    pub board: Board,
     pub tt: TranspositionTable,
     pub time: TimeManager,
     pub history: History,
@@ -26,9 +28,11 @@ impl SearchData {
             playing_as: Side::White,
             depth: 0,
             pv: vec![MoveList::new(); 128],
+            total_nodes: AtomicUsize::new(0),
+
+            board: Board::from_fen(STARTING_FEN),
             tt: TranspositionTable::new(),
             time: TimeManager::new(),
-            total_nodes: AtomicUsize::new(0),
             history: History::new(),
         }
     }

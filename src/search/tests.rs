@@ -3,9 +3,8 @@ use crate::board::Board;
 
 #[test]
 fn test_search() {
-    let mut board = Board::from_fen(STARTING_FEN);
     let mut data = SearchData::default();
-    search::<Root>(&mut data, 5, &mut board, -INFINITY, INFINITY, 0);
+    search::<Root>(&mut data, 5, -INFINITY, INFINITY, 0);
     let best_move = data.get_pv().get(0).mv;
     println!("Best move: {}", best_move);
 }
@@ -52,15 +51,17 @@ fn test_repetion_detection() {
     let _ = board.make_move(Move::new(E4, F4, QuietMove));
 
     let mut data = SearchData::default();
-    let score = search::<Root>(&mut data, 3, &mut board, -INFINITY, INFINITY, 0 );
+    data.board = board;
+
+    let score = search::<Root>(&mut data, 3, -INFINITY, INFINITY, 0 );
     println!("{score}");
     let m = data.get_best_move();
 
     println!(
         "{:?}\nCurrent Hash: {}",
-        board.game_history, board.board_state.hash
+        data.board.game_history, data.board.board_state.hash
     );
-    println!("Repetions counted: {}", board.detect_repetitions());
+    println!("Repetions counted: {}", data.board.detect_repetitions());
     assert_eq!(score, 0);
     assert_eq!(m, Move::new(C1, C2, QuietMove));
 }
@@ -68,10 +69,12 @@ fn test_repetion_detection() {
 #[test]
 fn test_mate_in_one() {
     let mut data = SearchData::default();
-    let mut board =
+    let board =
         Board::from_fen("r1b4r/p1p1q3/1bppk3/4pp2/3PP1Q1/2P1R3/PP3PPP/RN4K1 w - - 0 18");
     data.set_playing_as(board.board_state.side_to_move);
-    search::<Root>(&mut data, 1, &mut board, -INFINITY, INFINITY, 0);
+    data.board = board;
+
+    search::<Root>(&mut data, 1, -INFINITY, INFINITY, 0);
     let best_move = data.get_pv().get(0).mv;
     println!("Best Move: {}", best_move);
     assert_eq!(
@@ -83,9 +86,11 @@ fn test_mate_in_one() {
 #[test]
 fn test_mate_in_four() {
     let mut data = SearchData::default();
-    let mut board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36");
+    let board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36");
     data.set_playing_as(board.board_state.side_to_move);
-    search::<Root>(&mut data, 4, &mut board, -INFINITY, INFINITY, 0);
+    data.board = board;
+
+    search::<Root>(&mut data, 4, -INFINITY, INFINITY, 0);
     let best_move = data.get_best_move();
     println!("Best Move: {}", best_move);
     assert_eq!(
@@ -100,11 +105,13 @@ fn test_pv_line() {
     use Square::*;
 
     let mut data = SearchData::default();
-    let mut board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36");
+    let board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36");
     data.set_playing_as(board.board_state.side_to_move);
     data.get_time_settings().btime = 1000000;
     data.start_time();
-    let score = search::<Root>(&mut data, 7, &mut board, -INFINITY, INFINITY, 0);
+    data.board = board;
+
+    let score = search::<Root>(&mut data, 7, -INFINITY, INFINITY, 0);
     let best_move = data.get_best_move();
     println!("PV: {}", data.get_pv());
     println!("Eval: {}", score);
@@ -146,16 +153,18 @@ fn test_transposition_timeout() {
     let mut data = SearchData::new();
     data.set_playing_as(Side::Black);
     data.get_time_settings().btime = 8080;
-    let mut board = Board::from_fen("6k1/2p5/4R1pp/1p1r4/pP1p4/P5PP/2P2P2/6K1 b - - 0 32");
-    let _ = search_runner(&mut board, &mut data);
+    let board = Board::from_fen("6k1/2p5/4R1pp/1p1r4/pP1p4/P5PP/2P2P2/6K1 b - - 0 32");
+    data.board = board;
+
+    let _ = search_runner(&mut data);
     println!();
-    let _ = search_runner(&mut board, &mut data);
+    let _ = search_runner(&mut data);
     println!();
-    let _ = search_runner(&mut board, &mut data);
+    let _ = search_runner(&mut data);
     println!();
-    let _ = search_runner(&mut board, &mut data);
+    let _ = search_runner(&mut data);
     println!();
-    let _ = search_runner(&mut board, &mut data);
+    let _ = search_runner(&mut data);
     println!();
 
     assert!(!data.tt.0.iter().any(|i| {
