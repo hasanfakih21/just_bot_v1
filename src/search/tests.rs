@@ -71,7 +71,6 @@ fn test_mate_in_one() {
     let mut data = SearchData::default();
     let board =
         Board::from_fen("r1b4r/p1p1q3/1bppk3/4pp2/3PP1Q1/2P1R3/PP3PPP/RN4K1 w - - 0 18");
-    data.set_playing_as(board.board_state.side_to_move);
     data.board = board;
 
     search::<Root>(&mut data, 1, -INFINITY, INFINITY, 0);
@@ -87,7 +86,6 @@ fn test_mate_in_one() {
 fn test_mate_in_four() {
     let mut data = SearchData::default();
     let board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36");
-    data.set_playing_as(board.board_state.side_to_move);
     data.board = board;
 
     search::<Root>(&mut data, 4, -INFINITY, INFINITY, 0);
@@ -106,7 +104,6 @@ fn test_pv_line() {
 
     let mut data = SearchData::default();
     let board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36");
-    data.set_playing_as(board.board_state.side_to_move);
     data.get_time_settings().btime = 1000000;
     data.start_time();
     data.board = board;
@@ -151,7 +148,6 @@ fn test_bugged_position() {
 #[test]
 fn test_transposition_timeout() {
     let mut data = SearchData::new();
-    data.set_playing_as(Side::Black);
     data.get_time_settings().btime = 8080;
     let board = Board::from_fen("6k1/2p5/4R1pp/1p1r4/pP1p4/P5PP/2P2P2/6K1 b - - 0 32");
     data.board = board;

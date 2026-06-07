@@ -25,7 +25,6 @@ pub fn input_loop() {
             }
             "go" => {
                 data.time.clear_settings();
-                data.set_playing_as(data.board.board_state.side_to_move);
 
                 if let Some(e) = go(args, &mut data) {
                     println!("bestmove {}", e.mv);
