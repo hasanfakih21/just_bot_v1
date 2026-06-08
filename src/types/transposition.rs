@@ -89,26 +89,20 @@ impl TranspositionTable {
         let index = index(hash, self.len());
         debug_assert!(index < self.len());
 
-        unsafe { self.ptr().add(index).write(entry) };
+        let old_entry = unsafe {&mut *self.ptr().add(index) };
+        *old_entry = entry;
     }
 
-    pub fn get_entry(&self, hash: u64) -> Option<Entry> {
+    pub fn get_entry(&self, hash: u64) -> Option<&Entry> {
         let index = index(hash, self.len());
         debug_assert!(index < self.len());
 
-        let entry = unsafe { self.ptr().add(index).read() };
+        let entry = unsafe {& *self.ptr().add(index) };
         if entry.get_key() == hash {
             Some(entry)
         } else {
             None
         }
-    }
-
-    pub fn get_best_move(&self, hash: u64) -> Move {
-        let index = index(hash, self.len());
-        debug_assert!(index < self.len());
-
-        unsafe { self.ptr().add(index).read().get_best_move() }
     }
 
     pub fn hashfull(&self) -> usize {
