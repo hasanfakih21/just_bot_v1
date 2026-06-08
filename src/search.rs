@@ -77,11 +77,20 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
 
     //All infos belonging to the pv should be sent together e.g. info depth 2 score cp 214 time 1242 nodes 2124 nps 34928 pv e2e4 e7e5 g1f3
     if data.shared.report() {
+        //Report mate score
+        let score_print = if score.abs() > MATE_CUTOFF {
+            let num_plies = MATE_SCORE - score.abs();
+            let mate_in = score.signum() * ((num_plies + 1) / 2);
+            format!("mate {}", mate_in)
+        } else {
+            format!("cp {}", score)
+        };
+
         println!(
-            "info depth {} time {} score cp {} nodes {} nps {} pv {} hashfull {}",
+            "info depth {} time {} score {} nodes {} nps {} pv {} hashfull {}",
             depth - 1,
             data.time.elapsed().as_millis(),
-            score,
+            score_print,
             data.shared.get_total_nodes_searched(),
             data.nodes_per_second(),
             data.get_pv(),
@@ -128,11 +137,20 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
         alpha = score - alpha_window;
         beta = score + beta_window;
         if data.shared.report() {
+            //Report mate score
+            let score_print = if score.abs() > MATE_CUTOFF {
+                let num_plies = MATE_SCORE - score.abs();
+                let mate_in = score.signum() * ((num_plies + 1) / 2);
+                format!("mate {}", mate_in)
+            } else {
+                format!("cp {}", score)
+            };
+
             println!(
-                "info depth {} time {} score cp {} nodes {} nps {} pv {} hashfull {}",
+                "info depth {} time {} score {} nodes {} nps {} pv {} hashfull {}",
                 depth - 1,
                 data.time.elapsed().as_millis(),
-                score,
+                score_print,
                 data.shared.get_total_nodes_searched(),
                 data.nodes_per_second(),
                 data.get_pv(),
