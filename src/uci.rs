@@ -1,20 +1,19 @@
+use std::sync::Arc;
+use std::sync::mpsc::{Receiver, channel};
+use std::thread;
 use std::time::Instant;
 
 use crate::board::Board;
-use crate::search::data::SearchData;
+use crate::search::data::{SearchData, SharedData};
 use crate::search::search_runner;
 use crate::types::*;
 
 pub fn input_loop() {
     let mut data = SearchData::default();
-    let mut input_buffer = String::new();
+    let rx = listen(data.shared.clone());
 
-    loop {
-        if std::io::stdin().read_line(&mut input_buffer).unwrap() == 0 {
-            break;
-        }
-
-        let (command, args) = input_buffer.split_once(" ").unwrap_or((&input_buffer, ""));
+    while let Ok(input) = rx.recv() {
+        let (command, args) = input.split_once(" ").unwrap_or((&input, ""));
 
         match command.trim() {
             "position" => position(args, &mut data.board),
@@ -25,6 +24,7 @@ pub fn input_loop() {
             }
             "go" => {
                 data.time.clear_settings();
+                data.shared.status.run();
 
                 if let Some(e) = go(args, &mut data) {
                     println!("bestmove {}", e.mv);
@@ -44,11 +44,38 @@ pub fn input_loop() {
                 }
             }
             "d" => println!("{}", data.board),
-            _ => eprintln!("Not a valid command"),
+            _ => (),
         }
-
-        input_buffer.clear();
     }
+}
+
+pub fn listen(shared: Arc<SharedData>) -> Receiver<String> {
+    let (tx, rx) = channel::<String>();
+    let mut input_buffer = String::new();
+
+    thread::spawn(move || {
+        loop {
+            if std::io::stdin().read_line(&mut input_buffer).unwrap() == 0 {
+                shared.status.stop();
+            };
+
+            match input_buffer.trim() {
+                "quit" => {
+                    shared.status.stop();
+                    break;
+                },
+                "stop" => {
+                    shared.status.stop();
+                }
+                _ => (),
+            }
+            
+            let _ = tx.send(input_buffer.clone());
+            input_buffer.clear();
+        }
+    });
+
+    rx
 }
 
 pub fn position(args: &str, board: &mut Board) {

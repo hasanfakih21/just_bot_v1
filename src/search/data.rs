@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use crate::board::Board;
 use crate::search::time::{TimeManager, TimeSettings};
@@ -7,9 +7,23 @@ use crate::types::TranspositionTable;
 use crate::types::{History, Move, MoveList, STARTING_FEN};
 
 #[derive(Debug)]
-pub enum Status {
-    Stop,
-    Running,
+pub struct Status(AtomicBool);
+
+impl Status {
+    pub const RUNNING: bool = true;
+    pub const STOPPED: bool = false;
+
+    pub fn stop(&self) {
+        self.0.store(Self::STOPPED, Ordering::Relaxed);
+    }
+
+    pub fn run(&self) {
+        self.0.store(Self::RUNNING, Ordering::Relaxed);
+    }
+
+    pub fn get(&self) -> bool {
+        self.0.load(Ordering::Relaxed)
+    }
 }
 
 #[derive(Debug)]
@@ -38,7 +52,7 @@ impl Default for SharedData {
         Self {
             tt: TranspositionTable::default(),
             total_nodes: AtomicUsize::new(0),
-            status: Status::Running,
+            status: Status(AtomicBool::new(Status::RUNNING)),
         }
     }
 }

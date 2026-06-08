@@ -1,5 +1,5 @@
 use crate::board::Board;
-use crate::search::data::SearchData;
+use crate::search::data::{SearchData, Status};
 use crate::search::movepicker::MovePicker;
 use crate::types::*;
 
@@ -89,8 +89,7 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
 
     //Iterative Deepening
     loop {
-        let deeper_move_score = search::<Root>(data, depth, alpha, beta, 0);
-        if data.over_limit() || depth > data.time.depth_limit() {
+        if data.over_limit() || depth > data.time.depth_limit() || data.shared.status.get() == Status::STOPPED {
             // println!(
             //     "\n\nSearched for: {}\nTime Limit: {}\nDepth Limit: {}",
             //     data.time.elapsed().as_millis(),
@@ -99,6 +98,8 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
             // );
             break;
         }
+
+        let deeper_move_score = search::<Root>(data, depth, alpha, beta, 0);
 
         let new_score = deeper_move_score;
         if new_score <= alpha {
@@ -262,7 +263,7 @@ pub fn search<Node: NodeType>(
             }
 
             data.board.unmake_move();
-            if data.over_limit() {
+            if data.over_limit() || data.shared.status.get() == Status::STOPPED {
                 return TIMEOUT_SCORE;
             }
 
@@ -349,7 +350,7 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
         if data.board.make_move(m).is_ok() {
             let score = -quiesce(data, -beta, -alpha, _ply + 1);
             data.board.unmake_move();
-            if data.over_limit() {
+            if data.over_limit() || data.shared.status.get() == Status::STOPPED {
                 return TIMEOUT_SCORE;
             }
 
@@ -398,7 +399,7 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
             legal_moves += 1;
             let score = -search_checks(data, -beta, -alpha, ply + 1);
             data.board.unmake_move();
-            if data.over_limit() {
+            if data.over_limit() || data.shared.status.get() == Status::STOPPED {
                 return TIMEOUT_SCORE;
             }
 
