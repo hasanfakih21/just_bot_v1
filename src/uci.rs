@@ -3,6 +3,7 @@ use std::sync::mpsc::{Receiver, channel};
 use std::thread;
 use std::time::Instant;
 
+use crate::bench::bench;
 use crate::board::Board;
 use crate::search::data::{SearchData, SharedData};
 use crate::search::search_runner;
@@ -63,6 +64,7 @@ pub fn input_loop(cli_args: String) {
                 }
             }
             "d" => println!("{}", data.board),
+            "bench" => bench(),
             _ => (),
         }
 

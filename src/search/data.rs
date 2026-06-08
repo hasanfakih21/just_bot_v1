@@ -31,6 +31,7 @@ pub struct SharedData {
     pub tt: TranspositionTable,
     pub total_nodes: AtomicUsize,
     pub status: Status,
+    pub mute: AtomicBool,
 }
 
 impl SharedData {
@@ -45,6 +46,14 @@ impl SharedData {
     pub fn clear_node_count(&self) {
         self.total_nodes.store(0, Ordering::Release);
     }
+
+    pub fn report(&self) -> bool {
+        !self.mute.load(Ordering::Relaxed)
+    }
+
+    pub fn mute(&self) {
+        self.mute.store(true, Ordering::Relaxed);
+    }
 }
 
 impl Default for SharedData {
@@ -53,6 +62,7 @@ impl Default for SharedData {
             tt: TranspositionTable::default(),
             total_nodes: AtomicUsize::new(0),
             status: Status(AtomicBool::new(Status::RUNNING)),
+            mute: AtomicBool::new(false),
         }
     }
 }

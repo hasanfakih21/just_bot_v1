@@ -76,16 +76,18 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
     let mut beta = score + beta_window;
 
     //All infos belonging to the pv should be sent together e.g. info depth 2 score cp 214 time 1242 nodes 2124 nps 34928 pv e2e4 e7e5 g1f3
-    println!(
-        "info depth {} time {} score cp {} nodes {} nps {} pv {} hashfull {}",
-        depth - 1,
-        data.time.elapsed().as_millis(),
-        score,
-        data.shared.get_total_nodes_searched(),
-        data.nodes_per_second(),
-        data.get_pv(),
-        data.shared.tt.hashfull(),
-    );
+    if data.shared.report() {
+        println!(
+            "info depth {} time {} score cp {} nodes {} nps {} pv {} hashfull {}",
+            depth - 1,
+            data.time.elapsed().as_millis(),
+            score,
+            data.shared.get_total_nodes_searched(),
+            data.nodes_per_second(),
+            data.get_pv(),
+            data.shared.tt.hashfull(),
+        );
+    }
 
     //Iterative Deepening
     loop {
@@ -125,16 +127,18 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
         beta_window = 25;
         alpha = score - alpha_window;
         beta = score + beta_window;
-        println!(
-            "info depth {} time {} score cp {} nodes {} nps {} pv {} hashfull {}",
-            depth - 1,
-            data.time.elapsed().as_millis(),
-            score,
-            data.shared.get_total_nodes_searched(),
-            data.nodes_per_second(),
-            data.get_pv(),
-            data.shared.tt.hashfull()
-        );
+        if data.shared.report() {
+            println!(
+                "info depth {} time {} score cp {} nodes {} nps {} pv {} hashfull {}",
+                depth - 1,
+                data.time.elapsed().as_millis(),
+                score,
+                data.shared.get_total_nodes_searched(),
+                data.nodes_per_second(),
+                data.get_pv(),
+                data.shared.tt.hashfull()
+            );
+        }
     }
 
     Some(best_move)
