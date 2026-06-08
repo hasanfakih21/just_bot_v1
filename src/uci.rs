@@ -20,7 +20,11 @@ pub fn input_loop() {
             "uci" => uci(),
             "isready" => println!("readyok"),
             "ucinewgame" => {
-                data = SearchData::default();
+                data.shared.tt.clear();
+                data = SearchData{
+                    shared: data.shared,
+                    ..Default::default()
+                };
             }
             "go" => {
                 data.time.clear_settings();

@@ -93,6 +93,11 @@ impl TranspositionTable {
         *old_entry = entry;
     }
 
+    pub fn clear(&self) {
+        self.age.store(0, Ordering::Relaxed);
+        unsafe { self.ptr().write_bytes(0, self.len()) }
+    }
+
     pub fn get_entry(&self, hash: u64) -> Option<&Entry> {
         let index = index(hash, self.len());
         debug_assert!(index < self.len());
