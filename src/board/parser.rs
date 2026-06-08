@@ -7,7 +7,7 @@ pub struct FenParseError;
 
 impl From<pieces::InvalidPiece> for FenParseError {
     fn from(_: pieces::InvalidPiece) -> Self {
-       FenParseError 
+        FenParseError
     }
 }
 
@@ -43,14 +43,14 @@ impl Board {
             }
         }
 
-        let turn = fen.next().unwrap();
+        let turn = fen.next().ok_or(FenParseError)?;
         match turn {
             "w" => board.board_state.side_to_move = Side::White,
             "b" => board.board_state.side_to_move = Side::Black,
             _ => eprintln!("Invalid side to move"),
         }
 
-        let castling_rights = fen.next().unwrap();
+        let castling_rights = fen.next().ok_or(FenParseError)?;
         for c in castling_rights.chars() {
             if c == '-' {
                 continue;
@@ -62,8 +62,9 @@ impl Board {
                 .set(Castling::from(c) as u8);
         }
 
-        let enpassant = fen.next().unwrap();
-        if let Ok(square) = Square::try_from(enpassant) {
+        if let Some(enpassant) = fen.next()
+            && let Ok(square) = Square::try_from(enpassant)
+        {
             board.board_state.enpassant = Some(square);
         }
 
@@ -129,23 +130,28 @@ mod tests {
         println!("{board}");
 
         let board3 =
-            Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1").unwrap();
+            Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1")
+                .unwrap();
         println!("{board3}");
 
         let board4 =
-            Board::from_fen("rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQkq e6 0 1").unwrap();
+            Board::from_fen("rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQkq e6 0 1")
+                .unwrap();
         println!("{board4}");
 
         let board5 =
-            Board::from_fen("r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9").unwrap();
+            Board::from_fen("r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9")
+                .unwrap();
         println!("{board5}");
 
         let board5 =
-            Board::from_fen("rnbqkbnr/pp3ppp/4p3/2pp4/3P4/2P2N2/PP2PPPP/RNBQKB1R w KQkq c6 0 4").unwrap();
+            Board::from_fen("rnbqkbnr/pp3ppp/4p3/2pp4/3P4/2P2N2/PP2PPPP/RNBQKB1R w KQkq c6 0 4")
+                .unwrap();
         println!("{board5}");
 
         let board6 =
-            Board::from_fen("rnb1kbnr/pp1q1pp1/4p2p/2p1N3/3Pp3/2P5/PP2BPPP/RNBQK1R1 b Qkq - 1 7").unwrap();
+            Board::from_fen("rnb1kbnr/pp1q1pp1/4p2p/2p1N3/3Pp3/2P5/PP2BPPP/RNBQK1R1 b Qkq - 1 7")
+                .unwrap();
         println!("{board6}");
         println!("Half move: {}", board6.board_state.half_move_clock);
         println!("Full move: {}", board6.board_state.full_move);

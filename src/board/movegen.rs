@@ -462,7 +462,8 @@ mod tests {
         println!();
 
         let board =
-            Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1").unwrap();
+            Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1")
+                .unwrap();
         let captures = board.generate_moves(MoveGenKind::Captures);
         let quiet = board.generate_moves(MoveGenKind::Quiet);
         println!("Captures: {captures}");

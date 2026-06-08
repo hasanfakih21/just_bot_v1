@@ -12,7 +12,11 @@ pub fn input_loop(cli_args: String) {
     let mut data = SearchData::default();
     let rx = listen(data.shared.clone());
 
-    let mut input = if !cli_args.is_empty() {cli_args} else {String::new()};
+    let mut input = if !cli_args.is_empty() {
+        cli_args
+    } else {
+        String::new()
+    };
 
     loop {
         if input.is_empty() {
@@ -20,7 +24,7 @@ pub fn input_loop(cli_args: String) {
                 input = s;
             } else {
                 data.shared.status.stop();
-                break
+                break;
             }
         }
 
@@ -32,7 +36,7 @@ pub fn input_loop(cli_args: String) {
             "isready" => println!("readyok"),
             "ucinewgame" => {
                 data.shared.tt.clear();
-                data = SearchData{
+                data = SearchData {
                     shared: data.shared,
                     ..Default::default()
                 };

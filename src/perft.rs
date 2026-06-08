@@ -51,7 +51,8 @@ mod tests {
         assert_eq!(nodes_count, 4865609);
 
         let mut kiwipete =
-            Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ").unwrap();
+            Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ")
+                .unwrap();
         println!("{kiwipete}");
         clock = Instant::now();
         nodes_count = perft(4, &mut kiwipete);
@@ -72,7 +73,8 @@ mod tests {
         assert_eq!(nodes_count, 674624);
 
         let mut board4 =
-            Board::from_fen("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1").unwrap();
+            Board::from_fen("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1")
+                .unwrap();
         println!("{board4}");
         clock = Instant::now();
         nodes_count = perft(4, &mut board4);
@@ -95,7 +97,8 @@ mod tests {
 
         let mut board6 = Board::from_fen(
             "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ",
-        ).unwrap();
+        )
+        .unwrap();
         println!("{board6}");
         clock = Instant::now();
         nodes_count = perft(4, &mut board6);

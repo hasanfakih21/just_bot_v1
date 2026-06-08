@@ -230,7 +230,8 @@ mod tests {
 
     #[test]
     fn test_make_move() {
-        let mut board = Board::from_fen("1K6/3pp1P1/4R3/3k3p/Ppn5/4b3/1PP1P1p1/7B b - a3 0 1").unwrap();
+        let mut board =
+            Board::from_fen("1K6/3pp1P1/4R3/3k3p/Ppn5/4b3/1PP1P1p1/7B b - a3 0 1").unwrap();
         println!("{board}");
 
         let m = Move::new(Square::B4, Square::A3, MoveKind::EnPassant);
@@ -259,7 +260,8 @@ mod tests {
 
         let mut board = Board::from_fen(
             "r3k2r/pppqn2p/n1bp2pb/1N2p3/2B5/1QP1PN2/PP1B1PPP/R3K2R w KQkq - 10 12",
-        ).unwrap();
+        )
+        .unwrap();
         println!("{board}");
 
         let m = Move::new(Square::E1, Square::G1, MoveKind::KingCastle);
@@ -289,7 +291,8 @@ mod tests {
         assert!(board.get_piece_at_square(Square::E8).is_none());
 
         let mut board =
-            Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP2pPPP/R1B2R1K b - - 1 17").unwrap();
+            Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP2pPPP/R1B2R1K b - - 1 17")
+                .unwrap();
         println!("{board}");
 
         let m = Move::new(Square::E2, Square::E1, MoveKind::BPromotion);
@@ -312,7 +315,8 @@ mod tests {
         assert!(board.get_piece_at_square(Square::E2).is_none());
 
         let mut board =
-            Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP3PPP/R1B2q1K w - - 0 18").unwrap();
+            Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP3PPP/R1B2q1K w - - 0 18")
+                .unwrap();
         println!("{board}");
 
         let m = Move::new(Square::C1, Square::H6, MoveKind::Capture);
@@ -322,7 +326,8 @@ mod tests {
         assert!(board.make_move(m).is_ok());
 
         let mut board =
-            Board::from_fen("r3k2N/p1ppqpb1/bn2pn2/3P4/1p2P3/2N2Q2/PPPBBPpP/R3K2R b KQq - 0 2").unwrap();
+            Board::from_fen("r3k2N/p1ppqpb1/bn2pn2/3P4/1p2P3/2N2Q2/PPPBBPpP/R3K2R b KQq - 0 2")
+                .unwrap();
         println!("{board}");
 
         let m = Move::new(Square::G2, Square::H1, MoveKind::NPromCapture);
@@ -334,11 +339,13 @@ mod tests {
     #[test]
     fn test_null_move() {
         let mut board =
-            Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP2pPPP/R1B2R1K b - - 1 17").unwrap();
+            Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP2pPPP/R1B2R1K b - - 1 17")
+                .unwrap();
         println!("{board}");
 
         let original =
-            Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP2pPPP/R1B2R1K b - - 1 17").unwrap();
+            Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP2pPPP/R1B2R1K b - - 1 17")
+                .unwrap();
 
         board.make_null_move();
         assert_eq!(board.board_state.side_to_move, Side::White);
