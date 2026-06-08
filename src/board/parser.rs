@@ -1,5 +1,6 @@
 use crate::board::Board;
-use crate::types::{Castling, Piece, Side, Square, ZOBRIST};
+use crate::board::movegen::MoveGenKind;
+use crate::types::{Castling, Move, Piece, Side, Square, ZOBRIST};
 
 //Starting Position: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 //[pieces] [turn to move] [castling rights] [enpassant] [halfmove clock] [fullmove clock]
@@ -79,6 +80,32 @@ impl Board {
         }
 
         board
+    }
+
+    pub fn parse_move(&self, move_string: &str) -> Result<Move, &str> {
+        let from = Square::try_from(&move_string[0..2]).unwrap();
+        let to = Square::try_from(&move_string[2..4]).unwrap();
+        let mut promotion_piece: Option<Piece> = None;
+        if move_string.len() > 4 {
+            match &move_string[4..] {
+                "n" => promotion_piece = Some(Piece::Knight),
+                "b" => promotion_piece = Some(Piece::Bishop),
+                "r" => promotion_piece = Some(Piece::Rook),
+                "q" => promotion_piece = Some(Piece::Queen),
+                _ => (),
+            }
+        }
+
+        let move_list = self.generate_moves(MoveGenKind::All);
+        if let Some(m) = move_list.iter().find(|e| {
+            e.mv.get_from() == from
+                && e.mv.get_to() == to
+                && e.mv.get_promoted_piece() == promotion_piece
+        }) {
+            Ok(m.mv)
+        } else {
+            Err("Invalid move string")
+        }
     }
 }
 

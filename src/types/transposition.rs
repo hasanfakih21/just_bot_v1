@@ -1,11 +1,16 @@
+use std::sync::atomic::{AtomicPtr, AtomicU8, AtomicUsize, Ordering};
+
 use crate::types::moves::Move;
 
-const TT_SIZE: usize = 64;
+const TT_DEFAULT_SIZE: usize = 64;
 const MEGABYTE: usize = 1024 * 1024;
-pub const ENTRIES: usize = TT_SIZE * MEGABYTE / std::mem::size_of::<Option<Entry>>();
+pub const ENTRIES: usize = TT_DEFAULT_SIZE * MEGABYTE / std::mem::size_of::<Option<Entry>>();
+pub const SIZE_OF_ENTRY: usize = std::mem::size_of::<Entry>();
 
+#[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Bound {
+    None,
     Exact,
     Upper,
     Lower,
@@ -13,16 +18,16 @@ pub enum Bound {
 
 #[derive(Debug, Clone)]
 pub struct Entry {
-    key: u64,
-    best_move: Move,
-    depth: usize,
-    score: i32,
-    bound: Bound,
-    //age
+    key: u64,        //8 bytes
+    best_move: Move, //2 bytes
+    depth: u8,       //1 byte
+    score: i32,      //4 bytes
+    bound: Bound,    //1 byte
+                     //age
 }
 
 impl Entry {
-    pub fn new(key: u64, best_move: Move, score: i32, bound: Bound, depth: usize) -> Self {
+    pub fn new(key: u64, best_move: Move, score: i32, bound: Bound, depth: u8) -> Self {
         Entry {
             key,
             best_move,
@@ -48,57 +53,118 @@ impl Entry {
         self.bound
     }
 
-    pub fn get_depth(&self) -> usize {
+    pub fn get_depth(&self) -> u8 {
         self.depth
     }
 }
 
 //https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
-const fn index(hash: u64) -> usize {
-    (((hash as u128) * (ENTRIES as u128)) >> 64) as usize
+const fn index(hash: u64, len: usize) -> usize {
+    (((hash as u128) * (len as u128)) >> 64) as usize
 }
 
-#[derive(Debug, Clone)]
-pub struct TranspositionTable(pub Vec<Option<Entry>>);
+#[derive(Debug)]
+pub struct TranspositionTable {
+    entries: AtomicPtr<Entry>,
+    len: AtomicUsize,
+    age: AtomicU8,
+}
 
 impl TranspositionTable {
-    pub fn new() -> Self {
-        TranspositionTable(vec![None; ENTRIES])
+    pub fn new(size_mb: usize) -> Self {
+        let (len, p) = unsafe { allocate_entries(size_mb) };
+        TranspositionTable {
+            entries: AtomicPtr::new(p),
+            len: AtomicUsize::new(len),
+            age: AtomicU8::new(0),
+        }
     }
 
-    pub fn add_entry(
-        &mut self,
-        best_move: Move,
-        score: i32,
-        bound: Bound,
-        hash: u64,
-        depth: usize,
-    ) {
+    fn ptr(&self) -> *mut Entry {
+        self.entries.load(Ordering::Relaxed)
+    }
+
+    pub fn add_entry(&self, best_move: Move, score: i32, bound: Bound, hash: u64, depth: u8) {
         let entry = Entry::new(hash, best_move, score, bound, depth);
-        self.0[index(hash)] = Some(entry);
+        let index = index(hash, self.len());
+        debug_assert!(index < self.len());
+
+        let old_entry = unsafe { &mut *self.ptr().add(index) };
+        *old_entry = entry;
     }
 
-    pub fn get_entry(&self, hash: u64) -> &Option<Entry> {
-        &self.0[index(hash)]
+    pub fn clear(&self) {
+        self.age.store(0, Ordering::Relaxed);
+        unsafe { self.ptr().write_bytes(0, self.len()) }
     }
 
-    pub fn get_best_move(&self, hash: u64) -> Option<Move> {
-        self.0[index(hash)].as_ref().map(|e| e.get_best_move())
-    }
+    pub fn get_entry(&self, hash: u64) -> Option<&Entry> {
+        let index = index(hash, self.len());
+        debug_assert!(index < self.len());
 
-    pub fn clear(&mut self) {
-        self.0 = vec![None; ENTRIES];
+        let entry = unsafe { &*self.ptr().add(index) };
+        if entry.get_key() == hash {
+            Some(entry)
+        } else {
+            None
+        }
     }
 
     pub fn hashfull(&self) -> usize {
-        self.0.iter().take(1000).filter(|e| e.is_some()).count()
+        let mut count = 0;
+        let entries = unsafe { std::slice::from_raw_parts(self.ptr(), self.len()) };
+
+        for e in entries.iter().take(1000) {
+            if e.bound != Bound::None {
+                count += 1;
+            }
+        }
+
+        count
+    }
+
+    pub fn increase_age(&self) {
+        self.age
+            .update(Ordering::Relaxed, Ordering::Relaxed, |e| e + 1);
+    }
+
+    #[allow(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        self.len.load(Ordering::Relaxed)
     }
 }
 
 impl Default for TranspositionTable {
     fn default() -> Self {
-        Self::new()
+        Self::new(TT_DEFAULT_SIZE)
     }
+}
+
+impl Drop for TranspositionTable {
+    fn drop(&mut self) {
+        unsafe { deallocate_entries(self.len(), self.ptr()) };
+    }
+}
+
+unsafe fn allocate_entries(size_mb: usize) -> (usize, *mut Entry) {
+    debug_assert_eq!(std::mem::size_of::<Entry>(), 16);
+
+    let size = size_mb * MEGABYTE;
+    let num_entries = size / std::mem::size_of::<Entry>();
+
+    let layout = std::alloc::Layout::from_size_align(size, align_of::<Entry>()).unwrap();
+    let p = unsafe { std::alloc::alloc_zeroed(layout) };
+
+    (num_entries, p.cast())
+}
+
+unsafe fn deallocate_entries(len: usize, p: *mut Entry) {
+    debug_assert_eq!(std::mem::size_of::<Entry>(), 16);
+
+    let size = std::mem::size_of::<Entry>() * len;
+    let layout = std::alloc::Layout::from_size_align(size, align_of::<Entry>()).unwrap();
+
+    unsafe { std::alloc::dealloc(p.cast(), layout) };
 }
 
 #[cfg(test)]
@@ -111,39 +177,35 @@ mod tests {
 
     #[test]
     fn test_transposition_table() {
-        let mut board =
+        let board =
             Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
-        let mut data = SearchData::default();
-        let score = search::<Root>(&mut data, 3, &mut board, -INFINITY, INFINITY, 0); 
+        let mut data = SearchData {
+            board,
+            ..Default::default()
+        };
 
-        let hash = board.board_state.hash;
-        let entry = data.tt.get_entry(hash);
+        let score = search::<Root>(&mut data, 3, -INFINITY, INFINITY, 0);
 
-        let m = entry.as_ref().unwrap().get_best_move();
-        let s = entry.as_ref().unwrap().get_score();
+        let hash = data.board.board_state.hash;
+        let entry = data.shared.tt.get_entry(hash).unwrap();
+
+        let m = entry.get_best_move();
+        let s = entry.get_score();
 
         let best_move = data.get_pv().get(0).mv;
 
         assert_eq!(best_move, m);
         assert_eq!(score, s);
 
-        let _ = board.make_move(best_move);
-        search::<Root>(&mut data, 2, &mut board, -INFINITY, INFINITY, 0);
+        let _ = data.board.make_move(best_move);
+        search::<Root>(&mut data, 2, -INFINITY, INFINITY, 0);
 
-        let entry = data.tt.get_entry(hash);
+        let entry = data.shared.tt.get_entry(hash).unwrap();
 
-        let m = entry.as_ref().unwrap().get_best_move();
-        let s = entry.as_ref().unwrap().get_score();
+        let m = entry.get_best_move();
+        let s = entry.get_score();
 
         assert_eq!(best_move, m);
         assert_eq!(score, s);
-    
     }
-
-    // #[test]
-    // fn test_transposition_size() {
-    //     let board = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ");
-    //     let size_of_tt = board.tt;
-    //     println!("{:?}", size_of_tt);
-    // }
 }

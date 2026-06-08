@@ -1,64 +1,36 @@
+use std::sync::Arc;
+use std::sync::mpsc::{Receiver, channel};
+use std::thread;
 use std::time::Instant;
 
 use crate::board::Board;
-use crate::board::movegen::MoveGenKind;
-use crate::search::data::SearchData;
+use crate::search::data::{SearchData, SharedData};
 use crate::search::search_runner;
 use crate::types::*;
 
-impl Board {
-    pub fn parse_move(&self, move_string: &str) -> Result<Move, &str> {
-        let from = Square::try_from(&move_string[0..2]).unwrap();
-        let to = Square::try_from(&move_string[2..4]).unwrap();
-        let mut promotion_piece: Option<Piece> = None;
-        if move_string.len() > 4 {
-            match &move_string[4..] {
-                "n" => promotion_piece = Some(Piece::Knight),
-                "b" => promotion_piece = Some(Piece::Bishop),
-                "r" => promotion_piece = Some(Piece::Rook),
-                "q" => promotion_piece = Some(Piece::Queen),
-                _ => (),
-            }
-        }
-
-        let move_list = self.generate_moves(MoveGenKind::All);
-        if let Some(m) = move_list.iter().find(|e| {
-            e.mv.get_from() == from
-                && e.mv.get_to() == to
-                && e.mv.get_promoted_piece() == promotion_piece
-        }) {
-            Ok(m.mv)
-        } else {
-            Err("Invalid move string")
-        }
-    }
-}
-
 pub fn input_loop() {
-    let mut board = Board::from_fen(STARTING_FEN);
     let mut data = SearchData::default();
-    let mut input_buffer = String::new();
+    let rx = listen(data.shared.clone());
 
-    loop {
-        if std::io::stdin().read_line(&mut input_buffer).unwrap() == 0 {
-            break;
-        }
-
-        let (command, args) = input_buffer.split_once(" ").unwrap_or((&input_buffer, ""));
+    while let Ok(input) = rx.recv() {
+        let (command, args) = input.split_once(" ").unwrap_or((&input, ""));
 
         match command.trim() {
-            "position" => position(args, &mut board),
+            "position" => position(args, &mut data.board),
             "uci" => uci(),
             "isready" => println!("readyok"),
             "ucinewgame" => {
-                board = Board::from_fen(STARTING_FEN);
-                data = SearchData::default();
+                data.shared.tt.clear();
+                data = SearchData{
+                    shared: data.shared,
+                    ..Default::default()
+                };
             }
             "go" => {
                 data.time.clear_settings();
-                data.set_playing_as(board.board_state.side_to_move);
+                data.shared.status.run();
 
-                if let Some(e) = go(args, &mut board, &mut data) {
+                if let Some(e) = go(args, &mut data) {
                     println!("bestmove {}", e.mv);
                 }
             }
@@ -66,7 +38,7 @@ pub fn input_loop() {
             "perft" => {
                 if let Ok(depth) = args.trim().parse::<usize>() {
                     let clock = Instant::now();
-                    let nodes_count = crate::perft::perft(depth, &mut board);
+                    let nodes_count = crate::perft::perft(depth, &mut data.board);
                     println!(
                         "Number of nodes: {nodes_count}\nTime: {}ms",
                         clock.elapsed().as_millis()
@@ -75,12 +47,39 @@ pub fn input_loop() {
                     eprintln!("Enter a valid depth!")
                 }
             }
-            "d" => println!("{board}"),
-            _ => eprintln!("Not a valid command"),
+            "d" => println!("{}", data.board),
+            _ => (),
         }
-
-        input_buffer.clear();
     }
+}
+
+pub fn listen(shared: Arc<SharedData>) -> Receiver<String> {
+    let (tx, rx) = channel::<String>();
+    let mut input_buffer = String::new();
+
+    thread::spawn(move || {
+        loop {
+            if std::io::stdin().read_line(&mut input_buffer).unwrap() == 0 {
+                shared.status.stop();
+            };
+
+            match input_buffer.trim() {
+                "quit" => {
+                    shared.status.stop();
+                    break;
+                }
+                "stop" => {
+                    shared.status.stop();
+                }
+                _ => (),
+            }
+
+            let _ = tx.send(input_buffer.clone());
+            input_buffer.clear();
+        }
+    });
+
+    rx
 }
 
 pub fn position(args: &str, board: &mut Board) {
@@ -119,50 +118,50 @@ pub fn position(args: &str, board: &mut Board) {
     }
 }
 
-pub fn go(args: &str, board: &mut Board, data: &mut SearchData) -> Option<MoveEntry> {
+pub fn go(args: &str, data: &mut SearchData) -> Option<MoveEntry> {
     let (command, args) = args.split_once(" ").unwrap_or((args, ""));
     if args.is_empty() {
-        return search_runner(board, data);
+        return search_runner(data);
     }
 
     match command.trim() {
         "depth" => {
             let (depth, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().depth = depth.trim().parse().unwrap_or(MAX_DEPTH - 1);
-            go(args, board, data)
+            go(args, data)
         }
         "wtime" => {
             //Example: go wtime 900000 btime 900000 winc 0 binc 0
             let (wtime, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().wtime = wtime.trim().parse().unwrap_or(500);
-            go(args, board, data)
+            go(args, data)
         }
         "btime" => {
             let (btime, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().btime = btime.trim().parse().unwrap_or(500);
-            go(args, board, data)
+            go(args, data)
         }
         "winc" => {
             let (winc, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().winc = winc.trim().parse().unwrap_or(0);
-            go(args, board, data)
+            go(args, data)
         }
         "binc" => {
             let (binc, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().binc = binc.trim().parse().unwrap_or(0);
-            go(args, board, data)
+            go(args, data)
         }
         "movestogo" => {
             let (movestogo, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().movestogo = movestogo.trim().parse().unwrap_or(0);
-            go(args, board, data)
+            go(args, data)
         }
         "movetime" => {
             let (movetime, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().movetime = movetime.trim().parse().unwrap_or(0);
-            go(args, board, data)
+            go(args, data)
         }
-        _ => go(args, board, data),
+        _ => go(args, data),
     }
 }
 
@@ -174,7 +173,6 @@ pub fn uci() {
 
 #[cfg(test)]
 pub mod tests {
-    use std::{sync::Arc, thread};
 
     use super::*;
     use crate::types::constants::STARTING_FEN;
@@ -189,21 +187,17 @@ pub mod tests {
 
     #[test]
     fn test_parse_times() {
-        let mut board = Board::from_fen(STARTING_FEN);
         go(
             "wtime 5000 btime 5000 winc 0 binc 0",
-            &mut board,
             &mut SearchData::default(),
         );
     }
 
     #[test]
     fn test_parse_go() {
-        let mut board = Board::from_fen(STARTING_FEN);
         let mut data = SearchData::default();
         let bm = go(
             "wtime 5000 btime 5000 winc 5 binc 8 movetime 100",
-            &mut board,
             &mut data,
         );
         println!(
@@ -211,24 +205,5 @@ pub mod tests {
             data.get_time_settings(),
             bm.unwrap().mv
         );
-    }
-
-    #[test]
-    fn test_thread() {
-        let data = Arc::new(SearchData::default());
-        let mut handles = vec![];
-        {
-            let data = Arc::clone(&data);
-            let handle = thread::spawn(move || {
-                data.add_nodes(1);
-            });
-            handles.push(handle);
-        }
-
-        for handle in handles {
-            handle.join().unwrap();
-        }
-
-        println!("Result: {}", data.get_total_nodes_searched());
     }
 }

@@ -16,7 +16,7 @@ pub struct TimeSettings {
     pub winc: u64,
     pub binc: u64,
     pub movestogo: usize,
-    pub depth: usize,
+    pub depth: u8,
     pub nodes: usize,
     pub mate: usize,
     pub movetime: u64,
@@ -25,7 +25,7 @@ pub struct TimeSettings {
 #[derive(Debug, Clone, Copy)]
 pub struct Limits {
     time: u64,
-    depth: usize,
+    depth: u8,
 }
 
 impl Default for Limits {
@@ -86,7 +86,7 @@ impl TimeManager {
         self.limits.depth = self.settings.depth;
     }
 
-    pub fn depth_limit(&self) -> usize {
+    pub fn depth_limit(&self) -> u8 {
         self.limits.depth
     }
 
