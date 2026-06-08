@@ -120,7 +120,7 @@ pub fn position(args: &str, board: &mut Board) {
             if let Ok(b) = Board::from_fen(args) {
                 *board = b;
             } else {
-                eprintln!("Invalid FEN: {:?}", args);
+                eprintln!("Invalid FEN: {:?}", args.trim_end());
             }
         }
         _ => eprintln!("Not a valid position argument!"),

@@ -78,11 +78,6 @@ impl TimeManager {
     }
 
     pub fn set_depth_limit(&mut self) {
-        if self.settings.depth == 0 {
-            self.limits.depth = MAX_DEPTH - 1; //Default 
-            return;
-        }
-
         self.limits.depth = self.settings.depth;
     }
 
