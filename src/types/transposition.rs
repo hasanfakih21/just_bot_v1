@@ -109,7 +109,7 @@ impl TranspositionTable {
     pub fn hashfull(&self) -> usize {
         let mut count = 0;
 
-        for i in 0..10000 {
+        for i in 0..1000 {
             let e = unsafe { self.ptr().add(i).read() };
             if e.bound != Bound::None {
                 count += 1;
