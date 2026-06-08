@@ -137,7 +137,7 @@ impl Default for TranspositionTable {
 
 impl Drop for TranspositionTable {
     fn drop(&mut self) {
-        unsafe { deallocate_entries(self.len(), self.entries.load(Ordering::Relaxed)) };
+        unsafe { deallocate_entries(self.len(), self.ptr()) };
     }
 }
 
