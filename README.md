@@ -7,7 +7,7 @@
 
 </div>
 
-JustBot is written without the use of any agentic or LLM assisted coding.
+<div align="center">JustBot is written without the use of any agentic or LLM assisted coding.</div>
 
 ## Releases
 | Version |  Elo  |
