@@ -113,9 +113,9 @@ impl TranspositionTable {
 
     pub fn hashfull(&self) -> usize {
         let mut count = 0;
+        let entries = unsafe { std::slice::from_raw_parts(self.ptr(), self.len()) };
 
-        for i in 0..1000 {
-            let e = unsafe { self.ptr().add(i).read() };
+        for e in entries.iter().take(1000) {
             if e.bound != Bound::None {
                 count += 1;
             }
