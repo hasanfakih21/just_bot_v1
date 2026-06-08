@@ -130,9 +130,13 @@ impl TranspositionTable {
         count
     }
 
+    pub fn get_age(&self) -> u8 {
+        self.age.load(Ordering::Relaxed)
+    }
+
     pub fn increase_age(&self) {
-        self.age
-            .update(Ordering::Relaxed, Ordering::Relaxed, |e| e + 1);
+        let current_age = self.get_age();
+        self.age.store(current_age + 1, Ordering::Relaxed);
     }
 
     #[allow(clippy::len_without_is_empty)]
