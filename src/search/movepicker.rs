@@ -21,17 +21,11 @@ pub struct MovePicker {
 
 impl MovePicker {
     pub fn new(board: &Board, data: &SearchData) -> MovePicker {
+        let tt_move = data.shared.tt.get_entry(board.board_state.hash).map(|e| e.get_best_move());
         Self {
             moves: MoveList::new(),
-            tt_move: if let e = data.shared.tt.get_entry(board.board_state.hash)
-                && board.board_state.hash == e.get_key()
-            {
-                Some(e.get_best_move())
-            } else {
-                None
-            },
-            status: if let e = data.shared.tt.get_entry(board.board_state.hash)
-                && board.board_state.hash == e.get_key()
+            tt_move,
+            status: if tt_move.is_some()
             {
                 Status::HashMove
             } else {

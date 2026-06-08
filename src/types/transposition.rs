@@ -92,11 +92,16 @@ impl TranspositionTable {
         unsafe { self.ptr().add(index).write(entry) };
     }
 
-    pub fn get_entry(&self, hash: u64) -> Entry {
+    pub fn get_entry(&self, hash: u64) -> Option<Entry> {
         let index = index(hash, self.len());
         debug_assert!(index < self.len());
 
-        unsafe { self.ptr().add(index).read() }
+        let entry = unsafe { self.ptr().add(index).read() };
+        if entry.get_key() == hash {
+            Some(entry)
+        } else {
+            None
+        }
     }
 
     pub fn get_best_move(&self, hash: u64) -> Move {
@@ -183,7 +188,7 @@ mod tests {
         let score = search::<Root>(&mut data, 3, -INFINITY, INFINITY, 0);
 
         let hash = data.board.board_state.hash;
-        let entry = data.shared.tt.get_entry(hash);
+        let entry = data.shared.tt.get_entry(hash).unwrap();
 
         let m = entry.get_best_move();
         let s = entry.get_score();
@@ -196,7 +201,7 @@ mod tests {
         let _ = data.board.make_move(best_move);
         search::<Root>(&mut data, 2, -INFINITY, INFINITY, 0);
 
-        let entry = data.shared.tt.get_entry(hash);
+        let entry = data.shared.tt.get_entry(hash).unwrap();
 
         let m = entry.get_best_move();
         let s = entry.get_score();

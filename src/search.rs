@@ -169,9 +169,8 @@ pub fn search<Node: NodeType>(
     }
 
     //TT Cutoffs only if depth of entry is greater or equal to the depth of the current node
-    if let e = data.shared.tt.get_entry(data.board.board_state.hash)
+    if let Some(e) = data.shared.tt.get_entry(data.board.board_state.hash)
         && !Node::PV
-        && data.board.board_state.hash == e.get_key()
         && e.get_depth() >= depth
         && e.get_score().abs() < MATE_CUTOFF
     //Mate scores need to be properly adjusted for cutoffs
