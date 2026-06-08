@@ -63,13 +63,13 @@ pub fn listen(shared: Arc<SharedData>) -> Receiver<String> {
                 "quit" => {
                     shared.status.stop();
                     break;
-                },
+                }
                 "stop" => {
                     shared.status.stop();
                 }
                 _ => (),
             }
-            
+
             let _ = tx.send(input_buffer.clone());
             input_buffer.clear();
         }

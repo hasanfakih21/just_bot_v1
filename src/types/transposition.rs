@@ -89,7 +89,7 @@ impl TranspositionTable {
         let index = index(hash, self.len());
         debug_assert!(index < self.len());
 
-        let old_entry = unsafe {&mut *self.ptr().add(index) };
+        let old_entry = unsafe { &mut *self.ptr().add(index) };
         *old_entry = entry;
     }
 
@@ -97,7 +97,7 @@ impl TranspositionTable {
         let index = index(hash, self.len());
         debug_assert!(index < self.len());
 
-        let entry = unsafe {& *self.ptr().add(index) };
+        let entry = unsafe { &*self.ptr().add(index) };
         if entry.get_key() == hash {
             Some(entry)
         } else {

@@ -21,12 +21,15 @@ pub struct MovePicker {
 
 impl MovePicker {
     pub fn new(board: &Board, data: &SearchData) -> MovePicker {
-        let tt_move = data.shared.tt.get_entry(board.board_state.hash).map(|e| e.get_best_move());
+        let tt_move = data
+            .shared
+            .tt
+            .get_entry(board.board_state.hash)
+            .map(|e| e.get_best_move());
         Self {
             moves: MoveList::new(),
             tt_move,
-            status: if tt_move.is_some()
-            {
+            status: if tt_move.is_some() {
                 Status::HashMove
             } else {
                 Status::FirstNoisy

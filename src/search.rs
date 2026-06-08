@@ -89,7 +89,10 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
 
     //Iterative Deepening
     loop {
-        if data.over_limit() || depth > data.time.depth_limit() || data.shared.status.get() == Status::STOPPED {
+        if data.over_limit()
+            || depth > data.time.depth_limit()
+            || data.shared.status.get() == Status::STOPPED
+        {
             // println!(
             //     "\n\nSearched for: {}\nTime Limit: {}\nDepth Limit: {}",
             //     data.time.elapsed().as_millis(),
