@@ -9,7 +9,7 @@ pub struct TimeManager {
     pub limits: Limits,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct TimeSettings {
     pub wtime: u64,
     pub btime: u64,
@@ -20,6 +20,22 @@ pub struct TimeSettings {
     pub nodes: usize,
     pub mate: usize,
     pub movetime: u64,
+}
+
+impl Default for TimeSettings {
+    fn default() -> Self {
+        TimeSettings {
+            wtime: 0,
+            btime: 0,
+            winc: 0,
+            binc: 0,
+            movestogo: 0,
+            depth: MAX_DEPTH - 1,
+            nodes: 0,
+            mate: 0,
+            movetime: 0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

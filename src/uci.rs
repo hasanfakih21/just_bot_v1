@@ -152,10 +152,14 @@ pub fn set_option(args: &str, data: &mut SearchData) {
         ["name", "hash", "value", amount] => {
             let amount = amount.parse::<usize>().unwrap_or(16);
             data.shared.tt.resize(amount);
-            println!("info string Resized TT to {amount}mb");
+            println!("info string Resized TT to {amount} mb");
         }, 
         ["name", "threads", "value", ..] => {
-            println!("info string Only 1 thread is supported")
+            println!("info string Only 1 thread is supported");
+        },
+        ["name", "clear", "hash"] => {
+            data.shared.tt.clear();
+            println!("info string TT cleared");
         }
         _ => eprintln!("Unkown option"),
     } 
@@ -213,6 +217,7 @@ pub fn uci() {
     println!("id author Hasan Fakih");
     println!("option name Threads type spin default 1 min 1 max 1");
     println!("option name Hash type spin default 16 min 1 max 512");
+    println!("option name Clear Hash type button");
     println!("uciok");
 }
 
