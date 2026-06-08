@@ -78,7 +78,7 @@ impl TranspositionTable {
             age: AtomicU8::new(0),
         }
     }
-    
+
     pub fn resize(&self, size_mb: usize) {
         unsafe { deallocate_entries(self.len(), self.ptr()) }
         let (new_len, new_p) = unsafe { allocate_entries(size_mb) };

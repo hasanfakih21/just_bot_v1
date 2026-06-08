@@ -65,10 +65,10 @@ pub fn input_loop(cli_args: String) {
                 }
             }
             "d" => println!("{}", data.board),
-            "bench" => { 
+            "bench" => {
                 bench();
                 break;
-            },
+            }
             _ => (),
         }
 
@@ -153,16 +153,16 @@ pub fn set_option(args: &str, data: &mut SearchData) {
             let amount = amount.parse::<usize>().unwrap_or(16);
             data.shared.tt.resize(amount);
             println!("info string Resized TT to {amount} mb");
-        }, 
+        }
         ["name", "threads", "value", ..] => {
             println!("info string Only 1 thread is supported");
-        },
+        }
         ["name", "clear", "hash"] => {
             data.shared.tt.clear();
             println!("info string TT cleared");
         }
         _ => eprintln!("Unkown option"),
-    } 
+    }
 }
 
 pub fn go(args: &str, data: &mut SearchData) -> Option<MoveEntry> {
