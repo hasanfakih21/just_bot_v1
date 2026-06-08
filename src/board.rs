@@ -339,7 +339,7 @@ mod tests {
 
     #[test]
     fn test_board_occupancy() {
-        let mut board = Board::from_fen(STARTING_FEN);
+        let mut board = Board::from_fen(STARTING_FEN).unwrap();
         board.remove_piece(Side::White, Piece::Pawn, Square::A2);
         board.get_all_occupancy().print_board();
         board.board_state.board_occupancies[Side::Black as usize].print_board();
@@ -354,7 +354,7 @@ mod tests {
 
     #[test]
     fn test_get_all_attacks() {
-        let mut board = Board::from_fen(STARTING_FEN);
+        let mut board = Board::from_fen(STARTING_FEN).unwrap();
         let m = Move::new(Square::E2, Square::E4, moves::MoveKind::DoublePawn);
         let _ = board.make_move(m);
         println!("{board}");

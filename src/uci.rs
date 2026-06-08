@@ -8,11 +8,22 @@ use crate::search::data::{SearchData, SharedData};
 use crate::search::search_runner;
 use crate::types::*;
 
-pub fn input_loop() {
+pub fn input_loop(cli_args: String) {
     let mut data = SearchData::default();
     let rx = listen(data.shared.clone());
 
-    while let Ok(input) = rx.recv() {
+    let mut input = if !cli_args.is_empty() {cli_args} else {String::new()};
+
+    loop {
+        if input.is_empty() {
+            if let Ok(s) = rx.recv() {
+                input = s;
+            } else {
+                data.shared.status.stop();
+                break
+            }
+        }
+
         let (command, args) = input.split_once(" ").unwrap_or((&input, ""));
 
         match command.trim() {
@@ -44,12 +55,14 @@ pub fn input_loop() {
                         clock.elapsed().as_millis()
                     );
                 } else {
-                    eprintln!("Enter a valid depth!")
+                    eprintln!("Invalid depth: {:?}", args);
                 }
             }
             "d" => println!("{}", data.board),
             _ => (),
         }
+
+        input.clear();
     }
 }
 
@@ -93,14 +106,18 @@ pub fn position(args: &str, board: &mut Board) {
 
     match command.trim() {
         "startpos" => {
-            *board = Board::from_fen(STARTING_FEN);
+            *board = Board::from_fen(STARTING_FEN).unwrap();
         }
         "fen" => {
             if args.trim().is_empty() {
                 eprintln!("Please provide a fen string");
                 return;
             }
-            *board = Board::from_fen(args);
+            if let Ok(b) = Board::from_fen(args) {
+                *board = b;
+            } else {
+                eprintln!("Invalid FEN: {:?}", args);
+            }
         }
         _ => eprintln!("Not a valid position argument!"),
     }
@@ -179,7 +196,7 @@ pub mod tests {
 
     #[test]
     fn test_parse_move() {
-        let board = Board::from_fen(STARTING_FEN);
+        let board = Board::from_fen(STARTING_FEN).unwrap();
         if let Ok(m) = board.parse_move("e2e4") {
             println!("bestmove {m}");
         }

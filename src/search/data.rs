@@ -71,7 +71,7 @@ impl SearchData {
         SearchData {
             shared: Arc::new(shared),
             pv: vec![MoveList::new(); 128],
-            board: Board::from_fen(STARTING_FEN),
+            board: Board::from_fen(STARTING_FEN).unwrap(),
             time: TimeManager::new(),
             history: History::new(),
         }
