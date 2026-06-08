@@ -64,7 +64,10 @@ pub fn input_loop(cli_args: String) {
                 }
             }
             "d" => println!("{}", data.board),
-            "bench" => bench(),
+            "bench" => { 
+                bench();
+                break;
+            },
             _ => (),
         }
 
