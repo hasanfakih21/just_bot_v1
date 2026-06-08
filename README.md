@@ -7,8 +7,7 @@
 
 </div>
 
-
-JustBot is my first attempt at creating a UCI chess engine with magic bitboards without any agentic or LLM assisted coding.
+JustBot is written without the use of any agentic or LLM assisted coding.
 
 ## Releases
 | Version |  Elo  |
