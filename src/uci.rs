@@ -142,7 +142,6 @@ pub fn uci() {
 
 #[cfg(test)]
 pub mod tests {
-    use std::{sync::Arc, thread};
 
     use super::*;
     use crate::types::constants::STARTING_FEN;
@@ -175,24 +174,5 @@ pub mod tests {
             data.get_time_settings(),
             bm.unwrap().mv
         );
-    }
-
-    #[test]
-    fn test_thread() {
-        let data = Arc::new(SearchData::default());
-        let mut handles = vec![];
-        {
-            let data = Arc::clone(&data);
-            let handle = thread::spawn(move || {
-                data.add_nodes(1);
-            });
-            handles.push(handle);
-        }
-
-        for handle in handles {
-            handle.join().unwrap();
-        }
-
-        println!("Result: {}", data.get_total_nodes_searched());
     }
 }

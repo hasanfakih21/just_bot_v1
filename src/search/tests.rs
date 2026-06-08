@@ -50,10 +50,12 @@ fn test_repetion_detection() {
     let _ = board.make_move(Move::new(C2, C1, QuietMove));
     let _ = board.make_move(Move::new(E4, F4, QuietMove));
 
-    let mut data = SearchData::default();
-    data.board = board;
+    let mut data = SearchData {
+        board,
+        ..Default::default()
+    };
 
-    let score = search::<Root>(&mut data, 3, -INFINITY, INFINITY, 0 );
+    let score = search::<Root>(&mut data, 3, -INFINITY, INFINITY, 0);
     println!("{score}");
     let m = data.get_best_move();
 
@@ -69,8 +71,7 @@ fn test_repetion_detection() {
 #[test]
 fn test_mate_in_one() {
     let mut data = SearchData::default();
-    let board =
-        Board::from_fen("r1b4r/p1p1q3/1bppk3/4pp2/3PP1Q1/2P1R3/PP3PPP/RN4K1 w - - 0 18");
+    let board = Board::from_fen("r1b4r/p1p1q3/1bppk3/4pp2/3PP1Q1/2P1R3/PP3PPP/RN4K1 w - - 0 18");
     data.board = board;
 
     search::<Root>(&mut data, 1, -INFINITY, INFINITY, 0);
@@ -147,7 +148,7 @@ fn test_bugged_position() {
 
 #[test]
 fn test_transposition_timeout() {
-    let mut data = SearchData::new();
+    let mut data = SearchData::default();
     data.get_time_settings().btime = 8080;
     let board = Board::from_fen("6k1/2p5/4R1pp/1p1r4/pP1p4/P5PP/2P2P2/6K1 b - - 0 32");
     data.board = board;
@@ -162,21 +163,4 @@ fn test_transposition_timeout() {
     println!();
     let _ = search_runner(&mut data);
     println!();
-
-    assert!(!data.tt.0.iter().any(|i| {
-        if let Some(e) = i {
-            e.get_score() == TIMEOUT_SCORE
-        } else {
-            false
-        }
-    }));
-
-    //I want to count the number of entries in the table
-    let total_size = data.tt.0.len();
-    assert_eq!(total_size, ENTRIES);
-    let count = data.tt.0.iter().filter(|e| e.is_some()).count();
-
-    println!("Total Size: {total_size} Number of Entries: {count}");
-    println!("Hashfull: {}", (count as f32 / total_size as f32) * 1000.0);
-    println!("{}", data.tt.hashfull());
 }

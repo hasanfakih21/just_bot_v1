@@ -1,35 +1,63 @@
+use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::board::Board;
 use crate::search::time::{TimeManager, TimeSettings};
+use crate::types::TranspositionTable;
 use crate::types::{History, Move, MoveList, STARTING_FEN};
 
-use crate::types::TranspositionTable;
+#[derive(Debug)]
+pub enum Status {
+    Stop,
+    Running,
+}
+
+#[derive(Debug)]
+pub struct SharedData {
+    pub tt: TranspositionTable,
+    pub total_nodes: AtomicUsize,
+    pub status: Status,
+}
+
+impl SharedData {
+    pub fn get_total_nodes_searched(&self) -> usize {
+        self.total_nodes.load(Ordering::Acquire)
+    }
+
+    pub fn add_nodes(&self, nodes: usize) {
+        self.total_nodes.fetch_add(nodes, Ordering::Relaxed);
+    }
+
+    pub fn clear_node_count(&self) {
+        self.total_nodes.store(0, Ordering::Release);
+    }
+}
+
+impl Default for SharedData {
+    fn default() -> Self {
+        Self {
+            tt: TranspositionTable::default(),
+            total_nodes: AtomicUsize::new(0),
+            status: Status::Running,
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct SearchData {
-    depth: usize,
-    pv: Vec<MoveList>,
-    total_nodes: AtomicUsize,
-
+    pub shared: Arc<SharedData>,
+    pub pv: Vec<MoveList>,
     pub board: Board,
-    pub tt: TranspositionTable,
     pub time: TimeManager,
     pub history: History,
 }
 
-#[derive(Debug)]
-pub struct SearchCancelled;
-
 impl SearchData {
-    pub fn new() -> Self {
+    pub fn new(shared: SharedData) -> Self {
         SearchData {
-            depth: 0,
+            shared: Arc::new(shared),
             pv: vec![MoveList::new(); 128],
-            total_nodes: AtomicUsize::new(0),
-
             board: Board::from_fen(STARTING_FEN),
-            tt: TranspositionTable::new(),
             time: TimeManager::new(),
             history: History::new(),
         }
@@ -37,14 +65,6 @@ impl SearchData {
 
     pub fn clear_history(&mut self) {
         self.history = History::new();
-    }
-
-    pub fn get_searched_depth(&self) -> usize {
-        self.depth
-    }
-
-    pub fn get_total_nodes_searched(&self) -> usize {
-        self.total_nodes.load(Ordering::Acquire)
     }
 
     pub fn get_pv(&self) -> &MoveList {
@@ -55,20 +75,13 @@ impl SearchData {
         self.get_pv().get(0).mv
     }
 
-    pub fn add_nodes(&self, nodes: usize) {
-        self.total_nodes.fetch_add(nodes, Ordering::Relaxed);
-    }
-
-    pub fn increase_depth(&mut self) {
-        self.depth += 1;
-    }
-
     pub fn nodes_per_second(&self) -> usize {
-        (self.get_total_nodes_searched() as f32 / self.time.elapsed().as_secs_f32()) as usize
+        (self.shared.get_total_nodes_searched() as f32 / self.time.elapsed().as_secs_f32()) as usize
     }
 
     pub fn start_time(&mut self) {
-        self.time.set_time_limit(self.board.board_state.side_to_move);
+        self.time
+            .set_time_limit(self.board.board_state.side_to_move);
         self.time.reset_clock();
     }
 
@@ -84,20 +97,12 @@ impl SearchData {
         self.pv[ply].clear();
     }
 
-    pub fn clear_table(&mut self) {
-        self.tt.clear();
-    }
-
     pub fn get_time_settings(&mut self) -> &mut TimeSettings {
         &mut self.time.settings
     }
 
     pub fn over_limit(&self) -> bool {
         self.time.over_limit()
-    }
-
-    pub fn clear_node_count(&self) {
-        self.total_nodes.store(0, Ordering::Release);
     }
 
     pub fn reset_pv(&mut self) {
@@ -107,6 +112,6 @@ impl SearchData {
 
 impl Default for SearchData {
     fn default() -> Self {
-        Self::new()
+        Self::new(SharedData::default())
     }
 }

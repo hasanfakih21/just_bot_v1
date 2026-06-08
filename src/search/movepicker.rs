@@ -23,14 +23,14 @@ impl MovePicker {
     pub fn new(board: &Board, data: &SearchData) -> MovePicker {
         Self {
             moves: MoveList::new(),
-            tt_move: if let Some(e) = data.tt.get_entry(board.board_state.hash)
+            tt_move: if let e = data.shared.tt.get_entry(board.board_state.hash)
                 && board.board_state.hash == e.get_key()
             {
                 Some(e.get_best_move())
             } else {
                 None
             },
-            status: if let Some(e) = data.tt.get_entry(board.board_state.hash)
+            status: if let e = data.shared.tt.get_entry(board.board_state.hash)
                 && board.board_state.hash == e.get_key()
             {
                 Status::HashMove

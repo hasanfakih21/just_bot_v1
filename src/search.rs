@@ -56,7 +56,7 @@ impl NodeType for Root {
 }
 
 pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
-    data.clear_node_count();
+    data.shared.clear_node_count();
     data.reset_pv();
     data.start_time();
     data.time.set_depth_limit();
@@ -65,7 +65,7 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
 
     //Initialize with move from first depth
     let best_score = search::<Root>(data, depth, -INFINITY, INFINITY, 0);
-    let mut best_move = data.get_pv().get(0); 
+    let mut best_move = data.get_pv().get(0);
     depth += 1;
 
     //Aspiration Window
@@ -81,10 +81,10 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
         depth - 1,
         data.time.elapsed().as_millis(),
         score,
-        data.get_total_nodes_searched(),
+        data.shared.get_total_nodes_searched(),
         data.nodes_per_second(),
         data.get_pv(),
-        data.tt.hashfull(),
+        data.shared.tt.hashfull(),
     );
 
     //Iterative Deepening
@@ -126,10 +126,10 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
             depth - 1,
             data.time.elapsed().as_millis(),
             score,
-            data.get_total_nodes_searched(),
+            data.shared.get_total_nodes_searched(),
             data.nodes_per_second(),
             data.get_pv(),
-            data.tt.hashfull()
+            data.shared.tt.hashfull()
         );
     }
 
@@ -138,7 +138,7 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
 
 pub fn search<Node: NodeType>(
     data: &mut SearchData,
-    depth: usize,
+    depth: u8,
     mut alpha: i32,
     beta: i32,
     ply: usize,
@@ -151,7 +151,7 @@ pub fn search<Node: NodeType>(
         }
     }
 
-    data.add_nodes(1);
+    data.shared.add_nodes(1);
     if Node::PV && !Node::ROOT {
         data.clear_pv(ply);
     }
@@ -169,7 +169,7 @@ pub fn search<Node: NodeType>(
     }
 
     //TT Cutoffs only if depth of entry is greater or equal to the depth of the current node
-    if let Some(e) = data.tt.get_entry(data.board.board_state.hash)
+    if let e = data.shared.tt.get_entry(data.board.board_state.hash)
         && !Node::PV
         && data.board.board_state.hash == e.get_key()
         && e.get_depth() >= depth
@@ -190,6 +190,7 @@ pub fn search<Node: NodeType>(
                     return tt_score;
                 }
             }
+            _ => unreachable!(),
         }
     }
 
@@ -208,13 +209,8 @@ pub fn search<Node: NodeType>(
     if !Node::PV && !in_check && !data.board.only_king_and_pawns() {
         let r = 4;
         data.board.make_null_move();
-        let null_move_score = -search::<NonPV>(
-            data,
-            depth.saturating_sub(r),
-            -beta,
-            -(beta - 1),
-            ply + 1,
-        );
+        let null_move_score =
+            -search::<NonPV>(data, depth.saturating_sub(r), -beta, -(beta - 1), ply + 1);
         data.board.unmake_move();
         if null_move_score >= beta {
             return null_move_score;
@@ -234,7 +230,7 @@ pub fn search<Node: NodeType>(
         if !in_check
             && best_score.abs() < MATE_CUTOFF
             && m.get_kind().is_quiet()
-            && legal_moves > 6 + 2 * depth * depth
+            && legal_moves > 6 + 2 * depth as usize * depth as usize
         {
             continue;
         }
@@ -253,7 +249,7 @@ pub fn search<Node: NodeType>(
                 } else {
                     reduction /= 3.0;
                 }
-                let reduced_depth = (depth - 1).saturating_sub(reduction as usize);
+                let reduced_depth = (depth - 1).saturating_sub(reduction as u8);
                 score = -search::<NonPV>(data, reduced_depth, -alpha - 1, -alpha, ply + 1);
                 if score > alpha && reduced_depth < depth - 1 {
                     score = -search::<NonPV>(data, depth - 1, -alpha - 1, -alpha, ply + 1);
@@ -273,7 +269,7 @@ pub fn search<Node: NodeType>(
 
             if score > alpha {
                 bound = Bound::Exact;
-                //data.add_pv_move(m, ply);
+                data.add_pv_move(m, ply);
                 alpha = score;
             }
 
@@ -297,8 +293,13 @@ pub fn search<Node: NodeType>(
 
                 if let Some(m) = best_move {
                     let tt_score = best_score;
-                    data.tt
-                        .add_entry(m, tt_score, Bound::Lower, data.board.board_state.hash, depth);
+                    data.shared.tt.add_entry(
+                        m,
+                        tt_score,
+                        Bound::Lower,
+                        data.board.board_state.hash,
+                        depth,
+                    );
                 }
                 return best_score;
             }
@@ -311,7 +312,10 @@ pub fn search<Node: NodeType>(
     }
 
     if legal_moves == 0 {
-        if data.board.is_king_in_attack(data.board.board_state.side_to_move) {
+        if data
+            .board
+            .is_king_in_attack(data.board.board_state.side_to_move)
+        {
             return -MATE_SCORE + ply as i32;
         } else {
             return 0;
@@ -319,25 +323,17 @@ pub fn search<Node: NodeType>(
     }
 
     if let Some(m) = best_move {
-        if Node::PV {
-            data.add_pv_move(m, ply);
-        }
-
         let tt_score = best_score;
-        data.tt
+        data.shared
+            .tt
             .add_entry(m, tt_score, bound, data.board.board_state.hash, depth);
     }
 
     best_score
 }
 
-pub fn quiesce(
-    data: &mut SearchData,
-    mut alpha: i32,
-    beta: i32,
-    _ply: usize,
-) -> i32 {
-    data.add_nodes(1);
+pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) -> i32 {
+    data.shared.add_nodes(1);
     let mut best_score = data.board.evaluate();
 
     if best_score >= beta {
@@ -375,15 +371,10 @@ pub fn quiesce(
     best_score
 }
 
-pub fn search_checks(
-    data: &mut SearchData,
-    mut alpha: i32,
-    beta: i32,
-    ply: usize,
-) -> i32 {
+pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> i32 {
     let mut best_score = -INFINITY;
     let mut legal_moves = 0;
-    data.add_nodes(1);
+    data.shared.add_nodes(1);
 
     if data.board.board_state.half_move_clock > 4 {
         //50 move rule
@@ -425,7 +416,10 @@ pub fn search_checks(
     }
 
     if legal_moves == 0 {
-        if data.board.is_king_in_attack(data.board.board_state.side_to_move) {
+        if data
+            .board
+            .is_king_in_attack(data.board.board_state.side_to_move)
+        {
             return -MATE_SCORE + ply as i32;
         } else {
             return 0;
