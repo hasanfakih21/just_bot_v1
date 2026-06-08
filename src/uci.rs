@@ -35,6 +35,7 @@ pub fn input_loop(cli_args: String) {
             "position" => position(args, &mut data.board),
             "uci" => uci(),
             "isready" => println!("readyok"),
+            "setoption" => set_option(args, &mut data),
             "ucinewgame" => {
                 data.shared.tt.clear();
                 data = SearchData {
@@ -144,6 +145,22 @@ pub fn position(args: &str, board: &mut Board) {
     }
 }
 
+pub fn set_option(args: &str, data: &mut SearchData) {
+    let args = args.to_ascii_lowercase();
+    let args: Vec<&str> = args.split_ascii_whitespace().collect();
+    match args.as_slice() {
+        ["name", "hash", "value", amount] => {
+            let amount = amount.parse::<usize>().unwrap_or(16);
+            data.shared.tt.resize(amount);
+            println!("info string Resized TT to {amount}mb");
+        }, 
+        ["name", "threads", "value", ..] => {
+            println!("info string Only 1 thread is supported")
+        }
+        _ => eprintln!("Unkown option"),
+    } 
+}
+
 pub fn go(args: &str, data: &mut SearchData) -> Option<MoveEntry> {
     let (command, args) = args.split_once(" ").unwrap_or((args, ""));
     if args.is_empty() {
@@ -192,8 +209,10 @@ pub fn go(args: &str, data: &mut SearchData) -> Option<MoveEntry> {
 }
 
 pub fn uci() {
-    println!("id name JustBot 1.0");
+    println!("id name JustBot 0.1.0");
     println!("id author Hasan Fakih");
+    println!("option name Threads type spin default 1 min 1 max 1");
+    println!("option name Hash type spin default 16 min 1 max 512");
     println!("uciok");
 }
 
@@ -231,5 +250,11 @@ pub mod tests {
             data.get_time_settings(),
             bm.unwrap().mv
         );
+    }
+
+    #[test]
+    fn test_set_option() {
+        let mut data = SearchData::default();
+        set_option("name Hash value 32", &mut data);
     }
 }

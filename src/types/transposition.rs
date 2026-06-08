@@ -2,9 +2,8 @@ use std::sync::atomic::{AtomicPtr, AtomicU8, AtomicUsize, Ordering};
 
 use crate::types::moves::Move;
 
-const TT_DEFAULT_SIZE: usize = 64;
+const TT_DEFAULT_SIZE: usize = 16;
 const MEGABYTE: usize = 1024 * 1024;
-pub const ENTRIES: usize = TT_DEFAULT_SIZE * MEGABYTE / std::mem::size_of::<Option<Entry>>();
 pub const SIZE_OF_ENTRY: usize = std::mem::size_of::<Entry>();
 
 #[repr(u8)]
@@ -79,6 +78,14 @@ impl TranspositionTable {
             age: AtomicU8::new(0),
         }
     }
+    
+    pub fn resize(&self, size_mb: usize) {
+        unsafe { deallocate_entries(self.len(), self.ptr()) }
+        let (new_len, new_p) = unsafe { allocate_entries(size_mb) };
+        self.len.store(new_len, Ordering::Relaxed);
+        self.entries.store(new_p, Ordering::Relaxed);
+        self.age.store(0, Ordering::Relaxed);
+    }
 
     fn ptr(&self) -> *mut Entry {
         self.entries.load(Ordering::Relaxed)
@@ -147,10 +154,8 @@ impl Drop for TranspositionTable {
 }
 
 unsafe fn allocate_entries(size_mb: usize) -> (usize, *mut Entry) {
-    debug_assert_eq!(std::mem::size_of::<Entry>(), 16);
-
     let size = size_mb * MEGABYTE;
-    let num_entries = size / std::mem::size_of::<Entry>();
+    let num_entries = size / SIZE_OF_ENTRY;
 
     let layout = std::alloc::Layout::from_size_align(size, align_of::<Entry>()).unwrap();
     let p = unsafe { std::alloc::alloc_zeroed(layout) };
@@ -159,9 +164,7 @@ unsafe fn allocate_entries(size_mb: usize) -> (usize, *mut Entry) {
 }
 
 unsafe fn deallocate_entries(len: usize, p: *mut Entry) {
-    debug_assert_eq!(std::mem::size_of::<Entry>(), 16);
-
-    let size = std::mem::size_of::<Entry>() * len;
+    let size = SIZE_OF_ENTRY * len;
     let layout = std::alloc::Layout::from_size_align(size, align_of::<Entry>()).unwrap();
 
     unsafe { std::alloc::dealloc(p.cast(), layout) };
