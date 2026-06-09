@@ -213,6 +213,10 @@ impl Board {
         self.copy_state();
         self.board_state.side_to_move = self.board_state.side_to_move.other();
         self.board_state.hash ^= ZOBRIST.get_side_num();
+        if let Some(square) = self.board_state.enpassant {
+            self.board_state.hash ^= ZOBRIST.get_enpassant_num(square);
+            self.board_state.enpassant = None;
+        }
         self.game_history.push(self.board_state.hash);
         if self.board_state.side_to_move == Side::White {
             self.board_state.full_move += 1
