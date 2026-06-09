@@ -3,19 +3,23 @@
 <h1>JustBot Chess Engine</h1>
   
 [![License: GPL-3.0](https://img.shields.io/github/license/HasanFakih21/JustBot?style=flat-square&color=blue)](https://www.gnu.org/licenses/gpl-3.0.en.html)
-[![GitHub Release](https://img.shields.io/github/v/release/HasanFakih21/JustBot?include_prereleases&style=flat-square)](https://github.com/HasanFakih21/JustBot/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/HasanFakih21/JustBot?include_prereleases&style=flat-square&color=green)](https://github.com/HasanFakih21/JustBot/releases)
 
 </div>
 
 <div align="center">JustBot is written without the use of any agentic or LLM assisted coding.</div>
 
 ## Releases
-| Version |  Elo  |
-| :---:   | :---: |
-| 0.1.0   | ~2448 |
+|        Version             |      Elo         |
+|         :---:              |     :---:        |
+| [JustBot v0.1.0][v0.1.0]   |     ~2448        |
+
+[v0.1.0]: https://github.com/HasanFakih21/JustBot/releases/tag/v0.1.0
 
 > [!NOTE]
-> Elo is only an estimate based on a fixed number of games against Stash 
+> Elo is only an estimate based on a fixed number of games against Stash
+
+You can find precompiled binaries for Linux and Windows [here](https://github.com/HasanFakih21/JustBot/releases)
 
 ## Building the project
 To build the project, you need a working installation of Rust and Cargo, once the repository is cloned, you can run for a general build:
