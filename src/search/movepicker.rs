@@ -142,7 +142,8 @@ pub mod tests {
     #[test]
     fn test_move_picker() {
         let board =
-            Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1");
+            Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1")
+                .unwrap();
         let mut move_picker = MovePicker::new(&board, &SearchData::default());
         println!("{}", move_picker.moves);
         //println!("{:?}", move_picker);

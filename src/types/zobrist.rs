@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn test_board_hashing() {
-        let board1 = Board::from_fen("8/6K1/3N4/8/5Q2/8/1kr5/8 w - - 0 1");
+        let board1 = Board::from_fen("8/6K1/3N4/8/5Q2/8/1kr5/8 w - - 0 1").unwrap();
         let ver_hash = ZOBRIST.get_piece_num(Side::White, Piece::Knight, Square::D6)
             ^ ZOBRIST.get_piece_num(Side::White, Piece::Queen, Square::F4)
             ^ ZOBRIST.get_piece_num(Side::White, Piece::King, Square::G7)

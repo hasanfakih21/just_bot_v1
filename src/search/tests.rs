@@ -12,7 +12,8 @@ fn test_search() {
 #[test]
 fn test_order_moves() {
     let board =
-        Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1");
+        Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1")
+            .unwrap();
     let mut move_picker = MovePicker::new(&board, &SearchData::default());
     let first_move = move_picker
         .next(&board, &SearchData::default(), false)
@@ -24,7 +25,8 @@ fn test_order_moves() {
     );
 
     let board =
-        Board::from_fen("rnbq1rk1/pN1p1ppp/4n2b/2p1p3/N1BP3R/2P2Q2/PP3PPP/2B1K2R w K - 0 1");
+        Board::from_fen("rnbq1rk1/pN1p1ppp/4n2b/2p1p3/N1BP3R/2P2Q2/PP3PPP/2B1K2R w K - 0 1")
+            .unwrap();
     let mut move_picker = MovePicker::new(&board, &SearchData::default());
     let first_move = move_picker
         .next(&board, &SearchData::default(), false)
@@ -41,7 +43,7 @@ fn test_repetion_detection() {
     use MoveKind::*;
     use Square::*;
 
-    let mut board = Board::from_fen("8/6K1/3N4/8/5Q2/8/1kr5/8 w - - 0 1");
+    let mut board = Board::from_fen("8/6K1/3N4/8/5Q2/8/1kr5/8 w - - 0 1").unwrap();
     let _ = board.make_move(Move::new(F4, E4, QuietMove));
     let _ = board.make_move(Move::new(C2, C1, QuietMove));
     let _ = board.make_move(Move::new(E4, F4, QuietMove));
@@ -71,7 +73,8 @@ fn test_repetion_detection() {
 #[test]
 fn test_mate_in_one() {
     let mut data = SearchData::default();
-    let board = Board::from_fen("r1b4r/p1p1q3/1bppk3/4pp2/3PP1Q1/2P1R3/PP3PPP/RN4K1 w - - 0 18");
+    let board =
+        Board::from_fen("r1b4r/p1p1q3/1bppk3/4pp2/3PP1Q1/2P1R3/PP3PPP/RN4K1 w - - 0 18").unwrap();
     data.board = board;
 
     search::<Root>(&mut data, 1, -INFINITY, INFINITY, 0);
@@ -86,7 +89,7 @@ fn test_mate_in_one() {
 #[test]
 fn test_mate_in_four() {
     let mut data = SearchData::default();
-    let board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36");
+    let board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36").unwrap();
     data.board = board;
 
     search::<Root>(&mut data, 4, -INFINITY, INFINITY, 0);
@@ -104,7 +107,7 @@ fn test_pv_line() {
     use Square::*;
 
     let mut data = SearchData::default();
-    let board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36");
+    let board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36").unwrap();
     data.get_time_settings().btime = 1000000;
     data.start_time();
     data.board = board;
@@ -133,15 +136,15 @@ fn test_pv_line() {
 
 #[test]
 fn test_bugged_position() {
-    let mut board = Board::from_fen("6k1/5pp1/7p/8/5Pn1/2R4P/B5P1/4qQ1K b - - 6 39");
+    let mut board = Board::from_fen("6k1/5pp1/7p/8/5Pn1/2R4P/B5P1/4qQ1K b - - 6 39").unwrap();
     println!("Hash: {}", board.board_state.hash);
     //Position hash: 6128121706435820836
 
-    board = Board::from_fen("6k1/5pp1/7p/8/5Pn1/2RQ3P/B4qP1/6K1 w - - 3 38");
+    board = Board::from_fen("6k1/5pp1/7p/8/5Pn1/2RQ3P/B4qP1/6K1 w - - 3 38").unwrap();
     println!("Hash 2: {}", board.board_state.hash);
     //Position hash: 16381162810209017462
 
-    board = Board::from_fen("6k1/5pp1/7p/8/5Pnq/2RQ3P/B5P1/6K1 b - - 2 37");
+    board = Board::from_fen("6k1/5pp1/7p/8/5Pnq/2RQ3P/B5P1/6K1 b - - 2 37").unwrap();
     println!("Hash 3: {}", board.board_state.hash);
     //Position hash: 3246015867840709621
 }
@@ -150,7 +153,7 @@ fn test_bugged_position() {
 fn test_transposition_timeout() {
     let mut data = SearchData::default();
     data.get_time_settings().btime = 8080;
-    let board = Board::from_fen("6k1/2p5/4R1pp/1p1r4/pP1p4/P5PP/2P2P2/6K1 b - - 0 32");
+    let board = Board::from_fen("6k1/2p5/4R1pp/1p1r4/pP1p4/P5PP/2P2P2/6K1 b - - 0 32").unwrap();
     data.board = board;
 
     let _ = search_runner(&mut data);

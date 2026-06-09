@@ -1,3 +1,4 @@
 fn main() {
-    justbot::uci::input_loop();
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    justbot::uci::input_loop(args.join(" "));
 }

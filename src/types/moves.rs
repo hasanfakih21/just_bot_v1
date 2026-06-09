@@ -277,7 +277,7 @@ pub mod tests {
 
     #[test]
     fn test_move_list() {
-        let board = Board::from_fen(STARTING_FEN);
+        let board = Board::from_fen(STARTING_FEN).unwrap();
         let mut move_list = board.generate_moves(MoveGenKind::All);
         assert_eq!(move_list.len(), 20);
         let m = Move::new(Square::A1, Square::A3, MoveKind::QuietMove);

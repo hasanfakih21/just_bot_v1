@@ -323,7 +323,7 @@ mod tests {
 
     #[test]
     fn test_get_material_evaluation() {
-        let mut board = Board::from_fen(STARTING_FEN);
+        let mut board = Board::from_fen(STARTING_FEN).unwrap();
         assert_eq!(0, board.get_material_evaluation());
 
         board.remove_piece(Side::White, Piece::Pawn, Square::E2);
@@ -338,9 +338,9 @@ mod tests {
 
     #[test]
     fn test_only_king_and_pawn_check() {
-        let board = Board::from_fen("8/8/8/8/p7/P7/1k6/3K4 b - - 16 65");
+        let board = Board::from_fen("8/8/8/8/p7/P7/1k6/3K4 b - - 16 65").unwrap();
         assert!(board.only_king_and_pawns());
-        let board = Board::from_fen("8/r4pK1/5Rp1/6k1/p6p/P6P/6P1/8 w - - 2 50");
+        let board = Board::from_fen("8/r4pK1/5Rp1/6k1/p6p/P6P/6P1/8 w - - 2 50").unwrap();
         assert!(!board.only_king_and_pawns());
     }
 
@@ -380,14 +380,14 @@ mod tests {
 
     #[test]
     fn test_mop_up() {
-        let board = Board::from_fen("2K2R2/8/8/8/8/8/8/3k4 w - - 0 1");
+        let board = Board::from_fen("2K2R2/8/8/8/8/8/8/3k4 w - - 0 1").unwrap();
         assert_eq!(board.total_material_value(), Piece::Rook.value());
         println!("{}", board.mop_up());
         println!("{}", board.evaluate());
         let first_bonus = board.mop_up();
         let first_score = board.evaluate();
 
-        let board = Board::from_fen("5R2/8/8/8/8/2K5/8/3k4 w - - 0 1");
+        let board = Board::from_fen("5R2/8/8/8/8/2K5/8/3k4 w - - 0 1").unwrap();
         println!("{}", board.mop_up());
         println!("{}", board.evaluate());
         let second_bonus = board.mop_up();

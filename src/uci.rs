@@ -3,25 +3,42 @@ use std::sync::mpsc::{Receiver, channel};
 use std::thread;
 use std::time::Instant;
 
+use crate::bench::bench;
 use crate::board::Board;
 use crate::search::data::{SearchData, SharedData};
 use crate::search::search_runner;
 use crate::types::*;
 
-pub fn input_loop() {
+pub fn input_loop(cli_args: String) {
     let mut data = SearchData::default();
     let rx = listen(data.shared.clone());
 
-    while let Ok(input) = rx.recv() {
+    let mut input = if !cli_args.is_empty() {
+        cli_args
+    } else {
+        String::new()
+    };
+
+    loop {
+        if input.is_empty() {
+            if let Ok(s) = rx.recv() {
+                input = s;
+            } else {
+                data.shared.status.stop();
+                break;
+            }
+        }
+
         let (command, args) = input.split_once(" ").unwrap_or((&input, ""));
 
         match command.trim() {
             "position" => position(args, &mut data.board),
             "uci" => uci(),
             "isready" => println!("readyok"),
+            "setoption" => set_option(args, &mut data),
             "ucinewgame" => {
                 data.shared.tt.clear();
-                data = SearchData{
+                data = SearchData {
                     shared: data.shared,
                     ..Default::default()
                 };
@@ -44,12 +61,18 @@ pub fn input_loop() {
                         clock.elapsed().as_millis()
                     );
                 } else {
-                    eprintln!("Enter a valid depth!")
+                    eprintln!("Invalid depth: {:?}", args);
                 }
             }
             "d" => println!("{}", data.board),
+            "bench" => {
+                bench();
+                break;
+            }
             _ => (),
         }
+
+        input.clear();
     }
 }
 
@@ -93,14 +116,18 @@ pub fn position(args: &str, board: &mut Board) {
 
     match command.trim() {
         "startpos" => {
-            *board = Board::from_fen(STARTING_FEN);
+            *board = Board::from_fen(STARTING_FEN).unwrap();
         }
         "fen" => {
             if args.trim().is_empty() {
                 eprintln!("Please provide a fen string");
                 return;
             }
-            *board = Board::from_fen(args);
+            if let Ok(b) = Board::from_fen(args) {
+                *board = b;
+            } else {
+                eprintln!("Invalid FEN: {:?}", args.trim_end());
+            }
         }
         _ => eprintln!("Not a valid position argument!"),
     }
@@ -115,6 +142,26 @@ pub fn position(args: &str, board: &mut Board) {
                 return;
             }
         }
+    }
+}
+
+pub fn set_option(args: &str, data: &mut SearchData) {
+    let args = args.to_ascii_lowercase();
+    let args: Vec<&str> = args.split_ascii_whitespace().collect();
+    match args.as_slice() {
+        ["name", "hash", "value", amount] => {
+            let amount = amount.parse::<usize>().unwrap_or(16);
+            data.shared.tt.resize(amount);
+            println!("info string Resized TT to {amount} mb");
+        }
+        ["name", "threads", "value", ..] => {
+            println!("info string Only 1 thread is supported");
+        }
+        ["name", "clear", "hash"] => {
+            data.shared.tt.clear();
+            println!("info string TT cleared");
+        }
+        _ => eprintln!("Unkown option"),
     }
 }
 
@@ -166,8 +213,11 @@ pub fn go(args: &str, data: &mut SearchData) -> Option<MoveEntry> {
 }
 
 pub fn uci() {
-    println!("id name JustBot 1.0");
+    println!("id name JustBot 0.1.0");
     println!("id author Hasan Fakih");
+    println!("option name Threads type spin default 1 min 1 max 1");
+    println!("option name Hash type spin default 16 min 1 max 512");
+    println!("option name Clear Hash type button");
     println!("uciok");
 }
 
@@ -179,7 +229,7 @@ pub mod tests {
 
     #[test]
     fn test_parse_move() {
-        let board = Board::from_fen(STARTING_FEN);
+        let board = Board::from_fen(STARTING_FEN).unwrap();
         if let Ok(m) = board.parse_move("e2e4") {
             println!("bestmove {m}");
         }
@@ -205,5 +255,11 @@ pub mod tests {
             data.get_time_settings(),
             bm.unwrap().mv
         );
+    }
+
+    #[test]
+    fn test_set_option() {
+        let mut data = SearchData::default();
+        set_option("name Hash value 32", &mut data);
     }
 }

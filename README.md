@@ -7,15 +7,30 @@
 
 </div>
 
+<div align="center">JustBot is written without the use of any agentic or LLM assisted coding.</div>
 
-JustBot is my first attempt at creating a UCI chess engine with magic bitboards without any agentic or LLM assisted coding.
+## Releases
+| Version |  Elo  |
+| :---:   | :---: |
+| 0.1.0   | ~2448 |
+
+> [!NOTE]
+> Elo is only an estimate based on a fixed number of games against Stash 
 
 ## Building the project
-To build the project, you need a working installation of Rust and Cargo, once the repository is cloned, you can run:
+To build the project, you need a working installation of Rust and Cargo, once the repository is cloned, you can run for a general build:
 
 ```bash
 cargo build --release
 ```
+
+For a targeted  build you can run:
+
+```bash
+cargo rustc --release --bin justbot -- -C target-cpu=native
+```
+
+The binary should be located within `./target/release/`
 
 ## Features
 - Basic UCI compatibility
@@ -32,6 +47,13 @@ cargo build --release
 - Reverse Futility Pruning
 - Late Move Reductions
 - Butterfly History
+- Late Move Pruning
+
+### Supported UCI Options
+| Name        |    Default   |                Description                     |
+| :---:       |     :---:    |                   :---:                        |
+| Hash        |      16      | Sets the size of the transposition table in MB |
+| Clear Hash  |      ---     | Clears all entries in the transposition table  |
 
 ## Acknowledgments
 - [Chess Programming Wiki](https://www.chessprogramming.org/Main_Page)
