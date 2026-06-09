@@ -10,9 +10,9 @@ pub mod parser;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BoardState {
-    pub board_pieces: [BitBoard; 12],
-    pub pieces_on_squares: [Option<(Side, Piece)>; 64],
-    pub board_occupancies: [BitBoard; 2],
+    pub pieces: [BitBoard; 12],
+    pub mailbox: [Option<(Side, Piece)>; 64],
+    pub occupancies: [BitBoard; 2],
     pub side_to_move: Side,
     pub enpassant: Option<Square>,
     pub castling_rights: CastlingRights,
@@ -30,9 +30,9 @@ pub struct BoardState {
 impl BoardState {
     pub fn new() -> Self {
         BoardState {
-            board_pieces: [BitBoard(0); 12],
-            pieces_on_squares: [None; 64],
-            board_occupancies: [BitBoard(0); 2],
+            pieces: [BitBoard(0); 12],
+            mailbox: [None; 64],
+            occupancies: [BitBoard(0); 2],
             side_to_move: Side::White,
             enpassant: None,
             castling_rights: CastlingRights::new(),
@@ -66,7 +66,7 @@ pub struct Board {
     pub bishop_attacks: Vec<BitBoard>,
     pub rook_attacks: Vec<BitBoard>,
 
-    pub board_state: BoardState,
+    pub state: BoardState,
     pub state_stack: Vec<BoardState>,
     pub game_history: Vec<u64>,
 }
@@ -91,7 +91,7 @@ impl Board {
             rook_attacks: vec![BitBoard(0); 64 * 4096],
 
             state_stack: Vec::new(),
-            board_state: BoardState::new(),
+            state: BoardState::new(),
             game_history: Vec::new(),
         };
 
@@ -103,49 +103,49 @@ impl Board {
 
     pub fn is_there(&self, side: Side, piece: Piece, square: Square) -> bool {
         let b = 1u64 << square as u64;
-        (self.board_state.board_pieces[(piece as usize) + (side as usize * 6)].0 & b) != 0
+        (self.state.pieces[(piece as usize) + (side as usize * 6)].0 & b) != 0
     }
 
     pub const fn get_piece_bb(&self, side: Side, piece: Piece) -> BitBoard {
-        self.board_state.board_pieces[(piece as usize) + (side as usize * 6)]
+        self.state.pieces[(piece as usize) + (side as usize * 6)]
     }
 
     pub const fn get_piece_at_square(&self, square: Square) -> Option<(Side, Piece)> {
-        self.board_state.pieces_on_squares[square as usize]
+        self.state.mailbox[square as usize]
     }
 
     pub fn place_piece(&mut self, side: Side, piece: Piece, square: Square) {
         //Bitboards
-        self.board_state.board_pieces[(piece as usize) + (side as usize * 6)].set_bit(square);
-        self.board_state.board_occupancies[side as usize].set_bit(square);
+        self.state.pieces[(piece as usize) + (side as usize * 6)].set_bit(square);
+        self.state.occupancies[side as usize].set_bit(square);
         //Mailbox
-        self.board_state.pieces_on_squares[square as usize] = Some((side, piece));
+        self.state.mailbox[square as usize] = Some((side, piece));
         //Material Eval
-        self.board_state.material_value[side as usize] += piece.value();
+        self.state.material_value[side as usize] += piece.value();
         //Piece Square Table
-        self.board_state.pq_mg_value[side as usize] += self.get_mg_score(piece, square, side);
-        self.board_state.pq_eg_value[side as usize] += self.get_eg_score(piece, square, side);
+        self.state.pq_mg_value[side as usize] += self.get_mg_score(piece, square, side);
+        self.state.pq_eg_value[side as usize] += self.get_eg_score(piece, square, side);
         //Game Phase
-        self.board_state.game_phase += GAMEPHASE[piece as usize];
+        self.state.game_phase += GAMEPHASE[piece as usize];
         //Zobrist Hash
-        self.board_state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
+        self.state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
     }
 
     pub fn remove_piece(&mut self, side: Side, piece: Piece, square: Square) {
         //Bitboards
-        self.board_state.board_pieces[(piece as usize) + (side as usize * 6)].clear_bit(square);
-        self.board_state.board_occupancies[side as usize].clear_bit(square);
+        self.state.pieces[(piece as usize) + (side as usize * 6)].clear_bit(square);
+        self.state.occupancies[side as usize].clear_bit(square);
         //Mailbox
-        self.board_state.pieces_on_squares[square as usize] = None;
+        self.state.mailbox[square as usize] = None;
         //Material Eval
-        self.board_state.material_value[side as usize] -= piece.value();
+        self.state.material_value[side as usize] -= piece.value();
         //Piece Square Table
-        self.board_state.pq_mg_value[side as usize] -= self.get_mg_score(piece, square, side);
-        self.board_state.pq_eg_value[side as usize] -= self.get_eg_score(piece, square, side);
+        self.state.pq_mg_value[side as usize] -= self.get_mg_score(piece, square, side);
+        self.state.pq_eg_value[side as usize] -= self.get_eg_score(piece, square, side);
         //Game Phase
-        self.board_state.game_phase -= GAMEPHASE[piece as usize];
+        self.state.game_phase -= GAMEPHASE[piece as usize];
         //Zobrist Hash
-        self.board_state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
+        self.state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
     }
 
     pub fn get_piece_attack(&self, side: Side, square: Square, piece: Piece) -> BitBoard {
@@ -162,12 +162,12 @@ impl Board {
     pub fn get_all_attacks(&self, side: Side) -> BitBoard {
         let mut attacks = BitBoard(0);
         for i in 0..6 {
-            for source in self.board_state.board_pieces[i + (side as usize * 6)].iter() {
+            for source in self.state.pieces[i + (side as usize * 6)].iter() {
                 attacks |= self.get_piece_attack(side, source, Piece::from(i));
             }
         }
 
-        attacks & !self.board_state.board_occupancies[side as usize]
+        attacks & !self.state.occupancies[side as usize]
     }
 
     pub fn init_leaping_attacks(&mut self) {
@@ -254,8 +254,7 @@ impl Board {
     }
 
     pub fn get_all_occupancy(&self) -> BitBoard {
-        self.board_state.board_occupancies[Side::White as usize]
-            | self.board_state.board_occupancies[Side::Black as usize]
+        self.state.occupancies[Side::White as usize] | self.state.occupancies[Side::Black as usize]
     }
 }
 
@@ -283,9 +282,7 @@ impl Display for Board {
         output.push_str("\n     A  B  C  D  E  F  G  H\n");
         output.push_str(&format!(
             "\n     Side to move: {} \n     Castling: {}\n     Enpassant: {:?}\n",
-            self.board_state.side_to_move,
-            self.board_state.castling_rights,
-            self.board_state.enpassant
+            self.state.side_to_move, self.state.castling_rights, self.state.enpassant
         ));
         write!(f, "{}", output)
     }
@@ -342,8 +339,8 @@ mod tests {
         let mut board = Board::from_fen(STARTING_FEN).unwrap();
         board.remove_piece(Side::White, Piece::Pawn, Square::A2);
         board.get_all_occupancy().print_board();
-        board.board_state.board_occupancies[Side::Black as usize].print_board();
-        board.board_state.board_occupancies[Side::White as usize].print_board();
+        board.state.occupancies[Side::Black as usize].print_board();
+        board.state.occupancies[Side::White as usize].print_board();
     }
 
     #[test]

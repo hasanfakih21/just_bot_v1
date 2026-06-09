@@ -194,7 +194,7 @@ mod tests {
 
         let score = search::<Root>(&mut data, 3, -INFINITY, INFINITY, 0);
 
-        let hash = data.board.board_state.hash;
+        let hash = data.board.state.hash;
         let entry = data.shared.tt.get_entry(hash).unwrap();
 
         let m = entry.get_best_move();

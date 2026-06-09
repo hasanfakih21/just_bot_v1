@@ -175,9 +175,8 @@ pub const MAX_MATERIAL_VALUE: i32 = 8000;
 
 impl Board {
     pub const fn get_material_evaluation(&self) -> i32 {
-        let side = self.board_state.side_to_move;
-        self.board_state.material_value[side as usize]
-            - self.board_state.material_value[side.other() as usize]
+        let side = self.state.side_to_move;
+        self.state.material_value[side as usize] - self.state.material_value[side.other() as usize]
     }
 
     pub fn evaluate(&self) -> i32 {
@@ -195,8 +194,8 @@ impl Board {
     }
 
     pub const fn total_material_value(&self) -> i32 {
-        self.board_state.material_value[Side::White as usize]
-            + self.board_state.material_value[Side::Black as usize]
+        self.state.material_value[Side::White as usize]
+            + self.state.material_value[Side::Black as usize]
     }
 
     pub const fn get_mg_score(&self, piece: Piece, square: Square, side: Side) -> i32 {
@@ -218,14 +217,14 @@ impl Board {
     }
 
     pub const fn get_piece_square_evaluation(&self) -> i32 {
-        let side = self.board_state.side_to_move;
+        let side = self.state.side_to_move;
 
-        let mg_score = self.board_state.pq_mg_value[side as usize]
-            - self.board_state.pq_mg_value[side.other() as usize];
-        let eg_score = self.board_state.pq_eg_value[side as usize]
-            - self.board_state.pq_eg_value[side.other() as usize];
+        let mg_score =
+            self.state.pq_mg_value[side as usize] - self.state.pq_mg_value[side.other() as usize];
+        let eg_score =
+            self.state.pq_eg_value[side as usize] - self.state.pq_eg_value[side.other() as usize];
 
-        let mut mg_phase = self.board_state.game_phase;
+        let mut mg_phase = self.state.game_phase;
         if mg_phase > 24 {
             mg_phase = 24;
         }
@@ -247,7 +246,7 @@ impl Board {
 
     //Only checks for the current side to move
     pub fn only_king_and_pawns(&self) -> bool {
-        let side = self.board_state.side_to_move;
+        let side = self.state.side_to_move;
         self.get_piece_bb(side, Piece::Bishop)
             | self.get_piece_bb(side, Piece::Knight)
             | self.get_piece_bb(side, Piece::Queen)
@@ -257,7 +256,7 @@ impl Board {
 
     //Still needs more work and testing
     pub fn mop_up(&self) -> i32 {
-        let current_side = self.board_state.side_to_move;
+        let current_side = self.state.side_to_move;
         let opp_king_square = self.get_king_square(current_side.other());
         let curr_king_square = self.get_king_square(current_side);
 
@@ -280,7 +279,7 @@ impl Board {
     }
 
     pub fn piece_acitivty_evaluation(&self) -> i32 {
-        let side = self.board_state.side_to_move;
+        let side = self.state.side_to_move;
         self.piece_activity_score(side) - self.piece_activity_score(side.other())
     }
 }

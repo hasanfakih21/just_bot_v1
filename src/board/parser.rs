@@ -45,8 +45,8 @@ impl Board {
 
         let turn = fen.next().ok_or(FenParseError)?;
         match turn {
-            "w" => board.board_state.side_to_move = Side::White,
-            "b" => board.board_state.side_to_move = Side::Black,
+            "w" => board.state.side_to_move = Side::White,
+            "b" => board.state.side_to_move = Side::Black,
             _ => eprintln!("Invalid side to move"),
         }
 
@@ -56,37 +56,34 @@ impl Board {
                 continue;
             }
 
-            board
-                .board_state
-                .castling_rights
-                .set(Castling::from(c) as u8);
+            board.state.castling_rights.set(Castling::from(c) as u8);
         }
 
         if let Some(enpassant) = fen.next()
             && let Ok(square) = Square::try_from(enpassant)
         {
-            board.board_state.enpassant = Some(square);
+            board.state.enpassant = Some(square);
         }
 
         if let Some(half_move) = fen.next()
             && let Ok(i) = half_move.parse::<u8>()
         {
-            board.board_state.half_move_clock = i;
+            board.state.half_move_clock = i;
         }
 
         if let Some(full_move) = fen.next()
             && let Ok(i) = full_move.parse::<usize>()
         {
-            board.board_state.full_move = i;
+            board.state.full_move = i;
         }
 
-        if board.board_state.side_to_move == Side::Black {
-            board.board_state.hash ^= ZOBRIST.get_side_num()
+        if board.state.side_to_move == Side::Black {
+            board.state.hash ^= ZOBRIST.get_side_num()
         }
 
-        board.board_state.hash ^= ZOBRIST.get_castling_num(board.board_state.castling_rights);
-        if let Some(square) = board.board_state.enpassant {
-            board.board_state.hash ^= ZOBRIST.get_enpassant_num(square);
+        board.state.hash ^= ZOBRIST.get_castling_num(board.state.castling_rights);
+        if let Some(square) = board.state.enpassant {
+            board.state.hash ^= ZOBRIST.get_enpassant_num(square);
         }
 
         Ok(board)
@@ -153,7 +150,7 @@ mod tests {
             Board::from_fen("rnb1kbnr/pp1q1pp1/4p2p/2p1N3/3Pp3/2P5/PP2BPPP/RNBQK1R1 b Qkq - 1 7")
                 .unwrap();
         println!("{board6}");
-        println!("Half move: {}", board6.board_state.half_move_clock);
-        println!("Full move: {}", board6.board_state.full_move);
+        println!("Half move: {}", board6.state.half_move_clock);
+        println!("Full move: {}", board6.state.full_move);
     }
 }

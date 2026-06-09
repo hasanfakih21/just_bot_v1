@@ -104,8 +104,7 @@ impl SearchData {
     }
 
     pub fn start_time(&mut self) {
-        self.time
-            .set_time_limit(self.board.board_state.side_to_move);
+        self.time.set_time_limit(self.board.state.side_to_move);
         self.time.reset_clock();
     }
 

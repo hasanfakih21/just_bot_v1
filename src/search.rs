@@ -13,7 +13,7 @@ mod tests;
 impl Board {
     //Needs fixing
     pub fn detect_repetitions(&self) -> usize {
-        let half_moves = self.board_state.half_move_clock as usize;
+        let half_moves = self.state.half_move_clock as usize;
         let mut count = 0;
 
         if self.game_history.len() < half_moves {
@@ -22,7 +22,7 @@ impl Board {
 
         let last_halfmove_ply = self.game_history.len() - half_moves;
         for position in self.game_history[last_halfmove_ply..].iter() {
-            if self.board_state.hash == *position {
+            if self.state.hash == *position {
                 count += 1
             }
         }
@@ -182,9 +182,9 @@ pub fn search<Node: NodeType>(
         data.clear_pv(ply);
     }
 
-    if data.board.board_state.half_move_clock > 4 && !Node::ROOT {
+    if data.board.state.half_move_clock > 4 && !Node::ROOT {
         //50 move rule
-        if data.board.board_state.half_move_clock >= 100 {
+        if data.board.state.half_move_clock >= 100 {
             return 0;
         }
         //We need to check history if positions were repeated only for the side to move.
@@ -195,7 +195,7 @@ pub fn search<Node: NodeType>(
     }
 
     //TT Cutoffs only if depth of entry is greater or equal to the depth of the current node
-    if let Some(e) = data.shared.tt.get_entry(data.board.board_state.hash)
+    if let Some(e) = data.shared.tt.get_entry(data.board.state.hash)
         && !Node::PV
         && e.get_depth() >= depth
         && e.get_score().abs() < MATE_CUTOFF
@@ -252,7 +252,7 @@ pub fn search<Node: NodeType>(
 
     while let Some(m) = move_picker.next(&data.board, data, false) {
         //Late Move Pruning (LMP)
-        if  !in_check
+        if !in_check
             && best_score.abs() < MATE_CUTOFF
             && m.get_kind().is_quiet()
             && legal_moves > 6 + 2 * depth as usize * depth as usize
@@ -307,7 +307,7 @@ pub fn search<Node: NodeType>(
                 //Add quiet moves to history
                 if m.get_kind().is_quiet() {
                     let bonus = 300 * depth as i32 - 250;
-                    let side = data.board.board_state.side_to_move;
+                    let side = data.board.state.side_to_move;
                     data.history.update(side, m, bonus);
                     //Add malus to previously searched quiet moves
                     for e in quiets_searched.iter() {
@@ -322,7 +322,7 @@ pub fn search<Node: NodeType>(
                         m,
                         tt_score,
                         Bound::Lower,
-                        data.board.board_state.hash,
+                        data.board.state.hash,
                         depth,
                     );
                 }
@@ -337,10 +337,7 @@ pub fn search<Node: NodeType>(
     }
 
     if legal_moves == 0 {
-        if data
-            .board
-            .is_king_in_attack(data.board.board_state.side_to_move)
-        {
+        if data.board.is_king_in_attack(data.board.state.side_to_move) {
             return -MATE_SCORE + ply as i32;
         } else {
             return 0;
@@ -351,7 +348,7 @@ pub fn search<Node: NodeType>(
         let tt_score = best_score;
         data.shared
             .tt
-            .add_entry(m, tt_score, bound, data.board.board_state.hash, depth);
+            .add_entry(m, tt_score, bound, data.board.state.hash, depth);
     }
 
     best_score
@@ -401,9 +398,9 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
     let mut legal_moves = 0;
     data.shared.add_nodes(1);
 
-    if data.board.board_state.half_move_clock > 4 {
+    if data.board.state.half_move_clock > 4 {
         //50 move rule
-        if data.board.board_state.half_move_clock >= 100 {
+        if data.board.state.half_move_clock >= 100 {
             return 0;
         }
         //We need to check history if positions were repeated only for the side to move.
@@ -441,10 +438,7 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
     }
 
     if legal_moves == 0 {
-        if data
-            .board
-            .is_king_in_attack(data.board.board_state.side_to_move)
-        {
+        if data.board.is_king_in_attack(data.board.state.side_to_move) {
             return -MATE_SCORE + ply as i32;
         } else {
             return 0;

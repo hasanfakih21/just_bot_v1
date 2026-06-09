@@ -24,7 +24,7 @@ impl MovePicker {
         let tt_move = data
             .shared
             .tt
-            .get_entry(board.board_state.hash)
+            .get_entry(board.state.hash)
             .map(|e| e.get_best_move());
         Self {
             moves: MoveList::new(),
@@ -89,7 +89,7 @@ impl MovePicker {
     fn score_quiet_moves(&mut self, board: &Board, data: &SearchData) {
         for entry in self.moves.iter_mut() {
             let mv = entry.mv;
-            entry.score = Some(data.history.get(board.board_state.side_to_move, mv));
+            entry.score = Some(data.history.get(board.state.side_to_move, mv));
         }
     }
 
