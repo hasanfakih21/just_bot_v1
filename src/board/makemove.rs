@@ -168,7 +168,7 @@ impl Board {
             self.state.half_move_clock += 1
         }
 
-        if self.state.side_to_move == Side::White {
+        if self.state.side_to_move == Side::Black {
             self.state.full_move += 1
         }
         self.state.hash ^= ZOBRIST.get_castling_num(self.state.castling_rights);
