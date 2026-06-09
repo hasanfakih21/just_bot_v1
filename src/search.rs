@@ -252,7 +252,7 @@ pub fn search<Node: NodeType>(
 
     while let Some(m) = move_picker.next(&data.board, data, false) {
         //Late Move Pruning (LMP)
-        if !in_check
+        if  !in_check
             && best_score.abs() < MATE_CUTOFF
             && m.get_kind().is_quiet()
             && legal_moves > 6 + 2 * depth as usize * depth as usize
