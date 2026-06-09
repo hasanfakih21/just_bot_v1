@@ -12,31 +12,29 @@ pub enum MoveGenKind {
 
 impl Board {
     pub fn is_attacked_at_by(&self, square: Square, side: Side) -> bool {
-        let pawns = self.state.pieces[(Piece::Pawn as usize) + (side as usize * 6)];
+        let pawns = self.get_piece_bb(side, Piece::Pawn);
         if (pawns & self.get_pawn_attacks(square, side.other())) != BitBoard(0) {
             return true;
         }
 
-        let knights = self.state.pieces[(Piece::Knight as usize) + (side as usize * 6)];
+        let knights = self.get_piece_bb(side, Piece::Knight);
         if (knights & self.get_knight_attacks(square)) != BitBoard(0) {
             return true;
         }
 
-        let king = self.state.pieces[(Piece::King as usize) + (side as usize * 6)];
+        let king = self.get_piece_bb(side, Piece::King);
         if (king & self.get_king_attacks(square)) != BitBoard(0) {
             return true;
         }
 
-        let bishop_queens = self.state.pieces[(Piece::Bishop as usize) + (side as usize * 6)]
-            | self.state.pieces[(Piece::Queen as usize) + (side as usize * 6)];
+        let bishop_queens = self.get_piece_bb(side, Piece::Bishop) | self.get_piece_bb(side, Piece::Queen);
         if (bishop_queens & self.get_bishop_attacks(square, self.get_all_occupancy()))
             != BitBoard(0)
         {
             return true;
         }
 
-        let rook_queens = self.state.pieces[(Piece::Rook as usize) + (side as usize * 6)]
-            | self.state.pieces[(Piece::Queen as usize) + (side as usize * 6)];
+        let rook_queens = self.get_piece_bb(side, Piece::Rook) | self.get_piece_bb(side, Piece::Queen);
         if (rook_queens & self.get_rook_attacks(square, self.get_all_occupancy())) != BitBoard(0) {
             return true;
         }
@@ -46,7 +44,7 @@ impl Board {
 
     pub fn pawns_with_pushes(&self, side: Side) -> BitBoard {
         let mut empty = !self.get_all_occupancy();
-        let pawns = self.state.pieces[(Piece::Pawn as usize) + (side as usize * 6)];
+        let pawns = self.get_piece_bb(side, Piece::Pawn);
         let offset = match side {
             Side::White => SOUTH,
             Side::Black => NORTH,
@@ -58,7 +56,7 @@ impl Board {
 
     pub fn pawns_with_double_pushes(&self, side: Side) -> BitBoard {
         let mut empty = !self.get_all_occupancy();
-        let pawns = self.state.pieces[(Piece::Pawn as usize) + (side as usize * 6)];
+        let pawns = self.get_piece_bb(side, Piece::Pawn);
 
         let offset = match side {
             Side::White => SOUTH,
@@ -85,7 +83,7 @@ impl Board {
             Side::White => BitBoard(RANK_8),
             Side::Black => BitBoard(RANK_1),
         };
-        let pawns = self.state.pieces[(Piece::Pawn as usize) + (side as usize * 6)];
+        let pawns = self.get_piece_bb(side, Piece::Pawn);
         let opponent_pieces = self.state.occupancies[side.other() as usize];
         let offset = match side {
             Side::White => NORTH,
@@ -148,7 +146,7 @@ impl Board {
 
     pub fn gen_castling_moves(&self, move_list: &mut MoveList) {
         let side = self.state.side_to_move;
-        let king = self.state.pieces[(Piece::King as usize) + (side as usize * 6)];
+        let king = self.get_piece_bb(side, Piece::King);
         let occupancies = self.get_all_occupancy();
         let mut king_side_occ = BitBoard(WK_SIDE);
         let mut queen_side_occ = BitBoard(WQ_SIDE);
@@ -198,7 +196,7 @@ impl Board {
         let opponent_pieces = self.state.occupancies[side.other() as usize];
         let friendly_pieces = self.state.occupancies[side as usize];
 
-        for source in self.state.pieces[(Piece::Knight as usize) + (side as usize * 6)].iter() {
+        for source in self.get_piece_bb(side, Piece::Knight).iter() {
             let targets = self.get_knight_attacks(source) & !friendly_pieces;
             for target in targets.iter() {
                 if opponent_pieces.get_bit(target)
@@ -222,7 +220,7 @@ impl Board {
         let opponent_pieces = self.state.occupancies[side.other() as usize];
         let friendly_pieces = self.state.occupancies[side as usize];
 
-        for source in self.state.pieces[(Piece::Bishop as usize) + (side as usize * 6)].iter() {
+        for source in self.get_piece_bb(side, Piece::Bishop).iter() {
             let targets =
                 self.get_bishop_attacks(source, self.get_all_occupancy()) & !friendly_pieces;
             for target in targets.iter() {
@@ -248,7 +246,7 @@ impl Board {
         let opponent_pieces = self.state.occupancies[side.other() as usize];
         let friendly_pieces = self.state.occupancies[side as usize];
 
-        for source in self.state.pieces[(Piece::Rook as usize) + (side as usize * 6)].iter() {
+        for source in self.get_piece_bb(side, Piece::Rook).iter() {
             let targets =
                 self.get_rook_attacks(source, self.get_all_occupancy()) & !friendly_pieces;
             for target in targets.iter() {
@@ -274,7 +272,7 @@ impl Board {
         let opponent_pieces = self.state.occupancies[side.other() as usize];
         let friendly_pieces = self.state.occupancies[side as usize];
 
-        for source in self.state.pieces[(Piece::Queen as usize) + (side as usize * 6)].iter() {
+        for source in self.get_piece_bb(side, Piece::Queen).iter() {
             let targets =
                 self.get_queen_attacks(source, self.get_all_occupancy()) & !friendly_pieces;
             for target in targets.iter() {
@@ -300,7 +298,7 @@ impl Board {
         let opponent_pieces = self.state.occupancies[side.other() as usize];
         let friendly_pieces = self.state.occupancies[side as usize];
 
-        for source in self.state.pieces[(Piece::King as usize) + (side as usize * 6)].iter() {
+        for source in self.get_piece_bb(side, Piece::King).iter() {
             let targets = self.get_king_attacks(source) & !friendly_pieces;
             for target in targets.iter() {
                 if opponent_pieces.get_bit(target)

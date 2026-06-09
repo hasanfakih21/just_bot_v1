@@ -10,9 +10,9 @@ pub mod parser;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BoardState {
-    pub pieces: [BitBoard; 12],
-    pub mailbox: [Option<(Side, Piece)>; 64],
+    pub pieces: [BitBoard; 6],
     pub occupancies: [BitBoard; 2],
+    pub mailbox: [Option<(Side, Piece)>; 64],
     pub side_to_move: Side,
     pub enpassant: Option<Square>,
     pub castling_rights: CastlingRights,
@@ -30,9 +30,9 @@ pub struct BoardState {
 impl BoardState {
     pub fn new() -> Self {
         BoardState {
-            pieces: [BitBoard(0); 12],
-            mailbox: [None; 64],
+            pieces: [BitBoard(0); 6],
             occupancies: [BitBoard(0); 2],
+            mailbox: [None; 64],
             side_to_move: Side::White,
             enpassant: None,
             castling_rights: CastlingRights::new(),
@@ -101,13 +101,8 @@ impl Board {
         b
     }
 
-    pub fn is_there(&self, side: Side, piece: Piece, square: Square) -> bool {
-        let b = 1u64 << square as u64;
-        (self.state.pieces[(piece as usize) + (side as usize * 6)].0 & b) != 0
-    }
-
     pub const fn get_piece_bb(&self, side: Side, piece: Piece) -> BitBoard {
-        self.state.pieces[(piece as usize) + (side as usize * 6)]
+        BitBoard(self.state.pieces[piece as usize].0 & self.state.occupancies[side as usize].0)
     }
 
     pub const fn get_piece_at_square(&self, square: Square) -> Option<(Side, Piece)> {
@@ -116,7 +111,7 @@ impl Board {
 
     pub fn place_piece(&mut self, side: Side, piece: Piece, square: Square) {
         //Bitboards
-        self.state.pieces[(piece as usize) + (side as usize * 6)].set_bit(square);
+        self.state.pieces[piece as usize].set_bit(square);
         self.state.occupancies[side as usize].set_bit(square);
         //Mailbox
         self.state.mailbox[square as usize] = Some((side, piece));
@@ -133,7 +128,7 @@ impl Board {
 
     pub fn remove_piece(&mut self, side: Side, piece: Piece, square: Square) {
         //Bitboards
-        self.state.pieces[(piece as usize) + (side as usize * 6)].clear_bit(square);
+        self.state.pieces[piece as usize].clear_bit(square);
         self.state.occupancies[side as usize].clear_bit(square);
         //Mailbox
         self.state.mailbox[square as usize] = None;
