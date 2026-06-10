@@ -221,6 +221,7 @@ impl Board {
         if self.state.side_to_move == Side::White {
             self.state.full_move += 1
         }
+        self.update_all_threats();
     }
 }
 
