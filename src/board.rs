@@ -131,17 +131,6 @@ impl Board {
         }
     }
 
-    pub fn get_all_attacks(&self, side: Side) -> BitBoard {
-        let mut attacks = BitBoard(0);
-        for i in 0..6 {
-            for source in self.state.pieces[i + (side as usize * 6)].iter() {
-                attacks |= self.get_piece_attack(side, source, Piece::from(i));
-            }
-        }
-
-        attacks & !self.state.occupancies[side as usize]
-    }
-
     pub const fn get_pawn_attacks(&self, square: Square, side: Side) -> BitBoard {
         PAWN_ATTACKS[side as usize][square as usize]
     }
@@ -223,7 +212,6 @@ impl Display for Board {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::board::moves::Move;
 
     #[test]
     fn test_get_rook_attack() {
@@ -279,14 +267,5 @@ mod tests {
     fn test_full_board_print() {
         let board = Board::new();
         println!("{board}");
-    }
-
-    #[test]
-    fn test_get_all_attacks() {
-        let mut board = Board::from_fen(STARTING_FEN).unwrap();
-        let m = Move::new(Square::E2, Square::E4, moves::MoveKind::DoublePawn);
-        let _ = board.make_move(m);
-        println!("{board}");
-        board.get_all_attacks(Side::White).print_board();
     }
 }

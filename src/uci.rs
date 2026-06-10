@@ -84,6 +84,7 @@ pub fn listen(shared: Arc<SharedData>) -> Receiver<String> {
         loop {
             if std::io::stdin().read_line(&mut input_buffer).unwrap() == 0 {
                 shared.status.stop();
+                break;
             };
 
             match input_buffer.trim() {

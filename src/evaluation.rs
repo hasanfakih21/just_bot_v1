@@ -272,16 +272,6 @@ impl Board {
             .least_sig_bit()
             .unwrap()
     }
-
-    pub fn piece_activity_score(&self, side: Side) -> i32 {
-        let attacks = self.get_all_attacks(side);
-        attacks.count_bits() as i32 * 3
-    }
-
-    pub fn piece_acitivty_evaluation(&self) -> i32 {
-        let side = self.state.side_to_move;
-        self.piece_activity_score(side) - self.piece_activity_score(side.other())
-    }
 }
 
 //https://www.chessprogramming.org/Center_Manhattan-Distance
