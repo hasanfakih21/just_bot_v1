@@ -74,18 +74,32 @@ impl MovePicker {
     fn score_noisy_moves(&mut self, board: &Board) {
         for entry in self.moves.iter_mut() {
             let mv = entry.mv;
+            let mut score = 0;
+
             if mv.get_kind().is_capture() {
-                entry.score = Some(score_attack_move(mv, board));
-            } else if mv.get_kind().is_queen_promotion() {
-                entry.score = Some(500);
+                score += score_attack_move(mv, board);
+            } 
+
+            //Bonus for promotions
+            if mv.get_kind().is_queen_promotion() { 
+                score += 2000;
             }
+
+            if mv.get_kind().is_rook_promotion() | mv.get_kind().is_knight_promotion() {
+                score += 1000;
+            }
+
+            entry.score = Some(score);
         }
     }
 
     fn score_quiet_moves(&mut self, board: &Board, data: &SearchData) {
         for entry in self.moves.iter_mut() {
             let mv = entry.mv;
-            entry.score = Some(data.history.get(board.state.side_to_move, mv));
+            let side = board.state.side_to_move;
+            let score = data.history.get(side, mv);
+
+            entry.score = Some(score);
         }
     }
 
