@@ -151,12 +151,17 @@ impl Board {
 
     pub fn pawn_attacks_setwise(&self, side: Side) -> BitBoard {
         let pawns = self.get_piece_bb(side, Piece::Pawn);
-        let mut attacks = BitBoard(0);
-        for square in pawns.iter() {
-            attacks |= self.get_pawn_attacks(square, side);
-        }
+        let (top_left, top_right) = match side {
+            Side::White => (7, 9),
+            Side::Black => (-9, -7),
+        };
 
-        attacks
+        let mut l = BitBoard(!A_FILE & pawns.0); 
+        let mut r = BitBoard(!H_FILE & pawns.0);
+        l.shift(top_left);
+        r.shift(top_right);
+        
+        l | r
     }
 
     pub const fn get_knight_attacks(&self, square: Square) -> BitBoard {
@@ -277,7 +282,9 @@ impl Display for Board {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::search::data::SearchData;
+
+use super::*;
 
     #[test]
     fn test_get_rook_attack() {
@@ -333,5 +340,20 @@ mod tests {
     fn test_full_board_print() {
         let board = Board::new();
         println!("{board}");
+    }
+
+    #[test]
+    fn test_pawn_attacks_setwise() {
+        let data = SearchData {
+            board: Board::from_fen(
+                "rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1",
+            )
+            .unwrap(),
+            ..Default::default()
+        };
+
+        let pawn_attacks = data.board.pawn_attacks_setwise(Side::Black);
+        pawn_attacks.print_board();
+        assert_eq!(pawn_attacks.count_bits(), 12);
     }
 }
