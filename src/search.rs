@@ -104,12 +104,6 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
             || depth > data.time.depth_limit()
             || data.shared.status.get() == Status::STOPPED
         {
-            // println!(
-            //     "\n\nSearched for: {}\nTime Limit: {}\nDepth Limit: {}",
-            //     data.time.elapsed().as_millis(),
-            //     data.time.time_limit(),
-            //     data.time.depth_limit()
-            // );
             break;
         }
 
@@ -246,11 +240,12 @@ pub fn search<Node: NodeType>(
     let mut best_score = -INFINITY;
     let mut best_move: Option<Move> = None;
     let mut bound = Bound::Upper; //Fail-high means score is atleast this good so lower-bound/Fail-low means the score is an upper bound
+    let tt_move = data.shared.tt.get_entry(data.board.state.hash).map(|e| e.get_best_move());
 
-    let mut move_picker = MovePicker::new(&data.board, data);
+    let mut move_picker = MovePicker::new(tt_move);
     let mut quiets_searched = MoveList::new();
 
-    while let Some(m) = move_picker.next(&data.board, data, false) {
+    while let Some(m) = move_picker.next(data, false) {
         //Late Move Pruning (LMP)
         if !in_check
             && best_score.abs() < MATE_CUTOFF
@@ -366,9 +361,10 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
         alpha = best_score;
     }
 
-    let mut move_picker = MovePicker::new(&data.board, data);
+    let tt_move = data.shared.tt.get_entry(data.board.state.hash).map(|e| e.get_best_move());
+    let mut move_picker = MovePicker::new(tt_move);
 
-    while let Some(m) = move_picker.next(&data.board, data, true) {
+    while let Some(m) = move_picker.next(data, true) {
         if data.board.make_move(m).is_ok() {
             let score = -quiesce(data, -beta, -alpha, _ply + 1);
             data.board.unmake_move();
@@ -414,9 +410,10 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
         return quiesce(data, alpha, beta, ply);
     }
 
-    let mut move_picker = MovePicker::new(&data.board, data);
+    let tt_move = data.shared.tt.get_entry(data.board.state.hash).map(|e| e.get_best_move());
+    let mut move_picker = MovePicker::new(tt_move);
 
-    while let Some(m) = move_picker.next(&data.board, data, false) {
+    while let Some(m) = move_picker.next(data, false) {
         if data.board.make_move(m).is_ok() {
             legal_moves += 1;
             let score = -search_checks(data, -beta, -alpha, ply + 1);

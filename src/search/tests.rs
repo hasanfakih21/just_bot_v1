@@ -11,12 +11,14 @@ fn test_search() {
 
 #[test]
 fn test_order_moves() {
-    let board =
-        Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1")
-            .unwrap();
-    let mut move_picker = MovePicker::new(&board, &SearchData::default());
+    let data = SearchData {
+        board:  Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1").unwrap(),
+        ..Default::default()
+    };
+
+    let mut move_picker = MovePicker::new(None);
     let first_move = move_picker
-        .next(&board, &SearchData::default(), false)
+        .next(&data, false)
         .unwrap();
 
     assert_eq!(
@@ -24,12 +26,14 @@ fn test_order_moves() {
         Move::new(Square::F8, Square::B4, MoveKind::Capture)
     );
 
-    let board =
-        Board::from_fen("rnbq1rk1/pN1p1ppp/4n2b/2p1p3/N1BP3R/2P2Q2/PP3PPP/2B1K2R w K - 0 1")
-            .unwrap();
-    let mut move_picker = MovePicker::new(&board, &SearchData::default());
+    let data = SearchData {
+        board: Board::from_fen("rnbq1rk1/pN1p1ppp/4n2b/2p1p3/N1BP3R/2P2Q2/PP3PPP/2B1K2R w K - 0 1")
+            .unwrap(),
+            ..Default::default()
+    };
+    let mut move_picker = MovePicker::new(None);
     let first_move = move_picker
-        .next(&board, &SearchData::default(), false)
+        .next(&data, false)
         .unwrap();
 
     assert_eq!(

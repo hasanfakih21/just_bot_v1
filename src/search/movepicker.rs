@@ -20,12 +20,7 @@ pub struct MovePicker {
 }
 
 impl MovePicker {
-    pub fn new(board: &Board, data: &SearchData) -> MovePicker {
-        let tt_move = data
-            .shared
-            .tt
-            .get_entry(board.state.hash)
-            .map(|e| e.get_best_move());
+    pub fn new(tt_move: Option<Move>) -> MovePicker {
         Self {
             moves: MoveList::new(),
             tt_move,
@@ -37,7 +32,8 @@ impl MovePicker {
         }
     }
 
-    pub fn next(&mut self, board: &Board, data: &SearchData, quiesce: bool) -> Option<Move> {
+    pub fn next(&mut self, data: &SearchData, quiesce: bool) -> Option<Move> {
+        let board = &data.board;
         if self.status == Status::HashMove {
             self.status = Status::FirstNoisy;
             if !quiesce || !self.tt_move.unwrap().get_kind().is_quiet() {
@@ -141,13 +137,16 @@ pub mod tests {
 
     #[test]
     fn test_move_picker() {
-        let board =
-            Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1")
-                .unwrap();
-        let mut move_picker = MovePicker::new(&board, &SearchData::default());
+        let data = SearchData {
+            board: Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1")
+                .unwrap(),
+            ..Default::default()
+        };
+
+        let mut move_picker = MovePicker::new(None);
         println!("{}", move_picker.moves);
         //println!("{:?}", move_picker);
-        while let Some(m) = move_picker.next(&board, &SearchData::default(), true) {
+        while let Some(m) = move_picker.next( &data, true) {
             println!("{m}");
         }
     }
