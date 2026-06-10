@@ -233,7 +233,8 @@ impl Board {
 
         let mut attacks = BitBoard(0);
         for square in queens.iter() {
-            attacks |= self.get_rook_attacks(square, occ_bb) | self.get_bishop_attacks(square, occ_bb);
+            attacks |=
+                self.get_rook_attacks(square, occ_bb) | self.get_bishop_attacks(square, occ_bb);
         }
 
         attacks

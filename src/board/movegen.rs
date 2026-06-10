@@ -28,14 +28,16 @@ impl Board {
             return true;
         }
 
-        let bishop_queens = self.get_piece_bb(side, Piece::Bishop) | self.get_piece_bb(side, Piece::Queen);
+        let bishop_queens =
+            self.get_piece_bb(side, Piece::Bishop) | self.get_piece_bb(side, Piece::Queen);
         if (bishop_queens & self.get_bishop_attacks(square, self.get_all_occupancy()))
             != BitBoard(0)
         {
             return true;
         }
 
-        let rook_queens = self.get_piece_bb(side, Piece::Rook) | self.get_piece_bb(side, Piece::Queen);
+        let rook_queens =
+            self.get_piece_bb(side, Piece::Rook) | self.get_piece_bb(side, Piece::Queen);
         if (rook_queens & self.get_rook_attacks(square, self.get_all_occupancy())) != BitBoard(0) {
             return true;
         }

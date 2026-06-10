@@ -78,10 +78,10 @@ impl MovePicker {
 
             if mv.get_kind().is_capture() {
                 score += score_attack_move(mv, board);
-            } 
+            }
 
             //Bonus for promotions
-            if mv.get_kind().is_queen_promotion() { 
+            if mv.get_kind().is_queen_promotion() {
                 score += 2000;
             }
 
@@ -154,15 +154,17 @@ pub mod tests {
     #[test]
     fn test_move_picker() {
         let data = SearchData {
-            board: Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1")
-                .unwrap(),
+            board: Board::from_fen(
+                "rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1",
+            )
+            .unwrap(),
             ..Default::default()
         };
 
         let mut move_picker = MovePicker::new(None);
         println!("{}", move_picker.moves);
         //println!("{:?}", move_picker);
-        while let Some(m) = move_picker.next( &data, true) {
+        while let Some(m) = move_picker.next(&data, true) {
             println!("{m}");
         }
     }

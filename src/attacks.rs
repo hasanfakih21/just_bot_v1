@@ -1,6 +1,9 @@
 use std::sync::LazyLock;
 
-use crate::magics::{BISHOP_MAGIC_NUMBERS, BISHOP_OCCUPANCY_BIT_COUNTS, ROOK_MAGIC_NUMBERS, ROOK_OCCUPANCY_BIT_COUNTS, get_magic_index, set_occupancy};
+use crate::magics::{
+    BISHOP_MAGIC_NUMBERS, BISHOP_OCCUPANCY_BIT_COUNTS, ROOK_MAGIC_NUMBERS,
+    ROOK_OCCUPANCY_BIT_COUNTS, get_magic_index, set_occupancy,
+};
 use crate::types::bitboard::BitBoard;
 use crate::types::constants::*;
 use crate::types::{Side, Square};
@@ -26,7 +29,7 @@ pub const KNIGHT_ATTACKS: [BitBoard; 64] = {
         knight_attacks[i] = mask_knight_attacks(square);
         i += 1;
     }
-    
+
     knight_attacks
 };
 
@@ -38,7 +41,7 @@ pub const KING_ATTACKS: [BitBoard; 64] = {
         king_attacks[i] = mask_king_attacks(square);
         i += 1;
     }
-    
+
     king_attacks
 };
 
@@ -50,7 +53,7 @@ pub const BISHOP_MASKS: [BitBoard; 64] = {
         bishop_masks[i] = mask_bishop_attacks(square);
         i += 1;
     }
-    
+
     bishop_masks
 };
 
@@ -62,41 +65,43 @@ pub const ROOK_MASKS: [BitBoard; 64] = {
         rook_masks[i] = mask_rook_attacks(square);
         i += 1;
     }
-    
+
     rook_masks
 };
 
 pub static BISHOP_ATTACKS: LazyLock<Vec<BitBoard>> = LazyLock::new(|| {
-        let mut bishop_attacks = vec![BitBoard(0); 64 * 512];
-        for square in 0..64 {
-            let relevant_bits = BISHOP_OCCUPANCY_BIT_COUNTS[square];
-            let magic_number = BISHOP_MAGIC_NUMBERS[square];
+    let mut bishop_attacks = vec![BitBoard(0); 64 * 512];
+    for square in 0..64 {
+        let relevant_bits = BISHOP_OCCUPANCY_BIT_COUNTS[square];
+        let magic_number = BISHOP_MAGIC_NUMBERS[square];
 
-            for index in 0..512 {
-                let occupancy_bb = set_occupancy(index, relevant_bits, BISHOP_MASKS[square]);
-                let magic_index = get_magic_index(occupancy_bb, relevant_bits, magic_number);
-                bishop_attacks[(square * 512) + magic_index] = blocked_bishop_attacks(Square::from(square), occupancy_bb);
-            }
+        for index in 0..512 {
+            let occupancy_bb = set_occupancy(index, relevant_bits, BISHOP_MASKS[square]);
+            let magic_index = get_magic_index(occupancy_bb, relevant_bits, magic_number);
+            bishop_attacks[(square * 512) + magic_index] =
+                blocked_bishop_attacks(Square::from(square), occupancy_bb);
         }
+    }
 
-        bishop_attacks
-    });
+    bishop_attacks
+});
 
 pub static ROOK_ATTACKS: LazyLock<Vec<BitBoard>> = LazyLock::new(|| {
-        let mut rook_attacks = vec![BitBoard(0); 64 * 4096];
-        for square in 0..64 {
-            let relevant_bits = ROOK_OCCUPANCY_BIT_COUNTS[square];
-            let magic_number = ROOK_MAGIC_NUMBERS[square];
+    let mut rook_attacks = vec![BitBoard(0); 64 * 4096];
+    for square in 0..64 {
+        let relevant_bits = ROOK_OCCUPANCY_BIT_COUNTS[square];
+        let magic_number = ROOK_MAGIC_NUMBERS[square];
 
-            for index in 0..4096 {
-                let occupancy_bb = set_occupancy(index, relevant_bits, ROOK_MASKS[square]);
-                let magic_index = get_magic_index(occupancy_bb, relevant_bits, magic_number);
-                rook_attacks[(square * 4096) + magic_index] = blocked_rook_attacks(Square::from(square), occupancy_bb);
-            }
+        for index in 0..4096 {
+            let occupancy_bb = set_occupancy(index, relevant_bits, ROOK_MASKS[square]);
+            let magic_index = get_magic_index(occupancy_bb, relevant_bits, magic_number);
+            rook_attacks[(square * 4096) + magic_index] =
+                blocked_rook_attacks(Square::from(square), occupancy_bb);
         }
+    }
 
-        rook_attacks
-    });
+    rook_attacks
+});
 
 pub const fn mask_pawn_attacks(side: Side, square: Square) -> BitBoard {
     let current = 1u64 << square as u64;

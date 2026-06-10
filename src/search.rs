@@ -240,7 +240,11 @@ pub fn search<Node: NodeType>(
     let mut best_score = -INFINITY;
     let mut best_move: Option<Move> = None;
     let mut bound = Bound::Upper; //Fail-high means score is atleast this good so lower-bound/Fail-low means the score is an upper bound
-    let tt_move = data.shared.tt.get_entry(data.board.state.hash).map(|e| e.get_best_move());
+    let tt_move = data
+        .shared
+        .tt
+        .get_entry(data.board.state.hash)
+        .map(|e| e.get_best_move());
 
     let mut move_picker = MovePicker::new(tt_move);
     let mut quiets_searched = MoveList::new();
@@ -304,8 +308,8 @@ pub fn search<Node: NodeType>(
                     let bonus = 300 * depth as i32 - 250;
                     let side = data.board.state.side_to_move;
                     let threats = data.board.state.threats;
-
                     data.quiet_history.update(threats, side, m, bonus);
+
                     //Add malus to previously searched quiet moves
                     for e in quiets_searched.iter() {
                         let quiet_move = e.mv;
@@ -363,7 +367,11 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
         alpha = best_score;
     }
 
-    let tt_move = data.shared.tt.get_entry(data.board.state.hash).map(|e| e.get_best_move());
+    let tt_move = data
+        .shared
+        .tt
+        .get_entry(data.board.state.hash)
+        .map(|e| e.get_best_move());
     let mut move_picker = MovePicker::new(tt_move);
 
     while let Some(m) = move_picker.next(data, true) {
@@ -412,7 +420,11 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
         return quiesce(data, alpha, beta, ply);
     }
 
-    let tt_move = data.shared.tt.get_entry(data.board.state.hash).map(|e| e.get_best_move());
+    let tt_move = data
+        .shared
+        .tt
+        .get_entry(data.board.state.hash)
+        .map(|e| e.get_best_move());
     let mut move_picker = MovePicker::new(tt_move);
 
     while let Some(m) = move_picker.next(data, false) {

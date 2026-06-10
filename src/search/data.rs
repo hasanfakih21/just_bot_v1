@@ -3,8 +3,8 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use crate::board::Board;
 use crate::search::time::{TimeManager, TimeSettings};
-use crate::types::{QuietHistory, TranspositionTable};
 use crate::types::{Move, MoveList, STARTING_FEN};
+use crate::types::{QuietHistory, TranspositionTable};
 
 #[derive(Debug)]
 pub struct Status(AtomicBool);

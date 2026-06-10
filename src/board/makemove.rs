@@ -198,7 +198,8 @@ impl Board {
     }
 
     pub fn is_king_in_attack(&self, side: Side) -> bool {
-        let king_square = self.get_piece_bb(side, Piece::King)
+        let king_square = self
+            .get_piece_bb(side, Piece::King)
             .least_sig_bit()
             .unwrap();
         self.is_attacked_at_by(king_square, side.other())
