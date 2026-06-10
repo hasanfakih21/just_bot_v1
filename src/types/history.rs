@@ -23,8 +23,8 @@ impl QuietHistory {
         let from = m.get_from();
         let to = m.get_to();
 
-        let from_threats = threats.get_bit(from);
-        let to_threats = threats.get_bit(to);
+        let from_threats = threats.contains(from);
+        let to_threats = threats.contains(to);
 
         self.0[side as usize][from_threats as usize][to_threats as usize].0[from as usize][to as usize] += clamped_bonus
             - self.0[side as usize][from_threats as usize][to_threats as usize].0[from as usize][to as usize]
@@ -36,8 +36,8 @@ impl QuietHistory {
         let from = m.get_from();
         let to = m.get_to();
 
-        let from_threats = threats.get_bit(from);
-        let to_threats = threats.get_bit(to);
+        let from_threats = threats.contains(from);
+        let to_threats = threats.contains(to);
 
         self.0[side as usize][from_threats as usize][to_threats as usize].0[from as usize][to as usize]
     }

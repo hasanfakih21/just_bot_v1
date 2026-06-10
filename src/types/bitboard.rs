@@ -73,7 +73,7 @@ impl BitBoard {
         }
     }
 
-    pub const fn get_bit(&self, square: Square) -> bool {
+    pub const fn contains(&self, square: Square) -> bool {
         let b = 1u64 << square as u64;
         (self.0 & b) != 0
     }
