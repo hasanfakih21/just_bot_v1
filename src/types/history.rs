@@ -1,7 +1,7 @@
 use crate::types::{BitBoard, MAX_HISTORY, Move, Side};
 
 #[derive(Debug, Clone, Copy)]
-pub struct FromToHistory(pub [[i32; 64]; 64]);
+pub struct FromToHistory(pub [[i16; 64]; 64]);
 
 impl FromToHistory {
     pub fn new() -> Self {
@@ -19,17 +19,14 @@ impl QuietHistory {
     }
 
     pub fn update(&mut self, threats: BitBoard, side: Side, m: Move, bonus: i32) {
-        let clamped_bonus = bonus.clamp(-MAX_HISTORY, MAX_HISTORY);
         let from = m.get_from();
         let to = m.get_to();
 
         let from_threats = threats.contains(from);
         let to_threats = threats.contains(to);
 
-        self.0[side as usize][from_threats as usize][to_threats as usize].0[from as usize][to as usize] += clamped_bonus
-            - self.0[side as usize][from_threats as usize][to_threats as usize].0[from as usize][to as usize]
-                * clamped_bonus.abs()
-                / MAX_HISTORY;
+        let mut entry = self.0[side as usize][from_threats as usize][to_threats as usize].0[from as usize][to as usize];
+        update_entry(bonus, &mut entry);
     }
 
     pub fn get(&self, threats: BitBoard, side: Side, m: Move) -> i32 {
@@ -39,8 +36,13 @@ impl QuietHistory {
         let from_threats = threats.contains(from);
         let to_threats = threats.contains(to);
 
-        self.0[side as usize][from_threats as usize][to_threats as usize].0[from as usize][to as usize]
+        self.0[side as usize][from_threats as usize][to_threats as usize].0[from as usize][to as usize] as i32
     }
+}
+
+pub fn update_entry(bonus: i32, entry: &mut i16) {
+    let clamped_bonus = bonus.clamp(-MAX_HISTORY, MAX_HISTORY); 
+    *entry += (clamped_bonus - clamped_bonus.abs() * (*entry as i32) / MAX_HISTORY) as i16; 
 }
 
 impl Default for FromToHistory {
