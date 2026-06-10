@@ -46,15 +46,14 @@ impl Board {
     }
 
     pub fn pawns_with_pushes(&self, side: Side) -> BitBoard {
-        let mut empty = !self.get_all_occupancy();
+        let empty = !self.get_all_occupancy();
         let pawns = self.get_piece_bb(side, Piece::Pawn);
         let offset = match side {
             Side::White => SOUTH,
             Side::Black => NORTH,
         };
 
-        empty.shift(offset);
-        empty & pawns
+        empty.shift(offset) & pawns
     }
 
     pub fn pawns_with_double_pushes(&self, side: Side) -> BitBoard {
@@ -66,15 +65,13 @@ impl Board {
             Side::Black => NORTH,
         };
 
-        let mut second_rank = match side {
+        let second_rank = match side {
             Side::White => empty & BitBoard(RANK_4),
             Side::Black => empty & BitBoard(RANK_5),
         };
 
-        second_rank.shift(offset);
-        empty &= second_rank;
-        empty.shift(offset);
-        empty & pawns
+        empty &= second_rank.shift(offset);
+        empty.shift(offset) & pawns
     }
 
     pub fn gen_pawn_moves(&self, move_list: &mut MoveList, kind: MoveGenKind) {
@@ -154,8 +151,8 @@ impl Board {
         let mut king_side_occ = BitBoard(WK_SIDE);
         let mut queen_side_occ = BitBoard(WQ_SIDE);
         if side == Side::Black {
-            king_side_occ.shift(NORTH * 7);
-            queen_side_occ.shift(NORTH * 7);
+            king_side_occ = king_side_occ.shift(NORTH * 7);
+            queen_side_occ = queen_side_occ.shift(NORTH * 7);
         }
         let need_to_be_safe = (queen_side_occ ^ BitBoard(B_FILE)) & queen_side_occ;
 

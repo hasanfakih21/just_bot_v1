@@ -65,11 +65,11 @@ impl BitBoard {
         }
     }
 
-    pub const fn shift(&mut self, offset: i8) {
+    pub const fn shift(&self, offset: i8) -> BitBoard {
         if offset > 0 {
-            self.0 <<= offset
+            BitBoard(self.0 << offset)
         } else {
-            self.0 >>= -offset
+            BitBoard(self.0 >> -offset)
         }
     }
 

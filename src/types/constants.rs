@@ -1,9 +1,16 @@
-use crate::types::Square;
+use crate::types::{BitBoard, Square};
 
 pub const A_FILE: u64 = 0x0101010101010101;
 pub const B_FILE: u64 = 0x0202020202020202;
 pub const G_FILE: u64 = 0x4040404040404040;
 pub const H_FILE: u64 = 0x8080808080808080;
+
+pub const A: BitBoard = BitBoard(A_FILE);
+pub const H: BitBoard = BitBoard(H_FILE);
+pub const G: BitBoard = BitBoard(G_FILE);
+pub const B: BitBoard = BitBoard(B_FILE);
+pub const AB: BitBoard = BitBoard(A_FILE | B_FILE);
+pub const HG: BitBoard = BitBoard(H_FILE | G_FILE);
 
 pub const RANK_1: u64 = 0x00000000000000FF;
 pub const RANK_4: u64 = 0x00000000FF000000;

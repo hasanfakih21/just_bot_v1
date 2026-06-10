@@ -156,12 +156,7 @@ impl Board {
             Side::Black => (-9, -7),
         };
 
-        let mut l = BitBoard(!A_FILE & pawns.0); 
-        let mut r = BitBoard(!H_FILE & pawns.0);
-        l.shift(top_left);
-        r.shift(top_right);
-        
-        l | r
+        (!A & pawns).shift(top_left) | (!H & pawns).shift(top_right)
     }
 
     pub const fn get_knight_attacks(&self, square: Square) -> BitBoard {
@@ -170,12 +165,20 @@ impl Board {
 
     pub fn knight_attacks_setwise(&self, side: Side) -> BitBoard {
         let knights = self.get_piece_bb(side, Piece::Knight);
-        let mut attacks = BitBoard(0);
-        for square in knights.iter() {
-            attacks |= self.get_knight_attacks(square);
-        }
 
-        attacks
+        let not_a = knights & !A;
+        let not_ab = knights & !AB;
+        let not_h = knights & !H;
+        let not_hg = knights & !HG;
+
+        not_a.shift(15)
+            | not_ab.shift(6)
+            | not_a.shift(-17)
+            | not_ab.shift(-10)
+            | not_h.shift(17)
+            | not_hg.shift(10)
+            | not_h.shift(-15)
+            | not_hg.shift(-6)
     }
 
     pub const fn get_king_attacks(&self, square: Square) -> BitBoard {
@@ -284,7 +287,7 @@ impl Display for Board {
 mod tests {
     use crate::search::data::SearchData;
 
-use super::*;
+    use super::*;
 
     #[test]
     fn test_get_rook_attack() {
@@ -355,5 +358,20 @@ use super::*;
         let pawn_attacks = data.board.pawn_attacks_setwise(Side::Black);
         pawn_attacks.print_board();
         assert_eq!(pawn_attacks.count_bits(), 12);
+    }
+
+    #[test]
+    fn test_knight_attacks_setwise() {
+        let data = SearchData {
+            board: Board::from_fen(
+                "rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1",
+            )
+            .unwrap(),
+            ..Default::default()
+        };
+
+        let knight_attacks = data.board.knight_attacks_setwise(Side::Black);
+        knight_attacks.print_board();
+        assert_eq!(knight_attacks.count_bits(), 10);
     }
 }
