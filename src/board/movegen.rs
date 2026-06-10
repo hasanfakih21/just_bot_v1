@@ -1,3 +1,4 @@
+use crate::attacks::PAWN_ATTACKS;
 use crate::board::Board;
 use crate::types::*;
 
@@ -121,7 +122,7 @@ impl Board {
                 kind,
                 MoveGenKind::All | MoveGenKind::Captures | MoveGenKind::Noisy
             ) {
-                let attacks = self.pawn_attacks[side as usize][source as usize] & opponent_pieces;
+                let attacks = PAWN_ATTACKS[side as usize][source as usize] & opponent_pieces;
                 if attacks.0 != 0 {
                     for target in attacks.iter() {
                         if promotion_rank.get_bit(target) {
@@ -136,7 +137,7 @@ impl Board {
                 }
 
                 if let Some(target) = self.state.enpassant
-                    && self.pawn_attacks[side as usize][source as usize].get_bit(target)
+                    && PAWN_ATTACKS[side as usize][source as usize].get_bit(target)
                 {
                     move_list.push(Move::new(source, target, MoveKind::EnPassant));
                 }

@@ -1,8 +1,104 @@
+use std::sync::LazyLock;
+
+use crate::magics::{BISHOP_MAGIC_NUMBERS, BISHOP_OCCUPANCY_BIT_COUNTS, ROOK_MAGIC_NUMBERS, ROOK_OCCUPANCY_BIT_COUNTS, get_magic_index, set_occupancy};
 use crate::types::bitboard::BitBoard;
 use crate::types::constants::*;
 use crate::types::{Side, Square};
 
-pub fn mask_pawn_attacks(side: Side, square: Square) -> BitBoard {
+pub const PAWN_ATTACKS: [[BitBoard; 64]; 2] = {
+    let mut pawn_attacks = [[BitBoard(0); 64]; 2];
+    let mut i = 0;
+    while i < 64 {
+        let square = Square::from(i);
+        pawn_attacks[Side::White as usize][i] = mask_pawn_attacks(Side::White, square);
+        pawn_attacks[Side::Black as usize][i] = mask_pawn_attacks(Side::Black, square);
+        i += 1;
+    }
+
+    pawn_attacks
+};
+
+pub const KNIGHT_ATTACKS: [BitBoard; 64] = {
+    let mut knight_attacks = [BitBoard(0); 64];
+    let mut i = 0;
+    while i < 64 {
+        let square = Square::from(i);
+        knight_attacks[i] = mask_knight_attacks(square);
+        i += 1;
+    }
+    
+    knight_attacks
+};
+
+pub const KING_ATTACKS: [BitBoard; 64] = {
+    let mut king_attacks = [BitBoard(0); 64];
+    let mut i = 0;
+    while i < 64 {
+        let square = Square::from(i);
+        king_attacks[i] = mask_king_attacks(square);
+        i += 1;
+    }
+    
+    king_attacks
+};
+
+pub const BISHOP_MASKS: [BitBoard; 64] = {
+    let mut bishop_masks = [BitBoard(0); 64];
+    let mut i = 0;
+    while i < 64 {
+        let square = Square::from(i);
+        bishop_masks[i] = mask_bishop_attacks(square);
+        i += 1;
+    }
+    
+    bishop_masks
+};
+
+pub const ROOK_MASKS: [BitBoard; 64] = {
+    let mut rook_masks = [BitBoard(0); 64];
+    let mut i = 0;
+    while i < 64 {
+        let square = Square::from(i);
+        rook_masks[i] = mask_rook_attacks(square);
+        i += 1;
+    }
+    
+    rook_masks
+};
+
+pub static BISHOP_ATTACKS: LazyLock<Vec<BitBoard>> = LazyLock::new(|| {
+        let mut bishop_attacks = vec![BitBoard(0); 64 * 512];
+        for square in 0..64 {
+            let relevant_bits = BISHOP_OCCUPANCY_BIT_COUNTS[square];
+            let magic_number = BISHOP_MAGIC_NUMBERS[square];
+
+            for index in 0..512 {
+                let occupancy_bb = set_occupancy(index, relevant_bits, BISHOP_MASKS[square]);
+                let magic_index = get_magic_index(occupancy_bb, relevant_bits, magic_number);
+                bishop_attacks[(square * 512) + magic_index] = blocked_bishop_attacks(Square::from(square), occupancy_bb);
+            }
+        }
+
+        bishop_attacks
+    });
+
+pub static ROOK_ATTACKS: LazyLock<Vec<BitBoard>> = LazyLock::new(|| {
+        let mut rook_attacks = vec![BitBoard(0); 64 * 4096];
+        for square in 0..64 {
+            let relevant_bits = ROOK_OCCUPANCY_BIT_COUNTS[square];
+            let magic_number = ROOK_MAGIC_NUMBERS[square];
+
+            for index in 0..4096 {
+                let occupancy_bb = set_occupancy(index, relevant_bits, ROOK_MASKS[square]);
+                let magic_index = get_magic_index(occupancy_bb, relevant_bits, magic_number);
+                rook_attacks[(square * 4096) + magic_index] = blocked_rook_attacks(Square::from(square), occupancy_bb);
+            }
+        }
+
+        rook_attacks
+    });
+
+pub const fn mask_pawn_attacks(side: Side, square: Square) -> BitBoard {
     let current = 1u64 << square as u64;
     let mut top_left = 0u64;
     let mut top_right = 0u64;
@@ -31,7 +127,7 @@ pub fn mask_pawn_attacks(side: Side, square: Square) -> BitBoard {
     BitBoard(top_left | top_right)
 }
 
-pub fn mask_knight_attacks(square: Square) -> BitBoard {
+pub const fn mask_knight_attacks(square: Square) -> BitBoard {
     let current = 1u64 << square as u64;
 
     let tl1 = if (current & A_FILE) == 0 {
@@ -81,7 +177,7 @@ pub fn mask_knight_attacks(square: Square) -> BitBoard {
     BitBoard(tl1 | tl2 | bl1 | bl2 | tr1 | tr2 | br1 | br2)
 }
 
-pub fn mask_king_attacks(square: Square) -> BitBoard {
+pub const fn mask_king_attacks(square: Square) -> BitBoard {
     let current = 1u64 << square as u64;
     let n = current << 8;
     let nw = if current & A_FILE == 0 {
@@ -119,7 +215,7 @@ pub fn mask_king_attacks(square: Square) -> BitBoard {
     BitBoard(n | nw | w | sw | s | se | e | ne)
 }
 
-pub fn mask_bishop_attacks(square: Square) -> BitBoard {
+pub const fn mask_bishop_attacks(square: Square) -> BitBoard {
     let mut attacks = 0u64;
     let (rank, file) = square.to_rank_and_file();
 
@@ -154,7 +250,7 @@ pub fn mask_bishop_attacks(square: Square) -> BitBoard {
     BitBoard(attacks)
 }
 
-pub fn mask_rook_attacks(square: Square) -> BitBoard {
+pub const fn mask_rook_attacks(square: Square) -> BitBoard {
     let mut attacks = 0u64;
     let (rank, file) = square.to_rank_and_file();
 
@@ -185,7 +281,7 @@ pub fn mask_rook_attacks(square: Square) -> BitBoard {
     BitBoard(attacks)
 }
 
-pub fn blocked_bishop_attacks(square: Square, block_board: BitBoard) -> BitBoard {
+pub const fn blocked_bishop_attacks(square: Square, block_board: BitBoard) -> BitBoard {
     let mut attacks = 0u64;
     let (rank, file) = square.to_rank_and_file();
 
@@ -237,7 +333,7 @@ pub fn blocked_bishop_attacks(square: Square, block_board: BitBoard) -> BitBoard
     BitBoard(attacks)
 }
 
-pub fn blocked_rook_attacks(square: Square, block_board: BitBoard) -> BitBoard {
+pub const fn blocked_rook_attacks(square: Square, block_board: BitBoard) -> BitBoard {
     let mut attacks = 0u64;
     let (rank, file) = square.to_rank_and_file();
 

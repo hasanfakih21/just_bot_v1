@@ -57,15 +57,6 @@ impl Default for BoardState {
 
 #[derive(Debug, PartialEq)]
 pub struct Board {
-    pub bishop_masks: [BitBoard; 64],
-    pub rook_masks: [BitBoard; 64],
-
-    pub pawn_attacks: [[BitBoard; 64]; 2],
-    pub knight_attacks: [BitBoard; 64],
-    pub king_attacks: [BitBoard; 64],
-    pub bishop_attacks: Vec<BitBoard>,
-    pub rook_attacks: Vec<BitBoard>,
-
     pub state: BoardState,
     pub state_stack: Vec<BoardState>,
     pub game_history: Vec<u64>,
@@ -80,25 +71,11 @@ impl Default for Board {
 //Little-Endian Rank-File Mapping
 impl Board {
     pub fn new() -> Self {
-        let mut b = Board {
-            bishop_masks: std::array::from_fn(|i| mask_bishop_attacks(Square::from(i))),
-            rook_masks: std::array::from_fn(|i| mask_rook_attacks(Square::from(i))),
-
-            pawn_attacks: [[BitBoard(0); 64]; 2],
-            knight_attacks: [BitBoard(0); 64],
-            king_attacks: [BitBoard(0); 64],
-            bishop_attacks: vec![BitBoard(0); 64 * 512],
-            rook_attacks: vec![BitBoard(0); 64 * 4096],
-
+        Board {
             state_stack: Vec::new(),
             state: BoardState::new(),
             game_history: Vec::new(),
-        };
-
-        b.init_leaping_attacks();
-        b.init_bishop_attacks();
-        b.init_rook_attacks();
-        b
+        }
     }
 
     pub const fn get_piece_bb(&self, side: Side, piece: Piece) -> BitBoard {
@@ -165,82 +142,42 @@ impl Board {
         attacks & !self.state.occupancies[side as usize]
     }
 
-    pub fn init_leaping_attacks(&mut self) {
-        for i in 0..64 {
-            let square = Square::from(i);
-            self.pawn_attacks[Side::White as usize][i] = mask_pawn_attacks(Side::White, square);
-            self.pawn_attacks[Side::Black as usize][i] = mask_pawn_attacks(Side::Black, square);
-            self.knight_attacks[i] = mask_knight_attacks(square);
-            self.king_attacks[i] = mask_king_attacks(square);
-        }
+    pub const fn get_pawn_attacks(&self, square: Square, side: Side) -> BitBoard {
+        PAWN_ATTACKS[side as usize][square as usize]
     }
 
-    pub fn init_rook_attacks(&mut self) {
-        for i in 0..64 {
-            let square = Square::from(i);
-            let relevant_bits = ROOK_OCCUPANCY_BIT_COUNTS[square as usize];
-            let magic_number = ROOK_MAGIC_NUMBERS[square as usize];
-
-            for index in 0..4096 {
-                let occupancy_bb =
-                    set_occupancy(index, relevant_bits, self.rook_masks[square as usize]);
-                let magic_index = get_magic_index(occupancy_bb, relevant_bits, magic_number);
-                self.rook_attacks[(square as usize * 4096) + magic_index] =
-                    blocked_rook_attacks(square, occupancy_bb);
-            }
-        }
+    pub const fn get_knight_attacks(&self, square: Square) -> BitBoard {
+        KNIGHT_ATTACKS[square as usize]
     }
 
-    pub fn init_bishop_attacks(&mut self) {
-        for i in 0..64 {
-            let square = Square::from(i);
-            let relevant_bits = BISHOP_OCCUPANCY_BIT_COUNTS[square as usize];
-            let magic_number = BISHOP_MAGIC_NUMBERS[square as usize];
-
-            for index in 0..512 {
-                let occupancy_bb =
-                    set_occupancy(index, relevant_bits, self.bishop_masks[square as usize]);
-                let magic_index = get_magic_index(occupancy_bb, relevant_bits, magic_number);
-                self.bishop_attacks[(square as usize * 512) + magic_index] =
-                    blocked_bishop_attacks(square, occupancy_bb);
-            }
-        }
-    }
-
-    pub fn get_pawn_attacks(&self, square: Square, side: Side) -> BitBoard {
-        self.pawn_attacks[side as usize][square as usize]
-    }
-
-    pub fn get_knight_attacks(&self, square: Square) -> BitBoard {
-        self.knight_attacks[square as usize]
-    }
-
-    pub fn get_king_attacks(&self, square: Square) -> BitBoard {
-        self.king_attacks[square as usize]
+    pub const fn get_king_attacks(&self, square: Square) -> BitBoard {
+        KING_ATTACKS[square as usize]
     }
 
     pub fn get_bishop_attacks(&self, square: Square, board_occupancy: BitBoard) -> BitBoard {
-        let occupancy = board_occupancy & self.bishop_masks[square as usize];
+        let occupancy = board_occupancy & BISHOP_MASKS[square as usize];
         let magic_index = get_magic_index(
             occupancy,
             BISHOP_OCCUPANCY_BIT_COUNTS[square as usize],
             BISHOP_MAGIC_NUMBERS[square as usize],
         );
+
         let offset = (square as usize * 512) + magic_index;
 
-        self.bishop_attacks[offset]
+        BISHOP_ATTACKS[offset]
     }
 
     pub fn get_rook_attacks(&self, square: Square, board_occupancy: BitBoard) -> BitBoard {
-        let occupancy = board_occupancy & self.rook_masks[square as usize];
+        let occupancy = board_occupancy & ROOK_MASKS[square as usize];
         let magic_index = get_magic_index(
             occupancy,
             ROOK_OCCUPANCY_BIT_COUNTS[square as usize],
             ROOK_MAGIC_NUMBERS[square as usize],
         );
+
         let offset = (square as usize * 4096) + magic_index;
 
-        self.rook_attacks[offset]
+        ROOK_ATTACKS[offset]
     }
 
     pub fn get_queen_attacks(&self, square: Square, board_occupancy: BitBoard) -> BitBoard {
