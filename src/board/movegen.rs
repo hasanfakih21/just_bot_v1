@@ -355,13 +355,13 @@ mod tests {
 
     #[test]
     fn test_is_attacked_at_by() {
-        let board = Board::from_fen("8/8/8/3p4/8/8/5N2/8 w - - 0 1").unwrap();
+        let board = Board::from_fen("7k/8/8/3p4/8/8/5N2/K7 w - - 0 1").unwrap();
         assert!(board.is_attacked_at_by(C4, Black));
         assert!(board.is_attacked_at_by(E4, Black));
         assert!(board.is_attacked_at_by(D3, White));
         assert!(!board.is_attacked_at_by(F2, Black));
 
-        let board2 = Board::from_fen("6Q1/8/2R5/8/5b2/1q6/8/6K1 w - - 0 1").unwrap();
+        let board2 = Board::from_fen("6Q1/8/2R5/8/5b2/kq6/8/6K1 w - - 0 1").unwrap();
         assert!(board2.is_attacked_at_by(C3, White));
         assert!(board2.is_attacked_at_by(B3, White));
         assert!(board2.is_attacked_at_by(F1, White));
@@ -383,7 +383,7 @@ mod tests {
 
     #[test]
     fn test_source_pawn_push() {
-        let board = Board::from_fen("1K6/3pp3/4R3/7p/2n5/4b3/PPP1P1P1/8 w - - 0 1").unwrap();
+        let board = Board::from_fen("1K5k/3pp3/4R3/7p/2n5/4b3/PPP1P1P1/8 w - - 0 1").unwrap();
         let w_bb = board.pawns_with_pushes(White);
         let b_bb = board.pawns_with_pushes(Black);
 
@@ -406,7 +406,7 @@ mod tests {
 
     #[test]
     fn test_source_double_push() {
-        let board = Board::from_fen("1K6/3pp3/4R3/7p/2n5/4b3/PPP1P1P1/8 w - - 0 1").unwrap();
+        let board = Board::from_fen("1K5k/3pp3/4R3/7p/2n5/4b3/PPP1P1P1/8 w - - 0 1").unwrap();
         println!("{}", board);
         let w_bb = board.pawns_with_double_pushes(White);
         let b_bb = board.pawns_with_double_pushes(Black);

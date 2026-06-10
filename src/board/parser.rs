@@ -86,6 +86,8 @@ impl Board {
             board.state.hash ^= ZOBRIST.get_enpassant_num(square);
         }
 
+        board.update_all_threats();
+
         Ok(board)
     }
 

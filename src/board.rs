@@ -16,6 +16,7 @@ pub struct BoardState {
     pub side_to_move: Side,
     pub enpassant: Option<Square>,
     pub castling_rights: CastlingRights,
+    pub threats: BitBoard,
 
     pub material_value: [i32; 2],
     pub pq_mg_value: [i32; 2],
@@ -36,6 +37,7 @@ impl BoardState {
             side_to_move: Side::White,
             enpassant: None,
             castling_rights: CastlingRights::new(),
+            threats: BitBoard(0),
 
             material_value: [0; 2],
             pq_mg_value: [0; 2],
@@ -76,6 +78,18 @@ impl Board {
             state: BoardState::new(),
             game_history: Vec::new(),
         }
+    }
+
+    pub fn update_all_threats(&mut self) {
+        let side = self.state.side_to_move.other();
+        let occ_bb = self.get_all_occupancy();
+
+        self.state.threats = self.pawn_attacks_setwise(side)
+            | self.knight_attacks_setwise(side)
+            | self.bishop_attacks_setwise(side, occ_bb)
+            | self.rook_attacks_setwise(side, occ_bb)
+            | self.queen_attacks_setwise(side, occ_bb)
+            | self.get_king_attacks(self.get_king_square(side));
     }
 
     pub const fn get_piece_bb(&self, side: Side, piece: Piece) -> BitBoard {
@@ -135,8 +149,28 @@ impl Board {
         PAWN_ATTACKS[side as usize][square as usize]
     }
 
+    pub fn pawn_attacks_setwise(&self, side: Side) -> BitBoard {
+        let pawns = self.get_piece_bb(side, Piece::Pawn);
+        let mut attacks = BitBoard(0);
+        for square in pawns.iter() {
+            attacks |= self.get_pawn_attacks(square, side);
+        }
+
+        attacks
+    }
+
     pub const fn get_knight_attacks(&self, square: Square) -> BitBoard {
         KNIGHT_ATTACKS[square as usize]
+    }
+
+    pub fn knight_attacks_setwise(&self, side: Side) -> BitBoard {
+        let knights = self.get_piece_bb(side, Piece::Knight);
+        let mut attacks = BitBoard(0);
+        for square in knights.iter() {
+            attacks |= self.get_knight_attacks(square);
+        }
+
+        attacks
     }
 
     pub const fn get_king_attacks(&self, square: Square) -> BitBoard {
@@ -156,6 +190,16 @@ impl Board {
         BISHOP_ATTACKS[offset]
     }
 
+    pub fn bishop_attacks_setwise(&self, side: Side, occ_bb: BitBoard) -> BitBoard {
+        let bishops = self.get_piece_bb(side, Piece::Bishop);
+        let mut attacks = BitBoard(0);
+        for square in bishops.iter() {
+            attacks |= self.get_bishop_attacks(square, occ_bb);
+        }
+
+        attacks
+    }
+
     pub fn get_rook_attacks(&self, square: Square, board_occupancy: BitBoard) -> BitBoard {
         let occupancy = board_occupancy & ROOK_MASKS[square as usize];
         let magic_index = get_magic_index(
@@ -169,9 +213,30 @@ impl Board {
         ROOK_ATTACKS[offset]
     }
 
+    pub fn rook_attacks_setwise(&self, side: Side, occ_bb: BitBoard) -> BitBoard {
+        let rooks = self.get_piece_bb(side, Piece::Rook);
+        let mut attacks = BitBoard(0);
+        for square in rooks.iter() {
+            attacks |= self.get_rook_attacks(square, occ_bb);
+        }
+
+        attacks
+    }
+
     pub fn get_queen_attacks(&self, square: Square, board_occupancy: BitBoard) -> BitBoard {
         self.get_bishop_attacks(square, board_occupancy)
             | self.get_rook_attacks(square, board_occupancy)
+    }
+
+    pub fn queen_attacks_setwise(&self, side: Side, occ_bb: BitBoard) -> BitBoard {
+        let queens = self.get_piece_bb(side, Piece::Queen);
+
+        let mut attacks = BitBoard(0);
+        for square in queens.iter() {
+            attacks |= self.get_rook_attacks(square, occ_bb) | self.get_bishop_attacks(square, occ_bb);
+        }
+
+        attacks
     }
 
     pub fn get_all_occupancy(&self) -> BitBoard {

@@ -171,8 +171,11 @@ impl Board {
         if self.state.side_to_move == Side::Black {
             self.state.full_move += 1
         }
+
         self.state.hash ^= ZOBRIST.get_castling_num(self.state.castling_rights);
         self.game_history.push(self.state.hash);
+
+        self.update_all_threats();
 
         if self.is_king_in_attack(side) {
             self.unmake_move();
