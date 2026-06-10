@@ -97,7 +97,9 @@ impl MovePicker {
         for entry in self.moves.iter_mut() {
             let mv = entry.mv;
             let side = board.state.side_to_move;
-            let score = data.history.get(side, mv);
+            let threats = board.state.threats;
+
+            let score = data.quiet_history.get(threats, side, mv);
 
             entry.score = Some(score);
         }

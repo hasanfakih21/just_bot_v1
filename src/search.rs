@@ -303,11 +303,13 @@ pub fn search<Node: NodeType>(
                 if m.get_kind().is_quiet() {
                     let bonus = 300 * depth as i32 - 250;
                     let side = data.board.state.side_to_move;
-                    data.history.update(side, m, bonus);
+                    let threats = data.board.state.threats;
+
+                    data.quiet_history.update(threats, side, m, bonus);
                     //Add malus to previously searched quiet moves
                     for e in quiets_searched.iter() {
                         let quiet_move = e.mv;
-                        data.history.update(side, quiet_move, -bonus);
+                        data.quiet_history.update(threats, side, quiet_move, -bonus);
                     }
                 }
 
