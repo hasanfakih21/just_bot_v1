@@ -177,7 +177,6 @@ pub const fn generate_ray(square1: Square, square2: Square) -> BitBoard {
         let slide = generate_slide(square2, BitBoard(0), direction);
         if slide.contains(square1) {
             ray = slide.0;
-            break;
         }
 
         i += 1;

@@ -58,7 +58,7 @@ impl Board {
             debug_assert!(self.state.checkers.count_bits() ==  1);
             //Only moves that can block the check
             let checking_piece_square = self.state.checkers.least_sig_bit().unwrap();
-            BETWEEN[king_square as usize][checking_piece_square as usize]
+            BETWEEN[king_square as usize][checking_piece_square as usize] | self.state.checkers
         } else {
             !BitBoard(0)
         };
@@ -176,7 +176,7 @@ impl Board {
             debug_assert!(self.state.checkers.count_bits() ==  1);
             //Only moves that can block the check
             let checking_piece_square = self.state.checkers.least_sig_bit().unwrap();
-            BETWEEN[king_square as usize][checking_piece_square as usize]
+            BETWEEN[king_square as usize][checking_piece_square as usize] | self.state.checkers
         } else {
             !BitBoard(0)
         };
@@ -204,7 +204,7 @@ impl Board {
 
         let king_square = self.get_king_square(self.state.side_to_move);
         for from in (pieces & pinned).iter() {
-            move_list.push_setwise(from, attacks(from) & target & RAYS[king_square as usize][from as usize], kind);
+            move_list.push_setwise(from, attacks(from) & target & RAYS[from as usize][king_square as usize], kind);
         }
     } 
 
@@ -218,7 +218,7 @@ impl Board {
             debug_assert!(self.state.checkers.count_bits() ==  1);
             //Only moves that can block the check
             let checking_piece_square = self.state.checkers.least_sig_bit().unwrap();
-            BETWEEN[king_square as usize][checking_piece_square as usize]
+            BETWEEN[king_square as usize][checking_piece_square as usize] | self.state.checkers
         } else {
             !BitBoard(0)
         };
@@ -247,7 +247,7 @@ impl Board {
             debug_assert!(self.state.checkers.count_bits() ==  1);
             //Only moves that can block the check
             let checking_piece_square = self.state.checkers.least_sig_bit().unwrap();
-            BETWEEN[king_square as usize][checking_piece_square as usize]
+            BETWEEN[king_square as usize][checking_piece_square as usize] | self.state.checkers
         } else {
             !BitBoard(0)
         };
@@ -276,7 +276,7 @@ impl Board {
             debug_assert!(self.state.checkers.count_bits() ==  1);
             //Only moves that can block the check
             let checking_piece_square = self.state.checkers.least_sig_bit().unwrap();
-            BETWEEN[king_square as usize][checking_piece_square as usize]
+            BETWEEN[king_square as usize][checking_piece_square as usize] | self.state.checkers
         } else {
             !BitBoard(0)
         };
@@ -360,7 +360,8 @@ impl Board {
 
 #[cfg(test)]
 mod tests {
-    use crate::board::Board;
+    use crate::attacks::RAYS;
+use crate::board::Board;
     use crate::board::movegen::MoveGenKind;
     use crate::search::data::SearchData;
     use crate::types::{BitBoard, Square::{self, *}};
@@ -407,11 +408,11 @@ mod tests {
         assert_eq!(move_list.len(), 20);
 
         let mut data = SearchData::default();
-        data.board = Board::from_fen("rnbq1b1r/pppppkpp/5p1n/8/8/P7/QPPPPPPP/RNB1KBNR b K - 0 1").unwrap();
+        data.board = Board::from_fen("rnb1kbnr/pp1ppppp/2p5/q7/8/3P4/PPPBPPPP/RN1QKBNR w KQkq - 2 3").unwrap();
         data.board.state.threats.print_board();
         let mut move_list = MoveList::new();
         data.board.append_moves(MoveGenKind::All, &mut move_list);
         println!("{move_list}");
-        data.board.get_queen_attacks(Square::A2, BitBoard(0)).print_board();
+        RAYS[Square::D2 as usize][Square::E1 as usize].print_board();
     }
 }

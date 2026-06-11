@@ -93,6 +93,7 @@ impl Board {
             debug_assert!(if let Some((_, captured_piece)) = self.get_piece_at_square(to) {
                 if captured_piece == Piece::King {
                     self.unmake_move();
+                    self.unmake_move();
                     false
                 } else {
                     true
