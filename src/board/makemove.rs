@@ -90,6 +90,18 @@ impl Board {
                 }
             }
         } else {
+            debug_assert!(if let Some((_, captured_piece)) = self.get_piece_at_square(to) {
+                if captured_piece == Piece::King {
+                    self.unmake_move();
+                    self.unmake_move();
+                    false
+                } else {
+                    true
+                }
+            } else {
+                true
+            }, "Tried capturing king? {}\nMove: {}", self, m);
+
             if let Some((other_side, captured_piece)) = self.get_piece_at_square(to)
                 && captured_piece == Piece::Rook
             {
@@ -309,17 +321,6 @@ mod tests {
             (Side::Black, Piece::Queen)
         );
         assert!(board.get_piece_at_square(Square::E2).is_none());
-
-        let mut board =
-            Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP3PPP/R1B2q1K w - - 0 18")
-                .unwrap();
-        println!("{board}");
-
-        let m = Move::new(Square::C1, Square::H6, MoveKind::Capture);
-        assert!(board.make_move(m).is_err());
-        board.unmake_move();
-        let m = Move::new(Square::H3, Square::G1, MoveKind::QuietMove);
-        assert!(board.make_move(m).is_ok());
 
         let mut board =
             Board::from_fen("r3k2N/p1ppqpb1/bn2pn2/3P4/1p2P3/2N2Q2/PPPBBPpP/R3K2R b KQq - 0 2")

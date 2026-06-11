@@ -119,6 +119,22 @@ pub static BETWEEN: [[BitBoard; 64]; 64] = {
     between
 };
 
+pub static RAYS: [[BitBoard; 64]; 64] = {
+    let mut rays = [[BitBoard(0); 64]; 64];
+    let mut square1 = 0;
+    while square1 < 64 {
+        let mut square2 = 0;
+        while square2 < 64 {
+            rays[square1][square2] = generate_ray(Square::from(square1), Square::from(square2));
+            square2 += 1;
+        }
+
+        square1 += 1;
+    }
+
+    rays
+};
+
 pub const DIAGONALS: [[BitBoard; 64]; 2] = {
     let mut diagonals = [[BitBoard(0); 64]; 2];
     let mut square = 0;
@@ -149,6 +165,25 @@ pub const fn generate_between(square1: Square, square2: Square) -> BitBoard {
     }
 
     BitBoard(between)
+}
+
+pub const fn generate_ray(square1: Square, square2: Square) -> BitBoard {
+    let directions = [NORTH, SOUTH, EAST, WEST, NORTH_EAST, NORTH_WEST, SOUTH_EAST, SOUTH_WEST]; 
+    let mut ray = 0;
+    let mut i = 0;
+
+    while i < 8 {
+        let direction = directions[i];
+        let slide = generate_slide(square2, BitBoard(0), direction);
+        if slide.contains(square1) {
+            ray = slide.0;
+            break;
+        }
+
+        i += 1;
+    }
+
+    BitBoard(ray)
 }
 
 pub const fn border(direction: i8) -> BitBoard {
@@ -580,6 +615,12 @@ mod tests {
     #[test]
     fn test_diagonals() {
         let bb = DIAGONALS[Side::White as usize][Square::E4 as usize];
+        bb.print_board(); 
+    }
+
+    #[test]
+    fn test_rays() {
+        let bb = RAYS[Square::E5 as usize][Square::H2 as usize];
         bb.print_board(); 
     }
 }

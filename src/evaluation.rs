@@ -267,7 +267,8 @@ impl Board {
         ((15.0 * cmd as f32) + 5.0 * (7 - distance) as f32) as i32
     }
 
-    pub const fn get_king_square(&self, side: Side) -> Square {
+    pub fn get_king_square(&self, side: Side) -> Square {
+        debug_assert!(self.get_piece_bb(side, Piece::King).0 != 0, "{}", self);
         self.get_piece_bb(side, Piece::King)
             .least_sig_bit()
             .unwrap()

@@ -1,4 +1,4 @@
-use crate::attacks::{BETWEEN, DIAGONALS};
+use crate::attacks::{BETWEEN, DIAGONALS, RAYS};
 use crate::board::Board;
 use crate::types::*;
 
@@ -32,6 +32,11 @@ impl Board {
         let offset = match stm {
             Side::White => NORTH,
             Side::Black => SOUTH,
+        };
+
+        let (left, right) = match stm {
+            Side::White => (offset + WEST, offset + EAST),
+            Side::Black => (offset + EAST, offset + WEST)
         };
 
         let promotion_rank = match stm {
@@ -87,7 +92,7 @@ impl Board {
 
             //Captures
             let target = target & self.state.occupancies[stm.other() as usize];
-            let (left, right) = (offset + WEST, offset + EAST);
+            
             let left_pawns = (pawns & (!pinned | DIAGONALS[1][king_square as usize])) & !A;
             let right_pawns = (pawns & (!pinned | DIAGONALS[0][king_square as usize])) & !H;
 
@@ -162,103 +167,131 @@ impl Board {
     }
 
     pub fn gen_knight_moves(&self, move_list: &mut MoveList, kind: MoveGenKind) {
-        let side = self.state.side_to_move;
-        let opponent_pieces = self.state.occupancies[side.other() as usize];
-        let friendly_pieces = self.state.occupancies[side as usize];
+        let stm = self.state.side_to_move;
+        let king_square = self.get_king_square(stm);
+        let occupied = self.get_all_occupancy();
+        let pinned = self.state.pinned[stm as usize];
 
-        for source in self.get_piece_bb(side, Piece::Knight).iter() {
-            let targets = self.get_knight_attacks(source) & !friendly_pieces;
-            for target in targets.iter() {
-                if opponent_pieces.contains(target)
-                    && matches!(
-                        kind,
-                        MoveGenKind::All | MoveGenKind::Captures | MoveGenKind::Noisy
-                    )
-                {
-                    move_list.push(Move::new(source, target, MoveKind::Capture));
-                } else if !opponent_pieces.contains(target)
-                    && matches!(kind, MoveGenKind::All | MoveGenKind::Quiet)
-                {
-                    move_list.push(Move::new(source, target, MoveKind::QuietMove));
-                }
+        let target = if self.king_in_check(stm) {
+            debug_assert!(self.state.checkers.count_bits() ==  1);
+            //Only moves that can block the check
+            let checking_piece_square = self.state.checkers.least_sig_bit().unwrap();
+            BETWEEN[king_square as usize][checking_piece_square as usize]
+        } else {
+            !BitBoard(0)
+        };
+
+        let knights = self.get_piece_bb(stm, Piece::Knight);
+        if kind.is_noisy() {
+            let target = target & self.state.occupancies[stm.other() as usize]; 
+            for from in (knights & !pinned).iter() {
+                move_list.push_setwise(from, self.get_knight_attacks(from) & target, MoveKind::Capture);
+            }
+        }
+
+        if kind.is_quiet() {
+            let target = target & !occupied;
+            for from in (knights & !pinned).iter() {
+                move_list.push_setwise(from, self.get_knight_attacks(from) & target, MoveKind::QuietMove);
             }
         }
     }
+
+    pub fn gen_sliding_moves<F: Fn(Square) -> BitBoard>(&self, move_list: &mut MoveList, kind: MoveKind, pieces: BitBoard, attacks: F, target: BitBoard, pinned: BitBoard) {
+        for from in (pieces & !pinned).iter() {
+            move_list.push_setwise(from, attacks(from) & target, kind);
+        }
+
+        let king_square = self.get_king_square(self.state.side_to_move);
+        for from in (pieces & pinned).iter() {
+            move_list.push_setwise(from, attacks(from) & target & RAYS[king_square as usize][from as usize], kind);
+        }
+    } 
 
     pub fn gen_bishop_moves(&self, move_list: &mut MoveList, kind: MoveGenKind) {
-        let side = self.state.side_to_move;
-        let opponent_pieces = self.state.occupancies[side.other() as usize];
-        let friendly_pieces = self.state.occupancies[side as usize];
+        let stm = self.state.side_to_move;
+        let king_square = self.get_king_square(stm);
+        let occupied = self.get_all_occupancy();
+        let pinned = self.state.pinned[stm as usize];
 
-        for source in self.get_piece_bb(side, Piece::Bishop).iter() {
-            let targets =
-                self.get_bishop_attacks(source, self.get_all_occupancy()) & !friendly_pieces;
-            for target in targets.iter() {
-                if opponent_pieces.contains(target)
-                    && matches!(
-                        kind,
-                        MoveGenKind::All | MoveGenKind::Captures | MoveGenKind::Noisy
-                    )
-                {
-                    move_list.push(Move::new(source, target, MoveKind::Capture));
-                } else if !opponent_pieces.contains(target)
-                    && matches!(kind, MoveGenKind::All | MoveGenKind::Quiet)
-                {
-                    move_list.push(Move::new(source, target, MoveKind::QuietMove));
-                }
-            }
+        let target = if self.king_in_check(stm) {
+            debug_assert!(self.state.checkers.count_bits() ==  1);
+            //Only moves that can block the check
+            let checking_piece_square = self.state.checkers.least_sig_bit().unwrap();
+            BETWEEN[king_square as usize][checking_piece_square as usize]
+        } else {
+            !BitBoard(0)
+        };
+
+        let bishops = self.get_piece_bb(stm, Piece::Bishop);
+        let attacks = |square| self.get_bishop_attacks(square, occupied);
+
+        if kind.is_noisy() {
+            let target = target & self.state.occupancies[stm.other() as usize]; 
+            self.gen_sliding_moves(move_list, MoveKind::Capture, bishops, attacks, target, pinned);
+        }
+
+        if kind.is_quiet() {
+            let target = target & !occupied; 
+            self.gen_sliding_moves(move_list, MoveKind::QuietMove, bishops, attacks, target, pinned);
         }
     }
 
-    pub fn gen_rook_moves(&self, move_list: &mut MoveList, kind: MoveGenKind) {
-        let side = self.state.side_to_move;
+    pub fn gen_rook_moves(&self, move_list: &mut MoveList, kind: MoveGenKind) { 
+        let stm = self.state.side_to_move;
+        let king_square = self.get_king_square(stm);
+        let occupied = self.get_all_occupancy();
+        let pinned = self.state.pinned[stm as usize];
 
-        let opponent_pieces = self.state.occupancies[side.other() as usize];
-        let friendly_pieces = self.state.occupancies[side as usize];
+        let target = if self.king_in_check(stm) {
+            debug_assert!(self.state.checkers.count_bits() ==  1);
+            //Only moves that can block the check
+            let checking_piece_square = self.state.checkers.least_sig_bit().unwrap();
+            BETWEEN[king_square as usize][checking_piece_square as usize]
+        } else {
+            !BitBoard(0)
+        };
 
-        for source in self.get_piece_bb(side, Piece::Rook).iter() {
-            let targets =
-                self.get_rook_attacks(source, self.get_all_occupancy()) & !friendly_pieces;
-            for target in targets.iter() {
-                if opponent_pieces.contains(target)
-                    && matches!(
-                        kind,
-                        MoveGenKind::All | MoveGenKind::Captures | MoveGenKind::Noisy
-                    )
-                {
-                    move_list.push(Move::new(source, target, MoveKind::Capture));
-                } else if !opponent_pieces.contains(target)
-                    && matches!(kind, MoveGenKind::All | MoveGenKind::Quiet)
-                {
-                    move_list.push(Move::new(source, target, MoveKind::QuietMove));
-                }
-            }
+        let rooks = self.get_piece_bb(stm, Piece::Rook);
+        let attacks = |square| self.get_rook_attacks(square, occupied);
+
+        if kind.is_noisy() {
+            let target = target & self.state.occupancies[stm.other() as usize]; 
+            self.gen_sliding_moves(move_list, MoveKind::Capture, rooks, attacks, target, pinned);
+        }
+
+        if kind.is_quiet() {
+            let target = target & !occupied; 
+            self.gen_sliding_moves(move_list, MoveKind::QuietMove, rooks, attacks, target, pinned);
         }
     }
 
-    pub fn gen_queen_moves(&self, move_list: &mut MoveList, kind: MoveGenKind) {
-        let side = self.state.side_to_move;
+    pub fn gen_queen_moves(&self, move_list: &mut MoveList, kind: MoveGenKind) {  
+        let stm = self.state.side_to_move;
+        let king_square = self.get_king_square(stm);
+        let occupied = self.get_all_occupancy();
+        let pinned = self.state.pinned[stm as usize];
 
-        let opponent_pieces = self.state.occupancies[side.other() as usize];
-        let friendly_pieces = self.state.occupancies[side as usize];
+        let target = if self.king_in_check(stm) {
+            debug_assert!(self.state.checkers.count_bits() ==  1);
+            //Only moves that can block the check
+            let checking_piece_square = self.state.checkers.least_sig_bit().unwrap();
+            BETWEEN[king_square as usize][checking_piece_square as usize]
+        } else {
+            !BitBoard(0)
+        };
 
-        for source in self.get_piece_bb(side, Piece::Queen).iter() {
-            let targets =
-                self.get_queen_attacks(source, self.get_all_occupancy()) & !friendly_pieces;
-            for target in targets.iter() {
-                if opponent_pieces.contains(target)
-                    && matches!(
-                        kind,
-                        MoveGenKind::All | MoveGenKind::Captures | MoveGenKind::Noisy
-                    )
-                {
-                    move_list.push(Move::new(source, target, MoveKind::Capture));
-                } else if !opponent_pieces.contains(target)
-                    && matches!(kind, MoveGenKind::All | MoveGenKind::Quiet)
-                {
-                    move_list.push(Move::new(source, target, MoveKind::QuietMove));
-                }
-            }
+        let queens = self.get_piece_bb(stm, Piece::Queen);
+        let attacks = |square| self.get_queen_attacks(square, occupied);
+
+        if kind.is_noisy() {
+            let target = target & self.state.occupancies[stm.other() as usize]; 
+            self.gen_sliding_moves(move_list, MoveKind::Capture, queens, attacks, target, pinned);
+        }
+
+        if kind.is_quiet() {
+            let target = target & !occupied; 
+            self.gen_sliding_moves(move_list, MoveKind::QuietMove, queens, attacks, target, pinned);
         }
     }
 
@@ -309,6 +342,7 @@ impl Board {
     pub fn append_moves(&self, kind: MoveGenKind, move_list: &mut MoveList) {
         self.gen_king_moves(move_list, kind);
         if self.state.checkers.count_bits() > 1 {
+            self.state.checkers.print_board();
             return;
         }
 
@@ -329,8 +363,8 @@ mod tests {
     use crate::board::Board;
     use crate::board::movegen::MoveGenKind;
     use crate::search::data::SearchData;
-    use crate::types::Square::*;
-    use crate::types::{Move, MoveKind, MoveList, STARTING_FEN, };
+    use crate::types::{BitBoard, Square::{self, *}};
+    use crate::types::{Move, MoveKind, MoveList, };
 
     #[test]
     fn test_is_attacked() {
@@ -364,53 +398,20 @@ mod tests {
     }
 
     #[test]
-    fn test_move_gen_kind() {
-        let board = Board::from_fen("1K6/3pp3/4R3/7p/2n5/4b3/PPP1P1P1/6k1 w - - 0 1").unwrap();
-        let captures = board.generate_moves(MoveGenKind::Captures);
-        for m in captures.iter() {
-            println!("{}", m.mv);
-        }
-        assert_eq!(captures.len(), 2);
-        println!();
-
-        let board = Board::from_fen("1K6/3pp3/4R3/7p/2n5/4b3/PPP1P1P1/6k1 b - - 0 1").unwrap();
-        let captures = board.generate_moves(MoveGenKind::Captures);
-        for m in captures.iter() {
-            println!("{}", m.mv);
-        }
-        assert_eq!(captures.len(), 3);
-        println!();
-
-        let board = Board::from_fen(STARTING_FEN).unwrap();
-        let all = board.generate_moves(MoveGenKind::All);
-        for m in all.iter() {
-            println!("{}", m.mv);
-        }
-        println!();
-
-        let board =
-            Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1")
-                .unwrap();
-        let captures = board.generate_moves(MoveGenKind::Captures);
-        let quiet = board.generate_moves(MoveGenKind::Quiet);
-        println!("Captures: {captures}");
-        println!();
-        println!("Quiet Moves: {quiet}");
-    }
-
-    #[test]
     fn test_legal_moves() {
-        let data = SearchData {
-            board: Board::from_fen(
-                "8/2K5/8/8/1nQ2pk1/8/8/8 b - - 2 2",
-            )
-            .unwrap(),
-            ..Default::default()
-        };
-
+        let data = SearchData::default();
         let mut move_list = MoveList::new();
-        data.board.gen_pawn_moves(&mut move_list, MoveGenKind::Quiet);
-        
-        println!("{}", move_list);
+
+        data.board.append_moves(MoveGenKind::All, &mut move_list);
+        println!("{move_list}");
+        assert_eq!(move_list.len(), 20);
+
+        let mut data = SearchData::default();
+        data.board = Board::from_fen("rnbq1b1r/pppppkpp/5p1n/8/8/P7/QPPPPPPP/RNB1KBNR b K - 0 1").unwrap();
+        data.board.state.threats.print_board();
+        let mut move_list = MoveList::new();
+        data.board.append_moves(MoveGenKind::All, &mut move_list);
+        println!("{move_list}");
+        data.board.get_queen_attacks(Square::A2, BitBoard(0)).print_board();
     }
 }

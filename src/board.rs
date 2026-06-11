@@ -86,8 +86,8 @@ impl Board {
 
     pub fn update_all_threats(&mut self) {
         let side = self.state.side_to_move.other();
-        let occ_bb = self.get_all_occupancy();
         let stm = self.state.side_to_move;
+        let occ_bb = self.get_all_occupancy() ^ self.get_piece_bb(stm, Piece::King);
         let king_square = self.get_king_square(stm);
         
         self.state.threats = self.pawn_attacks_setwise(side)
@@ -100,10 +100,16 @@ impl Board {
         let pawn_attackers = self.get_piece_bb(stm.other(), Piece::Pawn);
         let knight_attackers = self.get_piece_bb(stm.other(), Piece::Knight);
         self.state.checkers = (self.get_pawn_attacks(king_square, stm) & pawn_attackers) | (self.get_knight_attacks(king_square) & knight_attackers);
-
         self.state.pinned[stm as usize] = BitBoard(0);        
-        let sliding_attackers = self.get_piece_bb(stm.other(), Piece::Bishop) | self.get_piece_bb(stm.other(), Piece::Queen) | self.get_piece_bb(stm.other(), Piece::Rook);
-        for square in sliding_attackers.iter() {
+
+        let bishop_queens = self.get_piece_bb(stm.other(), Piece::Bishop) | self.get_piece_bb(stm.other(), Piece::Queen);
+        let rook_queens = self.get_piece_bb(stm.other(), Piece::Rook) | self.get_piece_bb(stm.other(), Piece::Queen);
+
+        let opp_occ = self.state.occupancies[stm.other() as usize];
+        let diag_attackers = bishop_queens & self.get_bishop_attacks(king_square, opp_occ) & opp_occ;
+        let straight_attackers = rook_queens & self.get_rook_attacks(king_square, opp_occ) & occ_bb;
+
+        for square in (diag_attackers | straight_attackers).iter() {
             let blockers = BETWEEN[square as usize][king_square as usize] & self.state.occupancies[stm as usize];
             let pieces_betweeen = blockers.count_bits();
             if pieces_betweeen == 1 {
