@@ -76,6 +76,14 @@ impl Square {
         (*self as usize / 8, *self as usize % 8)
     }
 
+    pub const fn to_rank(&self) -> usize {
+        *self as usize / 8
+    }
+
+    pub const fn to_file(&self) -> usize {
+        *self as usize % 8
+    }
+
     pub const fn from_rank_and_file(rank: usize, file: usize) -> Square {
         Square::from((rank * 8) + file)
     }

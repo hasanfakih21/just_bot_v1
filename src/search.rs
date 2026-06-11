@@ -163,8 +163,10 @@ pub fn search<Node: NodeType>(
     beta: i32,
     ply: usize,
 ) -> i32 {
+    let stm = data.board.state.side_to_move;
+
     if depth == 0 {
-        if data.board.king_in_check() {
+        if data.board.king_in_check(stm) {
             return search_checks(data, alpha, beta, ply);
         } else {
             return quiesce(data, alpha, beta, ply); //Horizon Node
@@ -213,7 +215,7 @@ pub fn search<Node: NodeType>(
         }
     }
 
-    let in_check = data.board.king_in_check();
+    let in_check = data.board.king_in_check(stm);
 
     //Reverse Futillity Pruning (RFP)
     if !in_check && !Node::PV && depth < 7 {
@@ -338,7 +340,7 @@ pub fn search<Node: NodeType>(
     }
 
     if legal_moves == 0 {
-        if data.board.is_king_in_attack(data.board.state.side_to_move) {
+        if in_check {
             return -MATE_SCORE + ply as i32;
         } else {
             return 0;
@@ -402,6 +404,8 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
 pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> i32 {
     let mut best_score = -INFINITY;
     let mut legal_moves = 0;
+    let stm = data.board.state.side_to_move;
+
     data.shared.add_nodes(1);
 
     if data.board.state.half_move_clock > 4 {
@@ -416,7 +420,7 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
         }
     }
 
-    if !data.board.king_in_check() {
+    if !data.board.king_in_check(stm) {
         return quiesce(data, alpha, beta, ply);
     }
 
@@ -449,7 +453,7 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
     }
 
     if legal_moves == 0 {
-        if data.board.is_king_in_attack(data.board.state.side_to_move) {
+        if data.board.king_in_check(stm) {
             return -MATE_SCORE + ply as i32;
         } else {
             return 0;

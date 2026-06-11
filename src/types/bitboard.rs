@@ -57,6 +57,10 @@ impl BitBoard {
         self.0.count_ones() as usize
     }
 
+    pub const fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
+
     pub const fn least_sig_bit(&self) -> Option<Square> {
         if self.0 != 0 {
             Some(Square::from(self.0.trailing_zeros() as usize))

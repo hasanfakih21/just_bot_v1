@@ -103,6 +103,102 @@ pub static ROOK_ATTACKS: LazyLock<Vec<BitBoard>> = LazyLock::new(|| {
     rook_attacks
 });
 
+pub static BETWEEN: [[BitBoard; 64]; 64] = {
+    let mut between = [[BitBoard(0); 64]; 64];
+    let mut square1 = 0;
+    while square1 < 64 {
+        let mut square2 = 0;
+        while square2 < 64 {
+            between[square1][square2] = generate_between(Square::from(square1), Square::from(square2));
+            square2 += 1;
+        }
+
+        square1 += 1;
+    }
+
+    between
+};
+
+pub const DIAGONALS: [[BitBoard; 64]; 2] = {
+    let mut diagonals = [[BitBoard(0); 64]; 2];
+    let mut square = 0;
+    while square < 64 {
+        diagonals[0][square] = BitBoard(generate_slide(Square::from(square), BitBoard(0), NORTH_EAST).0 | generate_slide(Square::from(square), BitBoard(0), SOUTH_WEST).0);
+        diagonals[1][square] = BitBoard(generate_slide(Square::from(square), BitBoard(0), SOUTH_EAST).0 | generate_slide(Square::from(square), BitBoard(0), NORTH_WEST).0);
+
+        square += 1;
+    }
+
+    diagonals
+};
+
+pub const fn generate_between(square1: Square, square2: Square) -> BitBoard {
+    let directions = [NORTH, SOUTH, EAST, WEST, NORTH_EAST, NORTH_WEST, SOUTH_EAST, SOUTH_WEST]; 
+    let mut between = 0;
+    let mut i = 0;
+
+    while i < 8 {
+        let direction = directions[i];
+        let slide = generate_slide(square2, BitBoard(0), direction);
+        if slide.contains(square1) {
+            between = slide.0 & generate_slide(square1, BitBoard(0), -direction).0;
+            break;
+        }
+
+        i += 1;
+    }
+
+    BitBoard(between)
+}
+
+pub const fn border(direction: i8) -> BitBoard {
+    let mut border = 0;
+    if direction == NORTH {
+        border |= RANK_8;
+    }
+
+    if direction == SOUTH {
+        border |= RANK_1;
+    }
+
+    if direction == WEST {
+        border |= A_FILE;
+    }
+
+    if direction == EAST {
+        border |= H_FILE
+    }
+
+    if direction == NORTH_EAST {
+        border |= RANK_8 | H_FILE;
+    }
+
+    if direction == NORTH_WEST {
+        border |= RANK_8 | A_FILE
+    }
+
+    if direction == SOUTH_EAST {
+        border |= RANK_1 | H_FILE
+    }
+
+    if direction == SOUTH_WEST {
+        border |= RANK_1 | A_FILE
+    }
+
+    BitBoard(border)
+}
+
+pub const fn generate_slide(square: Square, occupancies: BitBoard, direction: i8) -> BitBoard {
+    let mut slide = BitBoard(0);
+    let mut step = BitBoard(1 << square as usize);
+    while (step.0 & (occupancies.0 | border(direction).0)) == 0 {
+        step = step.shift(direction); 
+        slide = BitBoard(step.0 | slide.0);
+    }
+
+    slide
+}
+
 pub const fn mask_pawn_attacks(side: Side, square: Square) -> BitBoard {
     let current = 1u64 << square as u64;
     let mut top_left = 0u64;
@@ -465,5 +561,25 @@ mod tests {
         let b1 = blocked_rook_attacks(Square::E3, blocked_bitboard);
 
         b1.print_board();
+    }
+
+    #[test]
+    fn test_generate_slide() {
+        let bb = generate_slide(Square::B7, BitBoard(0), SOUTH_EAST);
+        bb.print_board();
+    }
+
+    #[test]
+    fn test_generate_between() {
+        let bb = generate_between(Square::E1, Square::E6);
+        bb.print_board();
+        assert_eq!(bb, BETWEEN[Square::E1 as usize][Square::E6 as usize]);
+        BETWEEN[Square::E4 as usize][Square::B7 as usize].print_board();
+    }
+
+    #[test]
+    fn test_diagonals() {
+        let bb = DIAGONALS[Side::White as usize][Square::E4 as usize];
+        bb.print_board(); 
     }
 }

@@ -87,7 +87,6 @@ impl Board {
         }
 
         board.update_all_threats();
-
         Ok(board)
     }
 

@@ -17,6 +17,8 @@ pub struct BoardState {
     pub enpassant: Option<Square>,
     pub castling_rights: CastlingRights,
     pub threats: BitBoard,
+    pub pinned: [BitBoard; 2],
+    pub checkers: BitBoard,
 
     pub material_value: [i32; 2],
     pub pq_mg_value: [i32; 2],
@@ -38,6 +40,8 @@ impl BoardState {
             enpassant: None,
             castling_rights: CastlingRights::new(),
             threats: BitBoard(0),
+            pinned: [BitBoard(0); 2],
+            checkers: BitBoard(0),
 
             material_value: [0; 2],
             pq_mg_value: [0; 2],
@@ -83,13 +87,31 @@ impl Board {
     pub fn update_all_threats(&mut self) {
         let side = self.state.side_to_move.other();
         let occ_bb = self.get_all_occupancy();
-
+        let stm = self.state.side_to_move;
+        let king_square = self.get_king_square(stm);
+        
         self.state.threats = self.pawn_attacks_setwise(side)
             | self.knight_attacks_setwise(side)
             | self.bishop_attacks_setwise(side, occ_bb)
             | self.rook_attacks_setwise(side, occ_bb)
             | self.queen_attacks_setwise(side, occ_bb)
             | self.get_king_attacks(self.get_king_square(side));
+        
+        let pawn_attackers = self.get_piece_bb(stm.other(), Piece::Pawn);
+        let knight_attackers = self.get_piece_bb(stm.other(), Piece::Knight);
+        self.state.checkers = (self.get_pawn_attacks(king_square, stm) & pawn_attackers) | (self.get_knight_attacks(king_square) & knight_attackers);
+
+        self.state.pinned[stm as usize] = BitBoard(0);        
+        let sliding_attackers = self.get_piece_bb(stm.other(), Piece::Bishop) | self.get_piece_bb(stm.other(), Piece::Queen) | self.get_piece_bb(stm.other(), Piece::Rook);
+        for square in sliding_attackers.iter() {
+            let blockers = BETWEEN[square as usize][king_square as usize] & self.state.occupancies[stm as usize];
+            let pieces_betweeen = blockers.count_bits();
+            if pieces_betweeen == 1 {
+                self.state.pinned[stm as usize] |= blockers;
+            } else if pieces_betweeen == 0 {
+                self.state.checkers.set_bit(square);
+            }
+        }
     }
 
     pub const fn get_piece_bb(&self, side: Side, piece: Piece) -> BitBoard {
@@ -373,5 +395,32 @@ mod tests {
         let knight_attacks = data.board.knight_attacks_setwise(Side::Black);
         knight_attacks.print_board();
         assert_eq!(knight_attacks.count_bits(), 10);
+    }
+
+    #[test]
+    fn test_pinned_and_checkers() {
+        let mut data = SearchData {
+            board: Board::from_fen(
+                "8/8/1Q3K2/8/1n6/1k6/8/8 b - - 0 1",
+            )
+            .unwrap(),
+            ..Default::default()
+        };
+
+        data.board.update_all_threats();
+        let stm = data.board.state.side_to_move;
+        data.board.state.pinned[stm as usize].print_board();
+
+        let mut data = SearchData {
+            board: Board::from_fen(
+                "8/2K5/8/5k2/1n3p2/8/8/5Q2 b - - 0 1",
+            )
+            .unwrap(),
+            ..Default::default()
+        };
+
+        data.board.update_all_threats();
+        let stm = data.board.state.side_to_move;
+        data.board.state.pinned[stm as usize].print_board();
     }
 }

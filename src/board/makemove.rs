@@ -174,15 +174,10 @@ impl Board {
 
         self.state.hash ^= ZOBRIST.get_castling_num(self.state.castling_rights);
         self.game_history.push(self.state.hash);
-
         self.update_all_threats();
 
-        if self.is_king_in_attack(side) {
-            self.unmake_move();
-            Err(IllegalMove)
-        } else {
-            Ok(LegalMove)
-        }
+        //Legality Check
+        Ok(LegalMove)
     }
 
     pub fn unmake_move(&mut self) {
@@ -197,16 +192,12 @@ impl Board {
         self.state_stack.push(self.state.clone());
     }
 
-    pub fn is_king_in_attack(&self, side: Side) -> bool {
+    pub fn king_in_check(&self, side: Side) -> bool {
         let king_square = self
             .get_piece_bb(side, Piece::King)
             .least_sig_bit()
             .unwrap();
-        self.is_attacked_at_by(king_square, side.other())
-    }
-
-    pub fn king_in_check(&self) -> bool {
-        self.is_king_in_attack(Side::White) || self.is_king_in_attack(Side::Black)
+        self.is_attacked(king_square)
     }
 
     pub fn make_null_move(&mut self) {

@@ -21,12 +21,18 @@ pub const FULL: u64 = 0xFFFFFFFFFFFFFFFF;
 pub const WK_SIDE: u64 = 0x0000000000000060;
 pub const WQ_SIDE: u64 = 0x000000000000000E;
 
+pub const BORDERS: BitBoard = BitBoard(RANK_1 | RANK_8 | A_FILE | H_FILE);
+
 pub const STARTING_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 pub const NORTH: i8 = 8;
 pub const SOUTH: i8 = -8;
 pub const WEST: i8 = -1;
 pub const EAST: i8 = 1;
+pub const NORTH_WEST: i8 = 7;
+pub const SOUTH_WEST: i8 = -9;
+pub const SOUTH_EAST: i8 = -7;
+pub const NORTH_EAST: i8 = 9;
 
 pub const KING_SIDE_ROOK_WHITE: Square = Square::H1;
 pub const QUEEN_SIDE_ROOK_WHITE: Square = Square::A1;
@@ -41,3 +47,8 @@ pub const TIMEOUT_SCORE: i32 = 111111;
 
 pub const MAX_DEPTH: u8 = 128;
 pub const MAX_HISTORY: i32 = 8000;
+
+pub const fn to_file_bb(square: Square) -> BitBoard {
+    let file = square.to_file();
+    BitBoard(A_FILE).shift(EAST * file as i8)
+}
