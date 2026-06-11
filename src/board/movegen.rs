@@ -93,8 +93,8 @@ impl Board {
             //Captures
             let target = target & self.state.occupancies[stm.other() as usize];
             
-            let left_pawns = (pawns & (!pinned | DIAGONALS[1][king_square as usize])) & !A;
-            let right_pawns = (pawns & (!pinned | DIAGONALS[0][king_square as usize])) & !H;
+            let left_pawns = (pawns & (!pinned | DIAGONALS[1][king_square as usize])) & match stm {Side::White => !A, Side::Black=> !H};
+            let right_pawns = (pawns & (!pinned | DIAGONALS[0][king_square as usize])) & match stm {Side::White => !H, Side::Black=> !A};
 
             let left_captures = left_pawns.shift(left) & target;
             let left_promos = left_captures & promotion_rank;
