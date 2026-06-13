@@ -84,6 +84,11 @@ impl Board {
         }
     }
 
+    pub fn is_attacked(&self, square: Square) -> bool {
+        let threats = self.state.threats;
+        threats.contains(square)
+    }
+
     pub fn update_all_threats(&mut self) {
         let side = self.state.side_to_move.other();
         let stm = self.state.side_to_move;

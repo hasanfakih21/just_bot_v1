@@ -7,8 +7,6 @@ pub enum MoveGenKind {
     All,
     Quiet,
     Noisy,
-    Captures,
-    NonCapturePromotions,
 }
 
 impl MoveGenKind {
@@ -17,16 +15,11 @@ impl MoveGenKind {
     }
 
     pub fn is_noisy(&self) -> bool {
-        matches!(self, Self::Noisy | Self::Captures | Self::NonCapturePromotions | Self::All)
+        matches!(self, Self::Noisy | Self::All)
     }
 }
 
 impl Board {
-    pub fn is_attacked(&self, square: Square) -> bool {
-        let threats = self.state.threats;
-        threats.contains(square)
-    }
-
     pub fn gen_pawn_moves(&self, move_list: &mut MoveList, kind: MoveGenKind) {
         let stm = self.state.side_to_move;
         let offset = match stm {
