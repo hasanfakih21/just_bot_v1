@@ -10,12 +10,15 @@ pub mod parser;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BoardState {
-    pub board_pieces: [BitBoard; 12],
-    pub pieces_on_squares: [Option<(Side, Piece)>; 64],
-    pub board_occupancies: [BitBoard; 2],
+    pub pieces: [BitBoard; 6],
+    pub occupancies: [BitBoard; 2],
+    pub mailbox: [Option<(Side, Piece)>; 64],
     pub side_to_move: Side,
     pub enpassant: Option<Square>,
     pub castling_rights: CastlingRights,
+    pub threats: BitBoard,
+    pub pinned: [BitBoard; 2],
+    pub checkers: BitBoard,
 
     pub material_value: [i32; 2],
     pub pq_mg_value: [i32; 2],
@@ -30,12 +33,15 @@ pub struct BoardState {
 impl BoardState {
     pub fn new() -> Self {
         BoardState {
-            board_pieces: [BitBoard(0); 12],
-            pieces_on_squares: [None; 64],
-            board_occupancies: [BitBoard(0); 2],
+            pieces: [BitBoard(0); 6],
+            occupancies: [BitBoard(0); 2],
+            mailbox: [None; 64],
             side_to_move: Side::White,
             enpassant: None,
             castling_rights: CastlingRights::new(),
+            threats: BitBoard(0),
+            pinned: [BitBoard(0); 2],
+            checkers: BitBoard(0),
 
             material_value: [0; 2],
             pq_mg_value: [0; 2],
@@ -57,16 +63,7 @@ impl Default for BoardState {
 
 #[derive(Debug, PartialEq)]
 pub struct Board {
-    pub bishop_masks: [BitBoard; 64],
-    pub rook_masks: [BitBoard; 64],
-
-    pub pawn_attacks: [[BitBoard; 64]; 2],
-    pub knight_attacks: [BitBoard; 64],
-    pub king_attacks: [BitBoard; 64],
-    pub bishop_attacks: Vec<BitBoard>,
-    pub rook_attacks: Vec<BitBoard>,
-
-    pub board_state: BoardState,
+    pub state: BoardState,
     pub state_stack: Vec<BoardState>,
     pub game_history: Vec<u64>,
 }
@@ -80,72 +77,94 @@ impl Default for Board {
 //Little-Endian Rank-File Mapping
 impl Board {
     pub fn new() -> Self {
-        let mut b = Board {
-            bishop_masks: std::array::from_fn(|i| mask_bishop_attacks(Square::from(i))),
-            rook_masks: std::array::from_fn(|i| mask_rook_attacks(Square::from(i))),
-
-            pawn_attacks: [[BitBoard(0); 64]; 2],
-            knight_attacks: [BitBoard(0); 64],
-            king_attacks: [BitBoard(0); 64],
-            bishop_attacks: vec![BitBoard(0); 64 * 512],
-            rook_attacks: vec![BitBoard(0); 64 * 4096],
-
+        Board {
             state_stack: Vec::new(),
-            board_state: BoardState::new(),
+            state: BoardState::new(),
             game_history: Vec::new(),
-        };
-
-        b.init_leaping_attacks();
-        b.init_bishop_attacks();
-        b.init_rook_attacks();
-        b
+        }
     }
 
-    pub fn is_there(&self, side: Side, piece: Piece, square: Square) -> bool {
-        let b = 1u64 << square as u64;
-        (self.board_state.board_pieces[(piece as usize) + (side as usize * 6)].0 & b) != 0
+    pub fn is_attacked(&self, square: Square) -> bool {
+        let threats = self.state.threats;
+        threats.contains(square)
+    }
+
+    pub fn update_all_threats(&mut self) {
+        let side = self.state.side_to_move.other();
+        let stm = self.state.side_to_move;
+        let occ_bb = self.get_all_occupancy() ^ self.get_piece_bb(stm, Piece::King);
+        let king_square = self.get_king_square(stm);
+        
+        self.state.threats = self.pawn_attacks_setwise(side)
+            | self.knight_attacks_setwise(side)
+            | self.bishop_attacks_setwise(side, occ_bb)
+            | self.rook_attacks_setwise(side, occ_bb)
+            | self.queen_attacks_setwise(side, occ_bb)
+            | self.get_king_attacks(self.get_king_square(side));
+        
+        let pawn_attackers = self.get_piece_bb(stm.other(), Piece::Pawn);
+        let knight_attackers = self.get_piece_bb(stm.other(), Piece::Knight);
+        self.state.checkers = (self.get_pawn_attacks(king_square, stm) & pawn_attackers) | (self.get_knight_attacks(king_square) & knight_attackers);
+        self.state.pinned[stm as usize] = BitBoard(0);        
+
+        let bishop_queens = self.get_piece_bb(stm.other(), Piece::Bishop) | self.get_piece_bb(stm.other(), Piece::Queen);
+        let rook_queens = self.get_piece_bb(stm.other(), Piece::Rook) | self.get_piece_bb(stm.other(), Piece::Queen);
+
+        let opp_occ = self.state.occupancies[stm.other() as usize];
+        let diag_attackers = bishop_queens & self.get_bishop_attacks(king_square, opp_occ) & opp_occ;
+        let straight_attackers = rook_queens & self.get_rook_attacks(king_square, opp_occ) & occ_bb;
+
+        for square in (diag_attackers | straight_attackers).iter() {
+            let blockers = BETWEEN[square as usize][king_square as usize] & self.state.occupancies[stm as usize];
+            let pieces_betweeen = blockers.count_bits();
+            if pieces_betweeen == 1 {
+                self.state.pinned[stm as usize] |= blockers;
+            } else if pieces_betweeen == 0 {
+                self.state.checkers.set_bit(square);
+            }
+        }
     }
 
     pub const fn get_piece_bb(&self, side: Side, piece: Piece) -> BitBoard {
-        self.board_state.board_pieces[(piece as usize) + (side as usize * 6)]
+        BitBoard(self.state.pieces[piece as usize].0 & self.state.occupancies[side as usize].0)
     }
 
     pub const fn get_piece_at_square(&self, square: Square) -> Option<(Side, Piece)> {
-        self.board_state.pieces_on_squares[square as usize]
+        self.state.mailbox[square as usize]
     }
 
     pub fn place_piece(&mut self, side: Side, piece: Piece, square: Square) {
         //Bitboards
-        self.board_state.board_pieces[(piece as usize) + (side as usize * 6)].set_bit(square);
-        self.board_state.board_occupancies[side as usize].set_bit(square);
+        self.state.pieces[piece as usize].set_bit(square);
+        self.state.occupancies[side as usize].set_bit(square);
         //Mailbox
-        self.board_state.pieces_on_squares[square as usize] = Some((side, piece));
+        self.state.mailbox[square as usize] = Some((side, piece));
         //Material Eval
-        self.board_state.material_value[side as usize] += piece.value();
+        self.state.material_value[side as usize] += piece.value();
         //Piece Square Table
-        self.board_state.pq_mg_value[side as usize] += self.get_mg_score(piece, square, side);
-        self.board_state.pq_eg_value[side as usize] += self.get_eg_score(piece, square, side);
+        self.state.pq_mg_value[side as usize] += self.get_mg_score(piece, square, side);
+        self.state.pq_eg_value[side as usize] += self.get_eg_score(piece, square, side);
         //Game Phase
-        self.board_state.game_phase += GAMEPHASE[piece as usize];
+        self.state.game_phase += GAMEPHASE[piece as usize];
         //Zobrist Hash
-        self.board_state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
+        self.state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
     }
 
     pub fn remove_piece(&mut self, side: Side, piece: Piece, square: Square) {
         //Bitboards
-        self.board_state.board_pieces[(piece as usize) + (side as usize * 6)].clear_bit(square);
-        self.board_state.board_occupancies[side as usize].clear_bit(square);
+        self.state.pieces[piece as usize].clear_bit(square);
+        self.state.occupancies[side as usize].clear_bit(square);
         //Mailbox
-        self.board_state.pieces_on_squares[square as usize] = None;
+        self.state.mailbox[square as usize] = None;
         //Material Eval
-        self.board_state.material_value[side as usize] -= piece.value();
+        self.state.material_value[side as usize] -= piece.value();
         //Piece Square Table
-        self.board_state.pq_mg_value[side as usize] -= self.get_mg_score(piece, square, side);
-        self.board_state.pq_eg_value[side as usize] -= self.get_eg_score(piece, square, side);
+        self.state.pq_mg_value[side as usize] -= self.get_mg_score(piece, square, side);
+        self.state.pq_eg_value[side as usize] -= self.get_eg_score(piece, square, side);
         //Game Phase
-        self.board_state.game_phase -= GAMEPHASE[piece as usize];
+        self.state.game_phase -= GAMEPHASE[piece as usize];
         //Zobrist Hash
-        self.board_state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
+        self.state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
     }
 
     pub fn get_piece_attack(&self, side: Side, square: Square, piece: Piece) -> BitBoard {
@@ -159,93 +178,90 @@ impl Board {
         }
     }
 
-    pub fn get_all_attacks(&self, side: Side) -> BitBoard {
-        let mut attacks = BitBoard(0);
-        for i in 0..6 {
-            for source in self.board_state.board_pieces[i + (side as usize * 6)].iter() {
-                attacks |= self.get_piece_attack(side, source, Piece::from(i));
-            }
-        }
-
-        attacks & !self.board_state.board_occupancies[side as usize]
+    pub const fn get_pawn_attacks(&self, square: Square, side: Side) -> BitBoard {
+        PAWN_ATTACKS[side as usize][square as usize]
     }
 
-    pub fn init_leaping_attacks(&mut self) {
-        for i in 0..64 {
-            let square = Square::from(i);
-            self.pawn_attacks[Side::White as usize][i] = mask_pawn_attacks(Side::White, square);
-            self.pawn_attacks[Side::Black as usize][i] = mask_pawn_attacks(Side::Black, square);
-            self.knight_attacks[i] = mask_knight_attacks(square);
-            self.king_attacks[i] = mask_king_attacks(square);
-        }
+    pub fn pawn_attacks_setwise(&self, side: Side) -> BitBoard {
+        let pawns = self.get_piece_bb(side, Piece::Pawn);
+        let (top_left, top_right) = match side {
+            Side::White => (7, 9),
+            Side::Black => (-9, -7),
+        };
+
+        (!A & pawns).shift(top_left) | (!H & pawns).shift(top_right)
     }
 
-    pub fn init_rook_attacks(&mut self) {
-        for i in 0..64 {
-            let square = Square::from(i);
-            let relevant_bits = ROOK_OCCUPANCY_BIT_COUNTS[square as usize];
-            let magic_number = ROOK_MAGIC_NUMBERS[square as usize];
-
-            for index in 0..4096 {
-                let occupancy_bb =
-                    set_occupancy(index, relevant_bits, self.rook_masks[square as usize]);
-                let magic_index = get_magic_index(occupancy_bb, relevant_bits, magic_number);
-                self.rook_attacks[(square as usize * 4096) + magic_index] =
-                    blocked_rook_attacks(square, occupancy_bb);
-            }
-        }
+    pub const fn get_knight_attacks(&self, square: Square) -> BitBoard {
+        KNIGHT_ATTACKS[square as usize]
     }
 
-    pub fn init_bishop_attacks(&mut self) {
-        for i in 0..64 {
-            let square = Square::from(i);
-            let relevant_bits = BISHOP_OCCUPANCY_BIT_COUNTS[square as usize];
-            let magic_number = BISHOP_MAGIC_NUMBERS[square as usize];
+    pub fn knight_attacks_setwise(&self, side: Side) -> BitBoard {
+        let knights = self.get_piece_bb(side, Piece::Knight);
 
-            for index in 0..512 {
-                let occupancy_bb =
-                    set_occupancy(index, relevant_bits, self.bishop_masks[square as usize]);
-                let magic_index = get_magic_index(occupancy_bb, relevant_bits, magic_number);
-                self.bishop_attacks[(square as usize * 512) + magic_index] =
-                    blocked_bishop_attacks(square, occupancy_bb);
-            }
-        }
+        let not_a = knights & !A;
+        let not_ab = knights & !AB;
+        let not_h = knights & !H;
+        let not_hg = knights & !HG;
+
+        not_a.shift(15)
+            | not_ab.shift(6)
+            | not_a.shift(-17)
+            | not_ab.shift(-10)
+            | not_h.shift(17)
+            | not_hg.shift(10)
+            | not_h.shift(-15)
+            | not_hg.shift(-6)
     }
 
-    pub fn get_pawn_attacks(&self, square: Square, side: Side) -> BitBoard {
-        self.pawn_attacks[side as usize][square as usize]
-    }
-
-    pub fn get_knight_attacks(&self, square: Square) -> BitBoard {
-        self.knight_attacks[square as usize]
-    }
-
-    pub fn get_king_attacks(&self, square: Square) -> BitBoard {
-        self.king_attacks[square as usize]
+    pub const fn get_king_attacks(&self, square: Square) -> BitBoard {
+        KING_ATTACKS[square as usize]
     }
 
     pub fn get_bishop_attacks(&self, square: Square, board_occupancy: BitBoard) -> BitBoard {
-        let occupancy = board_occupancy & self.bishop_masks[square as usize];
+        let occupancy = board_occupancy & BISHOP_MASKS[square as usize];
         let magic_index = get_magic_index(
             occupancy,
             BISHOP_OCCUPANCY_BIT_COUNTS[square as usize],
             BISHOP_MAGIC_NUMBERS[square as usize],
         );
+
         let offset = (square as usize * 512) + magic_index;
 
-        self.bishop_attacks[offset]
+        BISHOP_ATTACKS[offset]
+    }
+
+    pub fn bishop_attacks_setwise(&self, side: Side, occ_bb: BitBoard) -> BitBoard {
+        let bishops = self.get_piece_bb(side, Piece::Bishop);
+        let mut attacks = BitBoard(0);
+        for square in bishops.iter() {
+            attacks |= self.get_bishop_attacks(square, occ_bb);
+        }
+
+        attacks
     }
 
     pub fn get_rook_attacks(&self, square: Square, board_occupancy: BitBoard) -> BitBoard {
-        let occupancy = board_occupancy & self.rook_masks[square as usize];
+        let occupancy = board_occupancy & ROOK_MASKS[square as usize];
         let magic_index = get_magic_index(
             occupancy,
             ROOK_OCCUPANCY_BIT_COUNTS[square as usize],
             ROOK_MAGIC_NUMBERS[square as usize],
         );
+
         let offset = (square as usize * 4096) + magic_index;
 
-        self.rook_attacks[offset]
+        ROOK_ATTACKS[offset]
+    }
+
+    pub fn rook_attacks_setwise(&self, side: Side, occ_bb: BitBoard) -> BitBoard {
+        let rooks = self.get_piece_bb(side, Piece::Rook);
+        let mut attacks = BitBoard(0);
+        for square in rooks.iter() {
+            attacks |= self.get_rook_attacks(square, occ_bb);
+        }
+
+        attacks
     }
 
     pub fn get_queen_attacks(&self, square: Square, board_occupancy: BitBoard) -> BitBoard {
@@ -253,9 +269,20 @@ impl Board {
             | self.get_rook_attacks(square, board_occupancy)
     }
 
+    pub fn queen_attacks_setwise(&self, side: Side, occ_bb: BitBoard) -> BitBoard {
+        let queens = self.get_piece_bb(side, Piece::Queen);
+
+        let mut attacks = BitBoard(0);
+        for square in queens.iter() {
+            attacks |=
+                self.get_rook_attacks(square, occ_bb) | self.get_bishop_attacks(square, occ_bb);
+        }
+
+        attacks
+    }
+
     pub fn get_all_occupancy(&self) -> BitBoard {
-        self.board_state.board_occupancies[Side::White as usize]
-            | self.board_state.board_occupancies[Side::Black as usize]
+        self.state.occupancies[Side::White as usize] | self.state.occupancies[Side::Black as usize]
     }
 }
 
@@ -283,9 +310,7 @@ impl Display for Board {
         output.push_str("\n     A  B  C  D  E  F  G  H\n");
         output.push_str(&format!(
             "\n     Side to move: {} \n     Castling: {}\n     Enpassant: {:?}\n",
-            self.board_state.side_to_move,
-            self.board_state.castling_rights,
-            self.board_state.enpassant
+            self.state.side_to_move, self.state.castling_rights, self.state.enpassant
         ));
         write!(f, "{}", output)
     }
@@ -293,8 +318,9 @@ impl Display for Board {
 
 #[cfg(test)]
 mod tests {
+    use crate::search::data::SearchData;
+
     use super::*;
-    use crate::board::moves::Move;
 
     #[test]
     fn test_get_rook_attack() {
@@ -342,8 +368,8 @@ mod tests {
         let mut board = Board::from_fen(STARTING_FEN).unwrap();
         board.remove_piece(Side::White, Piece::Pawn, Square::A2);
         board.get_all_occupancy().print_board();
-        board.board_state.board_occupancies[Side::Black as usize].print_board();
-        board.board_state.board_occupancies[Side::White as usize].print_board();
+        board.state.occupancies[Side::Black as usize].print_board();
+        board.state.occupancies[Side::White as usize].print_board();
     }
 
     #[test]
@@ -353,11 +379,59 @@ mod tests {
     }
 
     #[test]
-    fn test_get_all_attacks() {
-        let mut board = Board::from_fen(STARTING_FEN).unwrap();
-        let m = Move::new(Square::E2, Square::E4, moves::MoveKind::DoublePawn);
-        let _ = board.make_move(m);
-        println!("{board}");
-        board.get_all_attacks(Side::White).print_board();
+    fn test_pawn_attacks_setwise() {
+        let data = SearchData {
+            board: Board::from_fen(
+                "rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1",
+            )
+            .unwrap(),
+            ..Default::default()
+        };
+
+        let pawn_attacks = data.board.pawn_attacks_setwise(Side::Black);
+        pawn_attacks.print_board();
+        assert_eq!(pawn_attacks.count_bits(), 12);
+    }
+
+    #[test]
+    fn test_knight_attacks_setwise() {
+        let data = SearchData {
+            board: Board::from_fen(
+                "rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1",
+            )
+            .unwrap(),
+            ..Default::default()
+        };
+
+        let knight_attacks = data.board.knight_attacks_setwise(Side::Black);
+        knight_attacks.print_board();
+        assert_eq!(knight_attacks.count_bits(), 10);
+    }
+
+    #[test]
+    fn test_pinned_and_checkers() {
+        let mut data = SearchData {
+            board: Board::from_fen(
+                "8/8/1Q3K2/8/1n6/1k6/8/8 b - - 0 1",
+            )
+            .unwrap(),
+            ..Default::default()
+        };
+
+        data.board.update_all_threats();
+        let stm = data.board.state.side_to_move;
+        data.board.state.pinned[stm as usize].print_board();
+
+        let mut data = SearchData {
+            board: Board::from_fen(
+                "8/2K5/8/5k2/1n3p2/8/8/5Q2 b - - 0 1",
+            )
+            .unwrap(),
+            ..Default::default()
+        };
+
+        data.board.update_all_threats();
+        let stm = data.board.state.side_to_move;
+        data.board.state.pinned[stm as usize].print_board();
     }
 }

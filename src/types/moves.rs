@@ -3,7 +3,7 @@ use std::{
     mem::{self, MaybeUninit},
 };
 
-use crate::types::{Piece, Square};
+use crate::types::{BitBoard, Piece, Square};
 
 #[derive(Debug, Clone, Copy)]
 pub struct MoveEntry {
@@ -58,14 +58,23 @@ impl MoveList {
         unsafe { self.inner[index].assume_init() }
     }
 
-    pub fn push_front(&mut self, m: Move) {
-        for i in 0..self.len {
-            unsafe {
-                self.inner[i + 1].write(self.inner[i].assume_init());
-            }
+    pub fn push_promotion_captures_setwise(&mut self, offset: i8, targets: BitBoard) {
+        self.push_pawn_moves_setwise(offset, targets, MoveKind::QPromCapture);
+        self.push_pawn_moves_setwise(offset, targets, MoveKind::RPromCapture);
+        self.push_pawn_moves_setwise(offset, targets, MoveKind::NPromCapture);
+        self.push_pawn_moves_setwise(offset, targets, MoveKind::BPromCapture);
+    }
+
+    pub fn push_pawn_moves_setwise(&mut self, offset: i8, targets: BitBoard, kind: MoveKind) {
+        for target in targets.iter() {
+            self.push(Move::new(target.shift(-offset).unwrap(), target, kind));
         }
-        self.len += 1;
-        self.inner[0].write(MoveEntry { mv: m, score: None });
+    }
+
+    pub fn push_setwise(&mut self, from: Square, to_bb: BitBoard, kind: MoveKind) {
+        for to in to_bb.iter() {
+            self.push(Move::new(from, to, kind));
+        }
     }
 
     pub fn clear(&mut self) {
@@ -179,7 +188,7 @@ impl Display for Move {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum MoveKind {
     QuietMove = 0b0000,
     DoublePawn = 0b0001,
@@ -265,25 +274,5 @@ impl MoveKind {
             self,
             Capture | NPromCapture | BPromCapture | RPromCapture | QPromCapture | EnPassant
         )
-    }
-}
-
-#[cfg(test)]
-pub mod tests {
-    use crate::{
-        board::{Board, movegen::MoveGenKind},
-        types::{Move, MoveKind, STARTING_FEN, Square},
-    };
-
-    #[test]
-    fn test_move_list() {
-        let board = Board::from_fen(STARTING_FEN).unwrap();
-        let mut move_list = board.generate_moves(MoveGenKind::All);
-        assert_eq!(move_list.len(), 20);
-        let m = Move::new(Square::A1, Square::A3, MoveKind::QuietMove);
-        move_list.push_front(m);
-        println!("{move_list}");
-        assert_eq!(move_list.get(0).mv, m);
-        assert_eq!(move_list.len(), 21);
     }
 }

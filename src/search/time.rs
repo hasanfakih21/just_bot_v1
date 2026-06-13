@@ -9,6 +9,7 @@ pub struct TimeManager {
     pub limits: Limits,
 }
 
+//Some settings don't do anything yet
 #[derive(Debug)]
 pub struct TimeSettings {
     pub wtime: u64,

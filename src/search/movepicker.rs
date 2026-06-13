@@ -20,12 +20,7 @@ pub struct MovePicker {
 }
 
 impl MovePicker {
-    pub fn new(board: &Board, data: &SearchData) -> MovePicker {
-        let tt_move = data
-            .shared
-            .tt
-            .get_entry(board.board_state.hash)
-            .map(|e| e.get_best_move());
+    pub fn new(tt_move: Option<Move>) -> MovePicker {
         Self {
             moves: MoveList::new(),
             tt_move,
@@ -37,7 +32,8 @@ impl MovePicker {
         }
     }
 
-    pub fn next(&mut self, board: &Board, data: &SearchData, quiesce: bool) -> Option<Move> {
+    pub fn next(&mut self, data: &SearchData, quiesce: bool) -> Option<Move> {
+        let board = &data.board;
         if self.status == Status::HashMove {
             self.status = Status::FirstNoisy;
             if !quiesce || !self.tt_move.unwrap().get_kind().is_quiet() {
@@ -78,18 +74,34 @@ impl MovePicker {
     fn score_noisy_moves(&mut self, board: &Board) {
         for entry in self.moves.iter_mut() {
             let mv = entry.mv;
+            let mut score = 0;
+
             if mv.get_kind().is_capture() {
-                entry.score = Some(score_attack_move(mv, board));
-            } else if mv.get_kind().is_queen_promotion() {
-                entry.score = Some(500);
+                score += score_attack_move(mv, board);
             }
+
+            //Bonus for promotions
+            if mv.get_kind().is_queen_promotion() {
+                score += 2000;
+            }
+
+            if mv.get_kind().is_rook_promotion() | mv.get_kind().is_knight_promotion() {
+                score += 1000;
+            }
+
+            entry.score = Some(score);
         }
     }
 
     fn score_quiet_moves(&mut self, board: &Board, data: &SearchData) {
         for entry in self.moves.iter_mut() {
             let mv = entry.mv;
-            entry.score = Some(data.history.get(board.board_state.side_to_move, mv));
+            let side = board.state.side_to_move;
+            let threats = board.state.threats;
+
+            let score = data.quiet_history.get(threats, side, mv);
+
+            entry.score = Some(score);
         }
     }
 
@@ -141,13 +153,18 @@ pub mod tests {
 
     #[test]
     fn test_move_picker() {
-        let board =
-            Board::from_fen("rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1")
-                .unwrap();
-        let mut move_picker = MovePicker::new(&board, &SearchData::default());
+        let data = SearchData {
+            board: Board::from_fen(
+                "rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1",
+            )
+            .unwrap(),
+            ..Default::default()
+        };
+
+        let mut move_picker = MovePicker::new(None);
         println!("{}", move_picker.moves);
         //println!("{:?}", move_picker);
-        while let Some(m) = move_picker.next(&board, &SearchData::default(), true) {
+        while let Some(m) = move_picker.next(&data, true) {
             println!("{m}");
         }
     }

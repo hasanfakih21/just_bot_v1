@@ -57,6 +57,10 @@ impl BitBoard {
         self.0.count_ones() as usize
     }
 
+    pub const fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
+
     pub const fn least_sig_bit(&self) -> Option<Square> {
         if self.0 != 0 {
             Some(Square::from(self.0.trailing_zeros() as usize))
@@ -65,15 +69,15 @@ impl BitBoard {
         }
     }
 
-    pub const fn shift(&mut self, offset: i8) {
+    pub const fn shift(&self, offset: i8) -> BitBoard {
         if offset > 0 {
-            self.0 <<= offset
+            BitBoard(self.0 << offset)
         } else {
-            self.0 >>= -offset
+            BitBoard(self.0 >> -offset)
         }
     }
 
-    pub const fn get_bit(&self, square: Square) -> bool {
+    pub const fn contains(&self, square: Square) -> bool {
         let b = 1u64 << square as u64;
         (self.0 & b) != 0
     }

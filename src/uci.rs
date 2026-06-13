@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, channel};
 use std::thread;
-use std::time::Instant;
 
 use crate::bench::bench;
 use crate::board::Board;
@@ -54,12 +53,7 @@ pub fn input_loop(cli_args: String) {
             "quit" => break,
             "perft" => {
                 if let Ok(depth) = args.trim().parse::<usize>() {
-                    let clock = Instant::now();
-                    let nodes_count = crate::perft::perft(depth, &mut data.board);
-                    println!(
-                        "Number of nodes: {nodes_count}\nTime: {}ms",
-                        clock.elapsed().as_millis()
-                    );
+                    crate::perft::perft(depth, &mut data.board);
                 } else {
                     eprintln!("Invalid depth: {:?}", args);
                 }
@@ -84,6 +78,7 @@ pub fn listen(shared: Arc<SharedData>) -> Receiver<String> {
         loop {
             if std::io::stdin().read_line(&mut input_buffer).unwrap() == 0 {
                 shared.status.stop();
+                break;
             };
 
             match input_buffer.trim() {

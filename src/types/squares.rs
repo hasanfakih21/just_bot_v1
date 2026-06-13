@@ -1,5 +1,7 @@
 use std::{fmt::Display, ops::BitXor};
 
+use crate::types::BitBoard;
+
 #[derive(Debug)]
 pub struct InvalidSquare;
 
@@ -76,12 +78,24 @@ impl Square {
         (*self as usize / 8, *self as usize % 8)
     }
 
+    pub const fn to_rank(&self) -> usize {
+        *self as usize / 8
+    }
+
+    pub const fn to_file(&self) -> usize {
+        *self as usize % 8
+    }
+
     pub const fn from_rank_and_file(rank: usize, file: usize) -> Square {
         Square::from((rank * 8) + file)
     }
 
     pub fn shift(&self, offset: i8) -> Option<Square> {
         Square::try_from((*self as i8) + offset).ok()
+    }
+
+    pub fn to_bb(&self) -> BitBoard {
+        BitBoard(1 << *self as usize)
     }
 }
 
@@ -103,5 +117,11 @@ mod tests {
         if let Ok(sq) = Square::try_from(string) {
             println!("{sq}");
         }
+    }
+
+    #[test]
+    fn test_to_bb() {
+        let square = Square::E5;
+        square.to_bb().print_board();
     }
 }

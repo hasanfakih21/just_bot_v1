@@ -1,10 +1,8 @@
 use super::Board;
 use crate::types::{
-    Piece, Side, Square, ZOBRIST,
-    constants::{
+    Piece, Side, Square, ZOBRIST, constants::{
         KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE,
-    },
-    moves::{Move, MoveKind},
+    }, moves::{Move, MoveKind}
 };
 
 pub struct LegalMove;
@@ -35,28 +33,28 @@ impl Board {
         };
 
         self.copy_state();
+        self.state.hash ^= ZOBRIST.get_castling_num(self.state.castling_rights);
 
-        self.board_state.hash ^= ZOBRIST.get_castling_num(self.board_state.castling_rights);
-
-        if let Some(square) = self.board_state.enpassant {
-            self.board_state.hash ^= ZOBRIST.get_enpassant_num(square);
-            self.board_state.enpassant = None;
+        if let Some(square) = self.state.enpassant {
+            self.state.hash ^= ZOBRIST.get_enpassant_num(square);
+            self.state.enpassant = None;
         }
 
         if let Piece::King = piece {
-            self.board_state.castling_rights.clear_king_side(side);
-            self.board_state.castling_rights.clear_queen_side(side);
+            self.state.castling_rights.clear_king_side(side);
+            self.state.castling_rights.clear_queen_side(side);
         }
 
-        self.board_state.side_to_move = self.board_state.side_to_move.other();
-        self.board_state.hash ^= ZOBRIST.get_side_num();
+        self.state.side_to_move = self.state.side_to_move.other();
+        self.state.hash ^= ZOBRIST.get_side_num();
 
         if let Piece::Rook = piece {
-            if from == king_rook_square && self.board_state.castling_rights.can_king_side(side) {
-                self.board_state.castling_rights.clear_king_side(side);
+            if from == king_rook_square && self.state.castling_rights.can_king_side(side) {
+                self.state.castling_rights.clear_king_side(side);
             }
-            if from == queen_rook_square && self.board_state.castling_rights.can_queen_side(side) {
-                self.board_state.castling_rights.clear_queen_side(side);
+
+            if from == queen_rook_square && self.state.castling_rights.can_queen_side(side) {
+                self.state.castling_rights.clear_queen_side(side);
             }
         }
 
@@ -65,25 +63,25 @@ impl Board {
                 MoveKind::KingCastle => {
                     self.remove_piece(side, piece, from);
                     self.remove_piece(side, Piece::Rook, king_rook_square);
-                    self.board_state.castling_rights.clear_king_side(side);
-                    self.board_state.castling_rights.clear_queen_side(side);
+                    self.state.castling_rights.clear_king_side(side);
+                    self.state.castling_rights.clear_queen_side(side);
                     self.place_piece(side, piece, to);
                     self.place_piece(side, Piece::Rook, from.shift(1).unwrap());
                 }
                 MoveKind::QueenCastle => {
                     self.remove_piece(side, piece, from);
                     self.remove_piece(side, Piece::Rook, queen_rook_square);
-                    self.board_state.castling_rights.clear_queen_side(side);
-                    self.board_state.castling_rights.clear_king_side(side);
+                    self.state.castling_rights.clear_queen_side(side);
+                    self.state.castling_rights.clear_king_side(side);
                     self.place_piece(side, piece, to);
                     self.place_piece(side, Piece::Rook, from.shift(-1).unwrap());
                 }
                 MoveKind::DoublePawn => {
                     self.remove_piece(side, piece, from);
                     self.place_piece(side, piece, to);
-                    self.board_state.enpassant = Some(Square::from(to as usize ^ 8));
-                    self.board_state.hash ^=
-                        ZOBRIST.get_enpassant_num(Square::from(to as usize ^ 8));
+
+                    self.state.enpassant = Some(Square::from(to as usize ^ 8));
+                    self.state.hash ^= ZOBRIST.get_enpassant_num(Square::from(to as usize ^ 8));
                 }
                 _ => {
                     self.remove_piece(side, piece, from);
@@ -91,16 +89,26 @@ impl Board {
                 }
             }
         } else {
+            debug_assert!(if let Some((_, captured_piece)) = self.get_piece_at_square(to) {
+                if captured_piece == Piece::King {
+                    self.unmake_move();
+                    self.unmake_move();
+                    false
+                } else {
+                    true
+                }
+            } else {
+                true
+            }, "Tried capturing king? {}\nMove: {}", self, m);
+
             if let Some((other_side, captured_piece)) = self.get_piece_at_square(to)
                 && captured_piece == Piece::Rook
             {
                 if to == opp_king_rook_square {
-                    self.board_state.castling_rights.clear_king_side(other_side);
+                    self.state.castling_rights.clear_king_side(other_side);
                 }
                 if to == opp_queen_rook_square {
-                    self.board_state
-                        .castling_rights
-                        .clear_queen_side(other_side);
+                    self.state.castling_rights.clear_queen_side(other_side);
                 }
             }
             match kind {
@@ -166,68 +174,94 @@ impl Board {
 
         //Irreversible Move
         if kind.is_capture() || piece == Piece::Pawn {
-            self.board_state.half_move_clock = 0
+            self.state.half_move_clock = 0
         } else {
-            self.board_state.half_move_clock += 1
+            self.state.half_move_clock += 1
         }
 
-        if self.board_state.side_to_move == Side::White {
-            self.board_state.full_move += 1
+        if self.state.side_to_move == Side::Black {
+            self.state.full_move += 1
         }
-        self.board_state.hash ^= ZOBRIST.get_castling_num(self.board_state.castling_rights);
-        self.game_history.push(self.board_state.hash);
 
-        if self.is_king_in_attack(side) {
-            self.unmake_move();
-            Err(IllegalMove)
-        } else {
-            Ok(LegalMove)
+        self.state.hash ^= ZOBRIST.get_castling_num(self.state.castling_rights);
+        self.game_history.push(self.state.hash);
+        self.update_all_threats();
+        self.update_en_passant();
+
+        Ok(LegalMove)
+    }
+
+    pub fn update_en_passant(&mut self) {
+        if let Some(enpassant) = self.state.enpassant {
+            let stm = self.state.side_to_move;
+            let king_square = self.get_king_square(stm);
+            let pawn_square = Square::from(enpassant as usize ^ 8);
+
+            //Update occupancy as if enpassant pawn was taken for each possible ep taker
+            let occupancies = self.get_all_occupancy() ^ enpassant.to_bb() ^ pawn_square.to_bb();
+            let possible_takers = self.get_pawn_attacks(enpassant, stm.other()) & self.get_piece_bb(stm, Piece::Pawn);
+
+            debug_assert!(possible_takers.count_bits() <= 2);
+            for taker in possible_takers.iter() {
+                let new_occ = occupancies ^ taker.to_bb();
+                let bishop_queens = self.get_piece_bb(stm.other(), Piece::Bishop) | self.get_piece_bb(stm.other(), Piece::Queen);
+                let bishop_queen_checkers = self.get_bishop_attacks(king_square, new_occ) & bishop_queens;
+                
+                let rook_queens = self.get_piece_bb(stm.other(), Piece::Rook) | self.get_piece_bb(stm.other(), Piece::Queen);
+                let rook_queen_checkers = self.get_rook_attacks(king_square, new_occ) & rook_queens;
+                let checkers = bishop_queen_checkers | rook_queen_checkers;
+
+                if !checkers.is_empty() {
+                    //Toggle en passant off
+                    self.state.hash ^= ZOBRIST.get_enpassant_num(enpassant);
+                    self.state.enpassant = None;
+                    return;
+                }
+            }
         }
     }
 
     pub fn unmake_move(&mut self) {
         if let Some(prev_state) = self.state_stack.pop() {
-            self.board_state = prev_state;
+            self.state = prev_state;
         }
 
         self.game_history.pop();
     }
 
     pub fn copy_state(&mut self) {
-        self.state_stack.push(self.board_state.clone());
+        self.state_stack.push(self.state.clone());
     }
 
-    pub fn is_king_in_attack(&self, side: Side) -> bool {
-        let king_square = self.board_state.board_pieces
-            [(Piece::King as usize) + (side as usize * 6)]
+    pub fn king_in_check(&self, side: Side) -> bool {
+        let king_square = self
+            .get_piece_bb(side, Piece::King)
             .least_sig_bit()
             .unwrap();
-        self.is_attacked_at_by(king_square, side.other())
-    }
-
-    pub fn king_in_check(&self) -> bool {
-        self.is_king_in_attack(Side::White) || self.is_king_in_attack(Side::Black)
+        self.is_attacked(king_square)
     }
 
     pub fn make_null_move(&mut self) {
         self.copy_state();
-        self.board_state.side_to_move = self.board_state.side_to_move.other();
-        self.board_state.hash ^= ZOBRIST.get_side_num();
-        if let Some(square) = self.board_state.enpassant {
-            self.board_state.hash ^= ZOBRIST.get_enpassant_num(square);
-            self.board_state.enpassant = None;
+        self.state.side_to_move = self.state.side_to_move.other();
+        self.state.hash ^= ZOBRIST.get_side_num();
+        if let Some(square) = self.state.enpassant {
+            self.state.hash ^= ZOBRIST.get_enpassant_num(square);
+            self.state.enpassant = None;
         }
-        self.game_history.push(self.board_state.hash);
-        if self.board_state.side_to_move == Side::White {
-            self.board_state.full_move += 1
+        self.game_history.push(self.state.hash);
+        if self.state.side_to_move == Side::White {
+            self.state.full_move += 1
         }
+        self.update_all_threats();
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::board::Board;
-    use crate::types::{
+    use crate::search::data::SearchData;
+use crate::types::{
         Piece, Side, Square,
         moves::{Move, MoveKind},
     };
@@ -319,24 +353,13 @@ mod tests {
         assert!(board.get_piece_at_square(Square::E2).is_none());
 
         let mut board =
-            Board::from_fen("2kr3r/pppqn2p/n1b3pb/1N2p3/2B5/1QP4N/PP3PPP/R1B2q1K w - - 0 18")
-                .unwrap();
-        println!("{board}");
-
-        let m = Move::new(Square::C1, Square::H6, MoveKind::Capture);
-        assert!(board.make_move(m).is_err());
-        board.unmake_move();
-        let m = Move::new(Square::H3, Square::G1, MoveKind::QuietMove);
-        assert!(board.make_move(m).is_ok());
-
-        let mut board =
             Board::from_fen("r3k2N/p1ppqpb1/bn2pn2/3P4/1p2P3/2N2Q2/PPPBBPpP/R3K2R b KQq - 0 2")
                 .unwrap();
         println!("{board}");
 
         let m = Move::new(Square::G2, Square::H1, MoveKind::NPromCapture);
         assert!(board.make_move(m).is_ok());
-        assert!(!board.board_state.castling_rights.can_king_side(Side::White));
+        assert!(!board.state.castling_rights.can_king_side(Side::White));
         println!("{board}");
     }
 
@@ -352,10 +375,18 @@ mod tests {
                 .unwrap();
 
         board.make_null_move();
-        assert_eq!(board.board_state.side_to_move, Side::White);
+        assert_eq!(board.state.side_to_move, Side::White);
         println!("{board}");
         board.unmake_move();
 
         assert_eq!(board, original);
+    }
+
+    #[test]
+    fn test_update_ep() {
+        let _ = SearchData{
+            board: Board::from_fen("8/2p5/3p4/KP5r/1R3pPk/8/4P3/8 b - g3 0 1").unwrap(),
+            ..Default::default()
+        };
     }
 }

@@ -3,8 +3,8 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use crate::board::Board;
 use crate::search::time::{TimeManager, TimeSettings};
-use crate::types::TranspositionTable;
-use crate::types::{History, Move, MoveList, STARTING_FEN};
+use crate::types::{Move, MoveList, STARTING_FEN};
+use crate::types::{QuietHistory, TranspositionTable};
 
 #[derive(Debug)]
 pub struct Status(AtomicBool);
@@ -73,7 +73,8 @@ pub struct SearchData {
     pub pv: Vec<MoveList>,
     pub board: Board,
     pub time: TimeManager,
-    pub history: History,
+
+    pub quiet_history: QuietHistory,
 }
 
 impl SearchData {
@@ -83,12 +84,12 @@ impl SearchData {
             pv: vec![MoveList::new(); 128],
             board: Board::from_fen(STARTING_FEN).unwrap(),
             time: TimeManager::new(),
-            history: History::new(),
+            quiet_history: QuietHistory::new(),
         }
     }
 
     pub fn clear_history(&mut self) {
-        self.history = History::new();
+        self.quiet_history = QuietHistory::new();
     }
 
     pub fn get_pv(&self) -> &MoveList {
@@ -104,8 +105,7 @@ impl SearchData {
     }
 
     pub fn start_time(&mut self) {
-        self.time
-            .set_time_limit(self.board.board_state.side_to_move);
+        self.time.set_time_limit(self.board.state.side_to_move);
         self.time.reset_clock();
     }
 
