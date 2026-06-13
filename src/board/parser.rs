@@ -87,6 +87,8 @@ impl Board {
         }
 
         board.update_all_threats();
+        board.update_en_passant();
+
         Ok(board)
     }
 

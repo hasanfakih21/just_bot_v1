@@ -1,5 +1,7 @@
 use std::{fmt::Display, ops::BitXor};
 
+use crate::types::BitBoard;
+
 #[derive(Debug)]
 pub struct InvalidSquare;
 
@@ -91,6 +93,10 @@ impl Square {
     pub fn shift(&self, offset: i8) -> Option<Square> {
         Square::try_from((*self as i8) + offset).ok()
     }
+
+    pub fn to_bb(&self) -> BitBoard {
+        BitBoard(1 << *self as usize)
+    }
 }
 
 impl BitXor for Square {
@@ -111,5 +117,11 @@ mod tests {
         if let Ok(sq) = Square::try_from(string) {
             println!("{sq}");
         }
+    }
+
+    #[test]
+    fn test_to_bb() {
+        let square = Square::E5;
+        square.to_bb().print_board();
     }
 }

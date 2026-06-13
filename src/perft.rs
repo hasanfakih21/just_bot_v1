@@ -67,7 +67,7 @@ mod tests {
         assert_eq!(perft(1, &mut board3), 14);
         assert_eq!(perft(2, &mut board3), 191);
         assert_eq!(perft(3, &mut board3), 2812);
-        assert_eq!(perft(5, &mut board3), 43238);
+        assert_eq!(perft(4, &mut board3), 43238);
         assert_eq!(perft(5, &mut board3), 674624);
 
         let mut board4 =

@@ -1,10 +1,8 @@
 use super::Board;
 use crate::types::{
-    Piece, Side, Square, ZOBRIST,
-    constants::{
+    Piece, Side, Square, ZOBRIST, constants::{
         KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE,
-    },
-    moves::{Move, MoveKind},
+    }, moves::{Move, MoveKind}
 };
 
 pub struct LegalMove;
@@ -35,7 +33,6 @@ impl Board {
         };
 
         self.copy_state();
-
         self.state.hash ^= ZOBRIST.get_castling_num(self.state.castling_rights);
 
         if let Some(square) = self.state.enpassant {
@@ -55,6 +52,7 @@ impl Board {
             if from == king_rook_square && self.state.castling_rights.can_king_side(side) {
                 self.state.castling_rights.clear_king_side(side);
             }
+
             if from == queen_rook_square && self.state.castling_rights.can_queen_side(side) {
                 self.state.castling_rights.clear_queen_side(side);
             }
@@ -81,6 +79,7 @@ impl Board {
                 MoveKind::DoublePawn => {
                     self.remove_piece(side, piece, from);
                     self.place_piece(side, piece, to);
+
                     self.state.enpassant = Some(Square::from(to as usize ^ 8));
                     self.state.hash ^= ZOBRIST.get_enpassant_num(Square::from(to as usize ^ 8));
                 }
@@ -187,9 +186,39 @@ impl Board {
         self.state.hash ^= ZOBRIST.get_castling_num(self.state.castling_rights);
         self.game_history.push(self.state.hash);
         self.update_all_threats();
+        self.update_en_passant();
 
-        //Legality Check
         Ok(LegalMove)
+    }
+
+    pub fn update_en_passant(&mut self) {
+        if let Some(enpassant) = self.state.enpassant {
+            let stm = self.state.side_to_move;
+            let king_square = self.get_king_square(stm);
+            let pawn_square = Square::from(enpassant as usize ^ 8);
+
+            //Update occupancy as if enpassant pawn was taken for each possible ep taker
+            let occupancies = self.get_all_occupancy() ^ enpassant.to_bb() ^ pawn_square.to_bb();
+            let possible_takers = self.get_pawn_attacks(enpassant, stm.other()) & self.get_piece_bb(stm, Piece::Pawn);
+
+            debug_assert!(possible_takers.count_bits() <= 2);
+            for taker in possible_takers.iter() {
+                let new_occ = occupancies ^ taker.to_bb();
+                let bishop_queens = self.get_piece_bb(stm.other(), Piece::Bishop) | self.get_piece_bb(stm.other(), Piece::Queen);
+                let bishop_queen_checkers = self.get_bishop_attacks(king_square, new_occ) & bishop_queens;
+                
+                let rook_queens = self.get_piece_bb(stm.other(), Piece::Rook) | self.get_piece_bb(stm.other(), Piece::Queen);
+                let rook_queen_checkers = self.get_rook_attacks(king_square, new_occ) & rook_queens;
+                let checkers = bishop_queen_checkers | rook_queen_checkers;
+
+                if !checkers.is_empty() {
+                    //Toggle en passant off
+                    self.state.hash ^= ZOBRIST.get_enpassant_num(enpassant);
+                    self.state.enpassant = None;
+                    return;
+                }
+            }
+        }
     }
 
     pub fn unmake_move(&mut self) {
@@ -231,7 +260,8 @@ impl Board {
 #[cfg(test)]
 mod tests {
     use crate::board::Board;
-    use crate::types::{
+    use crate::search::data::SearchData;
+use crate::types::{
         Piece, Side, Square,
         moves::{Move, MoveKind},
     };
@@ -350,5 +380,13 @@ mod tests {
         board.unmake_move();
 
         assert_eq!(board, original);
+    }
+
+    #[test]
+    fn test_update_ep() {
+        let _ = SearchData{
+            board: Board::from_fen("8/2p5/3p4/KP5r/1R3pPk/8/4P3/8 b - g3 0 1").unwrap(),
+            ..Default::default()
+        };
     }
 }

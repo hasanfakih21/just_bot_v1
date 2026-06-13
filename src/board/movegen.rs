@@ -342,7 +342,6 @@ impl Board {
     pub fn append_moves(&self, kind: MoveGenKind, move_list: &mut MoveList) {
         self.gen_king_moves(move_list, kind);
         if self.state.checkers.count_bits() > 1 {
-            self.state.checkers.print_board();
             return;
         }
 
@@ -364,7 +363,7 @@ mod tests {
 use crate::board::Board;
     use crate::board::movegen::MoveGenKind;
     use crate::search::data::SearchData;
-    use crate::types::{BitBoard, Square::{self, *}};
+    use crate::types::Square::{self, *};
     use crate::types::{Move, MoveKind, MoveList, };
 
     #[test]
@@ -407,8 +406,11 @@ use crate::board::Board;
         println!("{move_list}");
         assert_eq!(move_list.len(), 20);
 
-        let mut data = SearchData::default();
-        data.board = Board::from_fen("rnb1kbnr/pp1ppppp/2p5/q7/8/3P4/PPPBPPPP/RN1QKBNR w KQkq - 2 3").unwrap();
+        let data = SearchData{
+            board: Board::from_fen("rnb1kbnr/pp1ppppp/2p5/q7/8/3P4/PPPBPPPP/RN1QKBNR w KQkq - 2 3").unwrap(),
+            ..Default::default()
+        };
+
         data.board.state.threats.print_board();
         let mut move_list = MoveList::new();
         data.board.append_moves(MoveGenKind::All, &mut move_list);
