@@ -7,6 +7,7 @@ use std::fmt::Display;
 pub mod makemove;
 pub mod movegen;
 pub mod parser;
+pub mod see;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BoardState {

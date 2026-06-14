@@ -1,7 +1,7 @@
 use crate::{
     board::{Board, movegen::MoveGenKind},
     search::data::SearchData,
-    types::{Move, MoveEntry, MoveKind, MoveList, Square},
+    types::{Move, MoveEntry, MoveList},
 };
 
 #[derive(Debug, PartialEq)]
@@ -56,8 +56,7 @@ impl MovePicker {
         if self.status == Status::GoodNoisy {
             while !self.moves.is_empty() {
                 let best_entry = self.best_entry();
-                //Probably not the best way since it only sees "onve move deep based on the current noisy scoring formula" would need to readjust my noisy move scoring to something more accurate
-                if best_entry.score.unwrap() < 0 {
+                if !data.board.see(best_entry.mv, 0) {
                     self.bad_noisy.push_entry(best_entry);
                     continue;
                 } 
@@ -99,7 +98,7 @@ impl MovePicker {
             let mut score = 0;
 
             if mv.get_kind().is_capture() {
-                score += score_attack_move(mv, board);
+                score += board.capture_move_value(mv);
             }
 
             //Bonus for promotions
@@ -149,21 +148,6 @@ impl MovePicker {
             self.moves.remove(index);
         }
     }
-}
-
-pub const fn score_attack_move(mv: Move, board: &Board) -> i32 {
-    let attacker = board.get_piece_at_square(mv.get_from()).unwrap().1;
-    let victim = match mv.get_kind() {
-        MoveKind::EnPassant => {
-            board
-                .get_piece_at_square(Square::from(mv.get_to() as usize ^ 8))
-                .unwrap()
-                .1
-        }
-        _ => board.get_piece_at_square(mv.get_to()).unwrap().1,
-    };
-
-    victim.value() - attacker.value()
 }
 
 #[cfg(test)]

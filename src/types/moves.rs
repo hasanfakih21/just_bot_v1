@@ -150,6 +150,14 @@ impl Move {
         Move(from as u16 | ((to as u16) << 6) | ((kind as u16) << 12))
     }
 
+    pub const fn get_capture_square(&self) -> Square {
+        if self.is_en_passant() {
+            Square::from(self.get_to() as usize ^ 8)
+        } else {
+            self.get_to()
+        }
+    }
+
     pub const fn get_from(&self) -> Square {
         Square::from((0x003F & self.0) as usize)
     }
@@ -162,7 +170,15 @@ impl Move {
         MoveKind::from(((0xF000 & self.0) >> 12) as u8)
     }
 
-    pub fn get_promoted_piece(&self) -> Option<Piece> {
+    pub const fn is_promotion(&self) -> bool {
+        self.get_kind().is_promotion()
+    }
+
+    pub const fn is_en_passant(&self) -> bool {
+        matches!(self.get_kind(), MoveKind::EnPassant)
+    }
+
+    pub const fn get_promoted_piece(&self) -> Option<Piece> {
         let kind = self.get_kind();
         let mut promoted_piece = None;
 
