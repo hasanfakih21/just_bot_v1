@@ -20,6 +20,7 @@ pub struct MovePicker {
     status: Status,
     bad_noisy: MoveList,
     bad_index: usize,
+    noisy_count: usize,
 }
 
 impl MovePicker {
@@ -34,14 +35,15 @@ impl MovePicker {
             },
             bad_noisy: MoveList::new(),
             bad_index: 0,
+            noisy_count: 0,
         }
     }
 
-    pub fn next(&mut self, data: &SearchData, quiesce: bool) -> Option<Move> {
+    pub fn next(&mut self, data: &SearchData, skip_quiets: bool) -> Option<Move> {
         let board = &data.board;
         if self.status == Status::HashMove {
             self.status = Status::FirstNoisy;
-            if !quiesce || !self.tt_move.unwrap().get_kind().is_quiet() {
+            if !skip_quiets || !self.tt_move.unwrap().get_kind().is_quiet() {
                 return self.tt_move;
             }
         }
@@ -61,10 +63,11 @@ impl MovePicker {
                     continue;
                 } 
 
+                self.noisy_count += 1;
                 return Some(best_entry.mv);
             }
 
-            if !quiesce {
+            if !skip_quiets {
                 self.status = Status::Quiet;
                 board.append_moves(MoveGenKind::Quiet, &mut self.moves);
                 self.remove_tt_move();
@@ -74,7 +77,7 @@ impl MovePicker {
             }
         }
 
-        if self.status == Status::Quiet && !quiesce {
+        if self.status == Status::Quiet && !skip_quiets {
             if !self.moves.is_empty() {
                 return Some(self.best_entry().mv);
             }
@@ -159,9 +162,24 @@ pub mod tests {
 
     #[test]
     fn test_move_picker() {
+        // let data = SearchData {
+        //     board: Board::from_fen(
+        //         "rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1",
+        //     )
+        //     .unwrap(),
+        //     ..Default::default()
+        // };
+
+        // let mut move_picker = MovePicker::new(None);
+        // println!("{}", move_picker.moves);
+        //println!("{:?}", move_picker);
+        // while let Some(m) = move_picker.next(&data, true) {
+        //     println!("{m}");
+        // }
+
         let data = SearchData {
             board: Board::from_fen(
-                "rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1",
+                "r1bqk2r/ppp1p1pp/3p2n1/3P4/4PN2/5b2/PPPP2Pp/RNBQK1R1 b Qkq - 0 1",
             )
             .unwrap(),
             ..Default::default()
@@ -171,7 +189,9 @@ pub mod tests {
         println!("{}", move_picker.moves);
         //println!("{:?}", move_picker);
         while let Some(m) = move_picker.next(&data, true) {
-            println!("{m}");
+            print!("{m}: ");
+            print!("Value: {}, Value: {}", if m.is_capture() { data.board.capture_move_value(m) } else { 2000 }, (data.board.move_value(m) - data.board.move_loss(m)));
+            println!();
         }
     }
 }
