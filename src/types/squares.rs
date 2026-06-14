@@ -107,6 +107,14 @@ impl BitXor for Square {
     }
 }
 
+impl BitXor<u8> for Square {
+    type Output = Self;
+
+    fn bitxor(self, rhs: u8) -> Self::Output {
+        Self::from(self as usize ^ rhs as usize)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,15 +1,16 @@
 use crate::{
     board::{Board, movegen::MoveGenKind},
     search::data::SearchData,
-    types::{Move, MoveKind, MoveList, Square},
+    types::{Move, MoveEntry, MoveList},
 };
 
 #[derive(Debug, PartialEq)]
 pub enum Status {
     HashMove,
     FirstNoisy,
-    Noisy,
+    GoodNoisy,
     Quiet,
+    BadNoisy,
 }
 
 #[derive(Debug)]
@@ -17,6 +18,9 @@ pub struct MovePicker {
     moves: MoveList,
     tt_move: Option<Move>,
     status: Status,
+    bad_noisy: MoveList,
+    bad_index: usize,
+    noisy_count: usize,
 }
 
 impl MovePicker {
@@ -29,14 +33,17 @@ impl MovePicker {
             } else {
                 Status::FirstNoisy
             },
+            bad_noisy: MoveList::new(),
+            bad_index: 0,
+            noisy_count: 0,
         }
     }
 
-    pub fn next(&mut self, data: &SearchData, quiesce: bool) -> Option<Move> {
+    pub fn next(&mut self, data: &SearchData, skip_quiets: bool) -> Option<Move> {
         let board = &data.board;
         if self.status == Status::HashMove {
             self.status = Status::FirstNoisy;
-            if !quiesce || !self.tt_move.unwrap().get_kind().is_quiet() {
+            if !skip_quiets || !self.tt_move.unwrap().get_kind().is_quiet() {
                 return self.tt_move;
             }
         }
@@ -45,29 +52,46 @@ impl MovePicker {
             board.append_moves(MoveGenKind::Noisy, &mut self.moves);
             self.remove_tt_move();
             self.score_noisy_moves(board);
-            self.status = Status::Noisy;
-            if !self.moves.is_empty() {
-                return Some(self.best_move());
-            }
+            self.status = Status::GoodNoisy;
         }
 
-        if self.status == Status::Noisy {
-            if self.moves.is_empty() {
+        if self.status == Status::GoodNoisy {
+            while !self.moves.is_empty() {
+                let best_entry = self.best_entry();
+                if !data.board.see(best_entry.mv, -150) {
+                    self.bad_noisy.push_entry(best_entry);
+                    continue;
+                } 
+
+                self.noisy_count += 1;
+                return Some(best_entry.mv);
+            }
+
+            if !skip_quiets {
                 self.status = Status::Quiet;
-                if !quiesce {
-                    board.append_moves(MoveGenKind::Quiet, &mut self.moves);
-                    self.remove_tt_move();
-                    self.score_quiet_moves(board, data);
-                }
+                board.append_moves(MoveGenKind::Quiet, &mut self.moves);
+                self.remove_tt_move();
+                self.score_quiet_moves(board, data);
             } else {
-                return Some(self.best_move());
+                self.status = Status::BadNoisy;
             }
         }
 
-        if self.status == Status::Quiet && !self.moves.is_empty() && !quiesce {
-            return Some(self.best_move());
+        if self.status == Status::Quiet && !skip_quiets {
+            if !self.moves.is_empty() {
+                return Some(self.best_entry().mv);
+            }
+
+            self.status = Status::BadNoisy;
         }
 
+        //Bad Noisy
+        if self.bad_index < self.bad_noisy.len() {
+            let m = self.bad_noisy.get(self.bad_index).mv;
+            self.bad_index += 1;
+            return Some(m);
+        }
+        
         None
     }
 
@@ -77,7 +101,7 @@ impl MovePicker {
             let mut score = 0;
 
             if mv.get_kind().is_capture() {
-                score += score_attack_move(mv, board);
+                score += board.capture_move_value(mv);
             }
 
             //Bonus for promotions
@@ -105,7 +129,7 @@ impl MovePicker {
         }
     }
 
-    fn best_move(&mut self) -> Move {
+    fn best_entry(&mut self) -> MoveEntry {
         let mut best_index = 0;
         let mut best_score = i32::MIN;
 
@@ -117,7 +141,7 @@ impl MovePicker {
             }
         }
 
-        self.moves.remove(best_index).unwrap().mv
+        self.moves.remove(best_index).unwrap()
     }
 
     fn remove_tt_move(&mut self) {
@@ -129,21 +153,6 @@ impl MovePicker {
     }
 }
 
-pub const fn score_attack_move(mv: Move, board: &Board) -> i32 {
-    let attacker = board.get_piece_at_square(mv.get_from()).unwrap().1;
-    let victim = match mv.get_kind() {
-        MoveKind::EnPassant => {
-            board
-                .get_piece_at_square(Square::from(mv.get_to() as usize ^ 8))
-                .unwrap()
-                .1
-        }
-        _ => board.get_piece_at_square(mv.get_to()).unwrap().1,
-    };
-
-    victim.value() - attacker.value()
-}
-
 #[cfg(test)]
 pub mod tests {
     use crate::{
@@ -153,9 +162,24 @@ pub mod tests {
 
     #[test]
     fn test_move_picker() {
+        // let data = SearchData {
+        //     board: Board::from_fen(
+        //         "rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1",
+        //     )
+        //     .unwrap(),
+        //     ..Default::default()
+        // };
+
+        // let mut move_picker = MovePicker::new(None);
+        // println!("{}", move_picker.moves);
+        //println!("{:?}", move_picker);
+        // while let Some(m) = move_picker.next(&data, true) {
+        //     println!("{m}");
+        // }
+
         let data = SearchData {
             board: Board::from_fen(
-                "rnbqkb1r/pp3p2/4pnpp/1p1p2N1/1Q1P4/BP2P3/P1PN1PPP/R3K2R b KQkq - 0 1",
+                "r1bqk2r/ppp1p1pp/3p2n1/3P4/4PN2/5b2/PPPP2Pp/RNBQK1R1 b Qkq - 0 1",
             )
             .unwrap(),
             ..Default::default()
@@ -165,7 +189,9 @@ pub mod tests {
         println!("{}", move_picker.moves);
         //println!("{:?}", move_picker);
         while let Some(m) = move_picker.next(&data, true) {
-            println!("{m}");
+            print!("{m}: ");
+            print!("Value: {}, Value: {}", if m.is_capture() { data.board.capture_move_value(m) } else { 2000 }, (data.board.move_value(m) - data.board.move_loss(m)));
+            println!();
         }
     }
 }

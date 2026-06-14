@@ -202,6 +202,7 @@ impl Board {
             let possible_takers = self.get_pawn_attacks(enpassant, stm.other()) & self.get_piece_bb(stm, Piece::Pawn);
 
             debug_assert!(possible_takers.count_bits() <= 2);
+
             for taker in possible_takers.iter() {
                 let new_occ = occupancies ^ taker.to_bb();
                 let bishop_queens = self.get_piece_bb(stm.other(), Piece::Bishop) | self.get_piece_bb(stm.other(), Piece::Queen);
@@ -211,13 +212,15 @@ impl Board {
                 let rook_queen_checkers = self.get_rook_attacks(king_square, new_occ) & rook_queens;
                 let checkers = bishop_queen_checkers | rook_queen_checkers;
 
-                if !checkers.is_empty() {
-                    //Toggle en passant off
-                    self.state.hash ^= ZOBRIST.get_enpassant_num(enpassant);
-                    self.state.enpassant = None;
+                if checkers.is_empty() {
+                    //En Passant is allowed
                     return;
                 }
             }
+
+            //Toggle en passant off
+            self.state.hash ^= ZOBRIST.get_enpassant_num(enpassant);
+            self.state.enpassant = None;
         }
     }
 
