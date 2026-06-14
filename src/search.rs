@@ -250,14 +250,16 @@ pub fn search<Node: NodeType>(
 
     let mut move_picker = MovePicker::new(tt_move);
     let mut quiets_searched = MoveList::new();
+    let mut skip_quiets = false;
 
-    while let Some(m) = move_picker.next(data, false) {
+    while let Some(m) = move_picker.next(data, skip_quiets) {
         //Late Move Pruning (LMP)
         if !in_check
             && best_score.abs() < MATE_CUTOFF
             && m.get_kind().is_quiet()
             && legal_moves > 6 + 2 * depth as usize * depth as usize
         {
+            skip_quiets = true;
             continue;
         }
 
