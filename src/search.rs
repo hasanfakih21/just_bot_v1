@@ -329,6 +329,7 @@ pub fn search<Node: NodeType>(
                         depth,
                     );
                 }
+
                 return best_score;
             }
 
@@ -375,6 +376,8 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
         .get_entry(data.board.state.hash)
         .map(|e| e.get_best_move());
     let mut move_picker = MovePicker::new(tt_move);
+    let mut bound = Bound::Upper;
+    let mut best_move: Option<Move> = None;
 
     while let Some(m) = move_picker.next(data, true) {
         if data.board.make_move(m).is_ok() {
@@ -385,17 +388,36 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
             }
 
             if score >= beta {
+                if let Some(m) = best_move {
+                    let tt_score = best_score;
+                    data.shared.tt.add_entry(
+                        m,
+                        tt_score,
+                        Bound::Lower,
+                        data.board.state.hash,
+                        0,
+                    );
+                }
                 return score;
             }
 
             if score > best_score {
                 best_score = score;
+                best_move = Some(m);
             }
 
             if score > alpha {
+                bound = Bound::Exact;
                 alpha = score;
             }
         }
+    }
+
+    if let Some(m) = best_move {
+        let tt_score = best_score;
+        data.shared
+            .tt
+            .add_entry(m, tt_score, bound, data.board.state.hash, 0);
     }
 
     best_score
