@@ -164,14 +164,8 @@ pub fn search<Node: NodeType>(
     beta: i32,
     ply: usize,
 ) -> i32 {
-    let stm = data.board.state.side_to_move;
-
     if depth == 0 {
-        if data.board.king_in_check(stm) {
-            return search_checks(data, alpha, beta, ply);
-        } else {
-            return quiesce(data, alpha, beta, ply); //Horizon Node
-        }
+        return quiesce(data, alpha, beta, ply); //Horizon Node 
     }
 
     data.shared.add_nodes(1);
@@ -216,6 +210,7 @@ pub fn search<Node: NodeType>(
         }
     }
 
+    let stm = data.board.state.side_to_move;
     let in_check = data.board.king_in_check(stm);
 
     //Reverse Futillity Pruning (RFP)
@@ -413,12 +408,12 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> 
 
         if !mated(best_score) {   
             //Late Move Pruning (LMP)
-            if move_count >= 3 {
+            if move_count > 6 {
                 break;
             }
 
             //Static Exchange Evaluation Pruning (SEE Pruning)
-            if !data.board.see(m, -159) {
+            if !data.board.see(m, -150) {
                 continue;
             }
         }
@@ -446,69 +441,6 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> 
 
     if move_count == 0 && in_check {
         return -MATE_SCORE + ply as i32;
-    }
-
-    best_score
-}
-
-pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> i32 {
-    let mut best_score = -INFINITY;
-    let mut move_count = 0;
-    let stm = data.board.state.side_to_move;
-
-    data.shared.add_nodes(1);
-
-    if data.board.state.half_move_clock > 4 {
-        //50 move rule
-        if data.board.state.half_move_clock >= 100 {
-            return 0;
-        }
-        //We need to check history if positions were repeated only for the side to move.
-        let count = data.board.detect_repetitions();
-        if count >= 2 {
-            return 0;
-        }
-    }
-
-    if !data.board.king_in_check(stm) {
-        return quiesce(data, alpha, beta, ply);
-    }
-
-    let tt_move = data
-        .shared
-        .tt
-        .get_entry(data.board.state.hash)
-        .map(|e| e.get_best_move());
-    let mut move_picker = MovePicker::new(tt_move);
-
-    while let Some(m) = move_picker.next(data, false) {
-        move_count += 1;
-
-        if data.board.make_move(m).is_ok() {
-            let score = -search_checks(data, -beta, -alpha, ply + 1);
-            data.board.unmake_move();
-            if data.over_limit() || data.shared.status.get() == Status::STOPPED {
-                return TIMEOUT_SCORE;
-            }
-
-            if score >= beta {
-                return score;
-            }
-            if score > best_score {
-                best_score = score;
-            }
-            if score > alpha {
-                alpha = score;
-            }
-        }
-    }
-
-    if move_count == 0 {
-        if data.board.king_in_check(stm) {
-            return -MATE_SCORE + ply as i32;
-        } else {
-            return 0;
-        }
     }
 
     best_score
