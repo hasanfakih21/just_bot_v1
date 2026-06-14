@@ -271,7 +271,6 @@ pub fn search<Node: NodeType>(
         if data.board.make_move(m).is_ok() {
             let mut score = best_score;
 
-            //PVS
             //Late Move Reductions (LMR)
             if depth > 3 && !Node::PV {
                 //let reduction = (0.99 + f32::ln(depth as f32) * f32::ln(move_count as f32)) / PI; //https://www.chessprogramming.org/Late_Move_Reductions Obsidian formula
@@ -290,6 +289,7 @@ pub fn search<Node: NodeType>(
                 score = -search::<NonPV>(data, depth - 1, -alpha - 1, -alpha, ply + 1);
             }
 
+            //Principal Variation Search (PVS)
             if Node::PV && (move_count == 1 || score > alpha) {
                 score = -search::<PV>(data, depth - 1, -beta, -alpha, ply + 1);
             }
