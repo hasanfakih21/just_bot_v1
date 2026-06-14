@@ -411,9 +411,16 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> 
     while let Some(m) = move_picker.next(data, skip_quiets) {
         move_count += 1;
 
-        //Static Exchange Evaluation Pruning (SEE Pruning)
-        if !mated(best_score) && !data.board.see(m, -159) {
-            continue;
+        if !mated(best_score) {   
+            //Late Move Pruning (LMP)
+            if move_count >= 3 {
+                break;
+            }
+
+            //Static Exchange Evaluation Pruning (SEE Pruning)
+            if !data.board.see(m, -159) {
+                continue;
+            }
         }
 
         if data.board.make_move(m).is_ok() {
