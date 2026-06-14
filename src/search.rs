@@ -363,10 +363,33 @@ pub fn search<Node: NodeType>(
     best_score
 }
 
-pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) -> i32 {
+pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> i32 {
     data.shared.add_nodes(1);
-    let mut best_score = data.board.evaluate();
 
+    let stm = data.board.state.side_to_move;
+    let in_check = data.board.king_in_check(stm);
+
+    //Detect draws
+    if data.board.state.half_move_clock > 4 {
+        //50 move rule
+        if data.board.state.half_move_clock >= 100 {
+            return 0;
+        }
+
+        //Repetitions
+        let count = data.board.detect_repetitions();
+        if count >= 2 {
+            return 0;
+        }
+    }
+
+    let mut best_score = if !in_check {
+        data.board.evaluate()
+    } else {
+        -INFINITY
+    };
+
+    //Stand Pat
     if best_score >= beta {
         return best_score;
     }
@@ -380,16 +403,21 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
         .tt
         .get_entry(data.board.state.hash)
         .map(|e| e.get_best_move());
-    let mut move_picker = MovePicker::new(tt_move);
 
-    while let Some(m) = move_picker.next(data, true) {
+    let mut move_count = 0;
+    let mut move_picker = MovePicker::new(tt_move);
+    let skip_quiets = !in_check || !mated(best_score);
+
+    while let Some(m) = move_picker.next(data, skip_quiets) {
+        move_count += 1;
+
         //Static Exchange Evaluation Pruning (SEE Pruning)
         if !mated(best_score) && !data.board.see(m, -159) {
             continue;
         }
 
         if data.board.make_move(m).is_ok() {
-            let score = -quiesce(data, -beta, -alpha, _ply + 1);
+            let score = -quiesce(data, -beta, -alpha, ply + 1);
             data.board.unmake_move();
             if data.over_limit() || data.shared.status.get() == Status::STOPPED {
                 return TIMEOUT_SCORE;
@@ -407,6 +435,10 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
                 alpha = score;
             }
         }
+    }
+
+    if move_count == 0 && in_check {
+        return -MATE_SCORE + ply as i32;
     }
 
     best_score
