@@ -174,6 +174,10 @@ impl Move {
         self.get_kind().is_promotion()
     }
 
+    pub const fn is_capture(&self) -> bool {
+        self.get_kind().is_capture()
+    }
+
     pub const fn is_en_passant(&self) -> bool {
         matches!(self.get_kind(), MoveKind::EnPassant)
     }

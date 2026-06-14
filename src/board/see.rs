@@ -2,6 +2,10 @@ use crate::{attacks::RAYS, board::Board, types::{BitBoard, Move, Piece, Side, Sq
 
 impl Board {
     pub fn see(&self, m: Move, threshold: i32) -> bool {
+        if m.is_promotion() && !m.is_capture() {
+            return true
+        }
+
         let mut balance = self.move_value(m) - threshold;
 
         if balance < 0 {
@@ -149,32 +153,29 @@ use super::*;
 
     #[test]
     fn test_see() {
-        // let data = SearchData {
-        //     board: Board::from_fen("1k1r3q/1ppn3p/p4b2/4p3/8/P2N2P1/1PP1R1BP/2K1Q3 w - - 0 1").unwrap(),
-        //     ..Default::default()
-        // };        
+        let data = SearchData {
+            board: Board::from_fen("1k1r3q/1ppn3p/p4b2/4p3/8/P2N2P1/1PP1R1BP/2K1Q3 w - - 0 1").unwrap(),
+            ..Default::default()
+        };        
 
-        // let m = data.board.parse_move("e2e5").unwrap();
-        // println!("{}", data.board.see(m, 0));
-        // assert!(!data.board.see(m, 0));
+        let m = data.board.parse_move("e2e5").unwrap();
+        assert!(!data.board.see(m, 0));
 
-        // let data = SearchData {
-        //     board: Board::from_fen("1k1r3q/1ppn3p/p4b2/4p3/8/P2N2P1/1PP1R1BP/2K1Q3 w - - 0 1").unwrap(),
-        //     ..Default::default()
-        // };        
+        let data = SearchData {
+            board: Board::from_fen("1k1r3q/1ppn3p/p4b2/4p3/8/P2N2P1/1PP1R1BP/2K1Q3 w - - 0 1").unwrap(),
+            ..Default::default()
+        };        
 
-        // let m = data.board.parse_move("d3e5").unwrap();
-        // println!("{}", data.board.see(m, 0));
-        // assert!(!data.board.see(m, 0));
+        let m = data.board.parse_move("d3e5").unwrap();
+        assert!(!data.board.see(m, 0));
 
-        // let data = SearchData {
-        //     board: Board::from_fen("1k1r4/1pp4p/p7/4p3/8/P5P1/1PP4P/2K1R3 w - -").unwrap(),
-        //     ..Default::default()
-        // };        
+        let data = SearchData {
+            board: Board::from_fen("1k1r4/1pp4p/p7/4p3/8/P5P1/1PP4P/2K1R3 w - -").unwrap(),
+            ..Default::default()
+        };        
 
-        // let m = data.board.parse_move("e1e5").unwrap();
-        // println!("{}", data.board.see(m, 0));
-        // assert!(data.board.see(m, 0));
+        let m = data.board.parse_move("e1e5").unwrap();
+        assert!(data.board.see(m, 0));
 
         let data = SearchData {
             board: Board::from_fen("1k1r3q/1pp4p/pn3b2/4p3/P7/3N2P1/1PP1R1BP/2K1Q3 w - - 1 2").unwrap(),
@@ -182,7 +183,22 @@ use super::*;
         };        
 
         let m = data.board.parse_move("d3e5").unwrap();
-        //println!("{}", data.board.see(m, 0));
+        assert!(data.board.see(m, 0));
+
+        let data = SearchData {
+            board: Board::from_fen("1k1r3q/1pp5/pn6/4R3/P7/5B2/1PP2Q1p/2K5 b - - 1 7").unwrap(),
+            ..Default::default()
+        };        
+
+        let m = data.board.parse_move("h2h1q").unwrap();
+        assert!(data.board.see(m, 0));
+
+        let data = SearchData {
+            board: Board::from_fen("1k5q/1pp5/pn6/3r4/P7/5B2/1PP2Q1p/2K3R1 b - - 5 9").unwrap(),
+            ..Default::default()
+        };        
+
+        let m = data.board.parse_move("h2g1q").unwrap();
         assert!(data.board.see(m, 0));
     }
 }
