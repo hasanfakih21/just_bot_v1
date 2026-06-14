@@ -2,7 +2,7 @@ use std::cmp::max;
 
 use crate::board::Board;
 use crate::board::movegen::MoveGenKind;
-use crate::types::{BitBoard, Piece, Side, Square};
+use crate::types::{BitBoard, MATE_CUTOFF, Piece, Side, Square};
 
 //Tables from https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
 #[rustfmt::skip]
@@ -268,6 +268,14 @@ impl Board {
     }
 }
 
+pub const fn mated(score: i32) -> bool {
+    score <= -MATE_CUTOFF
+}
+
+pub const fn mating(score: i32) -> bool {
+    score >= MATE_CUTOFF
+}
+
 //https://www.chessprogramming.org/Center_Manhattan-Distance
 pub const fn cmd(square: Square) -> usize {
     let (mut file, mut rank) = square.to_rank_and_file();
@@ -378,5 +386,12 @@ mod tests {
 
         assert!(second_bonus > first_bonus);
         assert!(second_score > first_score);
+    }
+
+    #[test]
+    fn test_mated_score() {
+        assert!(mated(-8993));
+        assert!(!mated(-34));
+        assert!(!mated(300));
     }
 }

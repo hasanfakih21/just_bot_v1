@@ -1,4 +1,5 @@
 use crate::board::Board;
+use crate::evaluation::{mated, mating};
 use crate::search::data::{SearchData, Status};
 use crate::search::movepicker::MovePicker;
 use crate::types::*;
@@ -238,7 +239,7 @@ pub fn search<Node: NodeType>(
         }
     }
 
-    let mut legal_moves = 0;
+    let mut move_count = 0;
     let mut best_score = -INFINITY;
     let mut best_move: Option<Move> = None;
     let mut bound = Bound::Upper; //Fail-high means score is atleast this good so lower-bound/Fail-low means the score is an upper bound
@@ -253,25 +254,28 @@ pub fn search<Node: NodeType>(
     let mut skip_quiets = false;
 
     while let Some(m) = move_picker.next(data, skip_quiets) {
-        //Late Move Pruning (LMP)
-        if !in_check
-            && best_score.abs() < MATE_CUTOFF
-            && m.get_kind().is_quiet()
-            && legal_moves > 6 + 2 * depth as usize * depth as usize
-        {
-            skip_quiets = true;
-            continue;
+        move_count += 1;
+
+        if !Node::ROOT && !mated(best_score) {
+            //Late Move Pruning (LMP)
+            if !in_check
+                && !mating(beta)
+                && m.get_kind().is_quiet()
+                && move_count > 6 + 2 * depth as usize * depth as usize
+            {
+                skip_quiets = true;
+                continue;
+            }
         }
 
         if data.board.make_move(m).is_ok() {
-            legal_moves += 1;
             let mut score = best_score;
 
             //PVS
             //Late Move Reductions (LMR)
             if depth > 3 && !Node::PV {
-                //let reduction = (0.99 + f32::ln(depth as f32) * f32::ln(legal_moves as f32)) / PI; //https://www.chessprogramming.org/Late_Move_Reductions Obsidian formula
-                let mut reduction = 0.7844 + f32::ln(depth as f32) * f32::ln(legal_moves as f32);
+                //let reduction = (0.99 + f32::ln(depth as f32) * f32::ln(move_count as f32)) / PI; //https://www.chessprogramming.org/Late_Move_Reductions Obsidian formula
+                let mut reduction = 0.7844 + f32::ln(depth as f32) * f32::ln(move_count as f32);
                 if m.get_kind().is_quiet() {
                     reduction /= 2.4696;
                 } else {
@@ -282,11 +286,11 @@ pub fn search<Node: NodeType>(
                 if score > alpha && reduced_depth < depth - 1 {
                     score = -search::<NonPV>(data, depth - 1, -alpha - 1, -alpha, ply + 1);
                 }
-            } else if !Node::PV || legal_moves > 1 {
+            } else if !Node::PV || move_count > 1 {
                 score = -search::<NonPV>(data, depth - 1, -alpha - 1, -alpha, ply + 1);
             }
 
-            if Node::PV && (legal_moves == 1 || score > alpha) {
+            if Node::PV && (move_count == 1 || score > alpha) {
                 score = -search::<PV>(data, depth - 1, -beta, -alpha, ply + 1);
             }
 
@@ -341,7 +345,7 @@ pub fn search<Node: NodeType>(
         }
     }
 
-    if legal_moves == 0 {
+    if move_count == 0 {
         if in_check {
             return -MATE_SCORE + ply as i32;
         } else {
@@ -379,6 +383,11 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
     let mut move_picker = MovePicker::new(tt_move);
 
     while let Some(m) = move_picker.next(data, true) {
+        //Static Exchange Evaluation Pruning (SEE Pruning)
+        if !mated(best_score) && !data.board.see(m, -159) {
+            continue;
+        }
+
         if data.board.make_move(m).is_ok() {
             let score = -quiesce(data, -beta, -alpha, _ply + 1);
             data.board.unmake_move();
@@ -405,7 +414,7 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
 
 pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> i32 {
     let mut best_score = -INFINITY;
-    let mut legal_moves = 0;
+    let mut move_count = 0;
     let stm = data.board.state.side_to_move;
 
     data.shared.add_nodes(1);
@@ -434,8 +443,9 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
     let mut move_picker = MovePicker::new(tt_move);
 
     while let Some(m) = move_picker.next(data, false) {
+        move_count += 1;
+
         if data.board.make_move(m).is_ok() {
-            legal_moves += 1;
             let score = -search_checks(data, -beta, -alpha, ply + 1);
             data.board.unmake_move();
             if data.over_limit() || data.shared.status.get() == Status::STOPPED {
@@ -454,7 +464,7 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
         }
     }
 
-    if legal_moves == 0 {
+    if move_count == 0 {
         if data.board.king_in_check(stm) {
             return -MATE_SCORE + ply as i32;
         } else {

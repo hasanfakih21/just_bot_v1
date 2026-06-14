@@ -159,7 +159,7 @@ use super::*;
         };        
 
         let m = data.board.parse_move("e2e5").unwrap();
-        assert!(!data.board.see(m, 0));
+        assert!(!data.board.see(m, -150));
 
         let data = SearchData {
             board: Board::from_fen("1k1r3q/1ppn3p/p4b2/4p3/8/P2N2P1/1PP1R1BP/2K1Q3 w - - 0 1").unwrap(),
@@ -167,7 +167,7 @@ use super::*;
         };        
 
         let m = data.board.parse_move("d3e5").unwrap();
-        assert!(!data.board.see(m, 0));
+        assert!(!data.board.see(m, -150));
 
         let data = SearchData {
             board: Board::from_fen("1k1r4/1pp4p/p7/4p3/8/P5P1/1PP4P/2K1R3 w - -").unwrap(),
@@ -175,7 +175,7 @@ use super::*;
         };        
 
         let m = data.board.parse_move("e1e5").unwrap();
-        assert!(data.board.see(m, 0));
+        assert!(data.board.see(m, -150));
 
         let data = SearchData {
             board: Board::from_fen("1k1r3q/1pp4p/pn3b2/4p3/P7/3N2P1/1PP1R1BP/2K1Q3 w - - 1 2").unwrap(),
@@ -183,7 +183,7 @@ use super::*;
         };        
 
         let m = data.board.parse_move("d3e5").unwrap();
-        assert!(data.board.see(m, 0));
+        assert!(data.board.see(m, -150));
 
         let data = SearchData {
             board: Board::from_fen("1k1r3q/1pp5/pn6/4R3/P7/5B2/1PP2Q1p/2K5 b - - 1 7").unwrap(),
@@ -191,7 +191,7 @@ use super::*;
         };        
 
         let m = data.board.parse_move("h2h1q").unwrap();
-        assert!(data.board.see(m, 0));
+        assert!(data.board.see(m, -150));
 
         let data = SearchData {
             board: Board::from_fen("1k5q/1pp5/pn6/3r4/P7/5B2/1PP2Q1p/2K3R1 b - - 5 9").unwrap(),
@@ -199,6 +199,14 @@ use super::*;
         };        
 
         let m = data.board.parse_move("h2g1q").unwrap();
-        assert!(data.board.see(m, 0));
+        assert!(data.board.see(m, -150));
+
+        let data = SearchData {
+            board: Board::from_fen("r1bqk2r/ppp1p1pp/3p2n1/3P4/4PN2/5b2/PPPP2Pp/RNBQK1R1 b Qkq - 0 1").unwrap(),
+            ..Default::default()
+        };        
+
+        let m = data.board.parse_move("h2g1q").unwrap();
+        assert!(data.board.see(m, -150));
     }
 }
