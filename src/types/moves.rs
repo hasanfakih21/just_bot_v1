@@ -33,6 +33,11 @@ impl MoveList {
         self.len += 1;
     }
 
+    pub fn push_entry(&mut self, e: MoveEntry) {
+        self.inner[self.len].write(e);
+        self.len += 1;
+    }
+
     pub fn replace(&mut self, m: MoveEntry, index: usize) -> MoveEntry {
         if index < self.len {
             let old_move = self.get(index);

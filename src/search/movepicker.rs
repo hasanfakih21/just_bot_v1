@@ -1,15 +1,16 @@
 use crate::{
     board::{Board, movegen::MoveGenKind},
     search::data::SearchData,
-    types::{Move, MoveKind, MoveList, Square},
+    types::{Move, MoveEntry, MoveKind, MoveList, Square},
 };
 
 #[derive(Debug, PartialEq)]
 pub enum Status {
     HashMove,
     FirstNoisy,
-    Noisy,
+    GoodNoisy,
     Quiet,
+    BadNoisy,
 }
 
 #[derive(Debug)]
@@ -17,6 +18,8 @@ pub struct MovePicker {
     moves: MoveList,
     tt_move: Option<Move>,
     status: Status,
+    bad_noisy: MoveList,
+    bad_index: usize,
 }
 
 impl MovePicker {
@@ -29,6 +32,8 @@ impl MovePicker {
             } else {
                 Status::FirstNoisy
             },
+            bad_noisy: MoveList::new(),
+            bad_index: 0,
         }
     }
 
@@ -45,29 +50,46 @@ impl MovePicker {
             board.append_moves(MoveGenKind::Noisy, &mut self.moves);
             self.remove_tt_move();
             self.score_noisy_moves(board);
-            self.status = Status::Noisy;
-            if !self.moves.is_empty() {
-                return Some(self.best_move());
-            }
+            self.status = Status::GoodNoisy;
         }
 
-        if self.status == Status::Noisy {
-            if self.moves.is_empty() {
+        if self.status == Status::GoodNoisy {
+            while !self.moves.is_empty() {
+                let best_entry = self.best_entry();
+                //Probably not the best way since it only sees "onve move deep based on the current noisy scoring formula" would need to readjust my noisy move scoring to something more accurate
+                if best_entry.score.unwrap() < 0 {
+                    self.bad_noisy.push_entry(best_entry);
+                    continue;
+                } 
+
+                return Some(best_entry.mv);
+            }
+
+            if !quiesce {
                 self.status = Status::Quiet;
-                if !quiesce {
-                    board.append_moves(MoveGenKind::Quiet, &mut self.moves);
-                    self.remove_tt_move();
-                    self.score_quiet_moves(board, data);
-                }
+                board.append_moves(MoveGenKind::Quiet, &mut self.moves);
+                self.remove_tt_move();
+                self.score_quiet_moves(board, data);
             } else {
-                return Some(self.best_move());
+                self.status = Status::BadNoisy;
             }
         }
 
-        if self.status == Status::Quiet && !self.moves.is_empty() && !quiesce {
-            return Some(self.best_move());
+        if self.status == Status::Quiet && !quiesce {
+            if !self.moves.is_empty() {
+                return Some(self.best_entry().mv);
+            }
+
+            self.status = Status::BadNoisy;
         }
 
+        //Bad Noisy
+        if self.bad_index < self.bad_noisy.len() {
+            let m = self.bad_noisy.get(self.bad_index).mv;
+            self.bad_index += 1;
+            return Some(m);
+        }
+        
         None
     }
 
@@ -105,7 +127,7 @@ impl MovePicker {
         }
     }
 
-    fn best_move(&mut self) -> Move {
+    fn best_entry(&mut self) -> MoveEntry {
         let mut best_index = 0;
         let mut best_score = i32::MIN;
 
@@ -117,7 +139,7 @@ impl MovePicker {
             }
         }
 
-        self.moves.remove(best_index).unwrap().mv
+        self.moves.remove(best_index).unwrap()
     }
 
     fn remove_tt_move(&mut self) {
