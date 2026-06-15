@@ -212,6 +212,12 @@ pub fn go(args: &str, data: &mut SearchData) -> Option<MoveEntry> {
             data.get_time_settings().movetime = movetime.trim().parse().unwrap_or(0);
             go(args, data)
         }
+        "nodes" => {
+            let (nodes, args) = args.split_once(" ").unwrap_or((args, ""));
+            data.get_time_settings().nodes = nodes.trim().parse().unwrap_or(0);
+            data.time.set_nodes_limit();
+            go(args, data)
+        }
         _ => go(args, data),
     }
 }
