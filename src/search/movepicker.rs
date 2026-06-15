@@ -101,10 +101,6 @@ impl MovePicker {
             let mv = entry.mv;
             let mut score = 0;
 
-            if mv.get_kind().is_capture() {
-                score += data.board.capture_move_value(mv);
-            }
-
             //Bonus for promotions
             if mv.get_kind().is_queen_promotion() {
                 score += 2000;
@@ -117,6 +113,9 @@ impl MovePicker {
             let piece = data.board.get_piece_at_square(mv.get_from());
             let to = mv.get_capture_square();
             let captured = data.board.get_piece_at_square(to).map(|e| e.1);
+            if let Some(p) = captured {
+                score += p.value();
+            }
 
             score += data.noisy_history.get(piece, to, captured, threats);
             entry.score = Some(score);
