@@ -89,7 +89,7 @@ impl NoisyHistory {
     }
 }
 
-pub fn allocate_empty_history<T>() -> Box<T> {
+fn allocate_empty_history<T>() -> Box<T> {
     let layout = std::alloc::Layout::new::<T>();
     unsafe {
         let p = std::alloc::alloc_zeroed(layout);
@@ -97,7 +97,7 @@ pub fn allocate_empty_history<T>() -> Box<T> {
     }
 }
 
-pub fn update_entry(bonus: i32, entry: &mut i16) {
+fn update_entry(bonus: i32, entry: &mut i16) {
     let clamped_bonus = bonus.clamp(-MAX_HISTORY, MAX_HISTORY);
     *entry += (clamped_bonus - (*entry as i32) * clamped_bonus.abs() / MAX_HISTORY) as i16;
 }

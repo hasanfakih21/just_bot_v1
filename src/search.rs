@@ -324,13 +324,15 @@ pub fn search<Node: NodeType>(
                         let quiet_move = e.mv;
                         data.quiet_history.update(threats, side, quiet_move, -bonus);
                     }
-                } else
-                //Add noisy moves to history
-                {
-                    let bonus = 300 * depth as i32 - 250;
+                } else {
+                    //Add noisy moves to history
+                    let bonus = 100 * depth as i32 - 50;
                     let piece = data.board.get_piece_at_square(m.get_from());
                     let to = m.get_to();
-                    let captured = data.board.get_piece_at_square(m.get_capture_square()).map(|e| e.1);
+                    let captured = data
+                        .board
+                        .get_piece_at_square(m.get_capture_square())
+                        .map(|e| e.1);
                     let threats = data.board.state.threats;
                     data.noisy_history
                         .update(piece, to, captured, threats, bonus);
@@ -340,7 +342,10 @@ pub fn search<Node: NodeType>(
                         let m = e.mv;
                         let piece = data.board.get_piece_at_square(m.get_from());
                         let to = m.get_to();
-                        let captured = data.board.get_piece_at_square(m.get_capture_square()).map(|e| e.1);
+                        let captured = data
+                            .board
+                            .get_piece_at_square(m.get_capture_square())
+                            .map(|e| e.1);
                         data.noisy_history
                             .update(piece, to, captured, threats, -bonus);
                     }

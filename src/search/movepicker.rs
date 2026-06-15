@@ -108,7 +108,10 @@ impl MovePicker {
 
             let piece = data.board.get_piece_at_square(mv.get_from());
             let to = mv.get_to();
-            let captured = data.board.get_piece_at_square(mv.get_capture_square()).map(|e| e.1);
+            let captured = data
+                .board
+                .get_piece_at_square(mv.get_capture_square())
+                .map(|e| e.1);
             if let Some(p) = captured {
                 score += p.value();
             }
