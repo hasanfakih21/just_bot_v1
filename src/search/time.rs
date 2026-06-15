@@ -43,6 +43,7 @@ impl Default for TimeSettings {
 pub struct Limits {
     time: u64,
     depth: u8,
+    nodes: Option<usize>,
 }
 
 impl Default for Limits {
@@ -50,6 +51,7 @@ impl Default for Limits {
         Self {
             time: 300000,
             depth: MAX_DEPTH - 1,
+            nodes: None,
         }
     }
 }
@@ -96,6 +98,14 @@ impl TimeManager {
 
     pub fn set_depth_limit(&mut self) {
         self.limits.depth = self.settings.depth;
+    }
+
+    pub fn set_nodes_limit(&mut self) {
+        self.limits.nodes = Some(self.settings.nodes);
+    }
+
+    pub fn node_limit(&self) -> Option<usize> {
+        self.limits.nodes
     }
 
     pub fn depth_limit(&self) -> u8 {

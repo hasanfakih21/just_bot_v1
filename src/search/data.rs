@@ -126,6 +126,11 @@ impl SearchData {
     }
 
     pub fn over_limit(&self) -> bool {
+        if let Some(node_limt) = self.time.node_limit()
+            && self.shared.get_total_nodes_searched() >= node_limt {
+                return true
+            }
+
         self.time.over_limit()
     }
 
