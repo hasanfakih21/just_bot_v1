@@ -289,7 +289,7 @@ impl Board {
 
 impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut output = String::from("\n\n");
+        let mut output = String::from("\n");
         for rank in (0..8).rev() {
             output.push_str(&format!("{}   ", 1 + rank));
             for file in 0..8 {
@@ -309,10 +309,8 @@ impl Display for Board {
             output.push('\n');
         }
         output.push_str("\n     A  B  C  D  E  F  G  H\n");
-        output.push_str(&format!(
-            "\n     Side to move: {} \n     Castling: {}\n     Enpassant: {:?}\n",
-            self.state.side_to_move, self.state.castling_rights, self.state.enpassant
-        ));
+        output.push('\n');
+        output.push_str(&self.to_fen());
         write!(f, "{}", output)
     }
 }
