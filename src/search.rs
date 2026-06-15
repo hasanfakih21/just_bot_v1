@@ -365,9 +365,9 @@ pub fn search<Node: NodeType>(
             }
 
             //Add searched quiet moves to list
-            if m.get_kind().is_quiet() {
+            if m.get_kind().is_quiet() && Some(m) != best_move {
                 quiets_searched.push(m);
-            } else {
+            } else if Some(m) != best_move {
                 noisies_searched.push(m);
             }
         }
