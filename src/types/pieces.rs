@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use crate::types::Side;
+
 #[derive(Debug)]
 pub struct InvalidPiece;
 
@@ -52,6 +54,15 @@ impl Piece {
             Self::Queen => 900,
             Self::King => 0,
         }
+    }
+
+    pub fn to_char(&self, side: Side) -> char {
+        let mut c = self.to_string().chars().last().unwrap();
+        if side == Side::Black {
+            c.make_ascii_lowercase();
+        }
+
+        c
     }
 }
 

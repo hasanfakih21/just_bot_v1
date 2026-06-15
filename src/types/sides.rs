@@ -20,8 +20,8 @@ impl Side {
 impl Display for Side {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Side::White => write!(f, "White"),
-            Side::Black => write!(f, "Black"),
+            Side::White => write!(f, "w"),
+            Side::Black => write!(f, "b"),
         }
     }
 }
@@ -156,6 +156,10 @@ impl Display for CastlingRights {
         }
         if self.can_queen_side(Side::Black) {
             output_string.push('q');
+        }
+
+        if output_string.is_empty() {
+            output_string.push('-');
         }
 
         write!(f, "{output_string}")

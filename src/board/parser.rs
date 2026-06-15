@@ -117,6 +117,53 @@ impl Board {
             Err("Invalid move string")
         }
     }
+
+    //Starting Position: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    //[pieces] [turn to move] [castling rights] [enpassant] [halfmove clock] [fullmove clock]
+    pub fn to_fen(&self) -> String {
+        let mut fen = String::new();
+        for rank in (0..8).rev() {
+            let mut empty = 0;
+            for file in 0..8 {
+                let p = self.get_piece_at_square(Square::from_rank_and_file(rank, file));
+                if let Some((side, piece)) = p {
+                    if empty > 0 {
+                        fen.push_str(&empty.to_string());
+                    }
+                    empty = 0;
+                    fen.push(piece.to_char(side));
+                } else {
+                    empty += 1;
+                }
+            }
+
+            if empty > 0 {
+                fen.push_str(&empty.to_string());
+            }
+
+            if rank != 0 {
+                fen.push('/');
+            }
+        }
+
+        fen.push(' ');
+        fen.push_str(&self.state.side_to_move.to_string());
+        fen.push(' ');
+        fen.push_str(&self.state.castling_rights.to_string());
+        fen.push(' ');
+        let ep_string = match self.state.enpassant {
+            Some(square) => square.to_string(),
+            None => "-".to_string()
+        };
+
+        fen.push_str(&ep_string);
+        fen.push(' ');
+        fen.push_str(&self.state.half_move_clock.to_string());
+        fen.push(' ');
+        fen.push_str(&self.state.full_move.to_string());
+
+        fen
+    }
 }
 
 #[cfg(test)]
@@ -155,5 +202,17 @@ mod tests {
         println!("{board6}");
         println!("Half move: {}", board6.state.half_move_clock);
         println!("Full move: {}", board6.state.full_move);
+    }
+
+    #[test]
+    fn test_to_fen() {
+        let board = Board::from_fen(STARTING_FEN).unwrap();
+        assert_eq!(STARTING_FEN, board.to_fen());
+
+        let board = Board::from_fen("r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9").unwrap();
+        assert_eq!("r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9", board.to_fen());
+
+        let board = Board::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1 ").unwrap();
+        assert_eq!("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", board.to_fen());
     }
 }
