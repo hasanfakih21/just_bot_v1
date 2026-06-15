@@ -1,5 +1,5 @@
 use crate::{
-    board::{Board, movegen::MoveGenKind},
+    board::movegen::MoveGenKind,
     search::data::SearchData,
     types::{Move, MoveEntry, MoveList},
 };
@@ -51,7 +51,7 @@ impl MovePicker {
         if self.status == Status::FirstNoisy {
             board.append_moves(MoveGenKind::Noisy, &mut self.moves);
             self.remove_tt_move();
-            self.score_noisy_moves(board);
+            self.score_noisy_moves(data);
             self.status = Status::GoodNoisy;
         }
 
@@ -71,7 +71,7 @@ impl MovePicker {
                 self.status = Status::Quiet;
                 board.append_moves(MoveGenKind::Quiet, &mut self.moves);
                 self.remove_tt_move();
-                self.score_quiet_moves(board, data);
+                self.score_quiet_moves(data);
             } else {
                 self.status = Status::BadNoisy;
             }
@@ -95,13 +95,14 @@ impl MovePicker {
         None
     }
 
-    fn score_noisy_moves(&mut self, board: &Board) {
+    fn score_noisy_moves(&mut self, data: &SearchData) {
+        let threats = data.board.state.threats;
         for entry in self.moves.iter_mut() {
             let mv = entry.mv;
             let mut score = 0;
 
             if mv.get_kind().is_capture() {
-                score += board.capture_move_value(mv);
+                score += data.board.capture_move_value(mv);
             }
 
             //Bonus for promotions
@@ -113,18 +114,22 @@ impl MovePicker {
                 score += 1000;
             }
 
+            let piece = data.board.get_piece_at_square(mv.get_from());
+            let to = mv.get_capture_square();
+            let captured = data.board.get_piece_at_square(to).map(|e| e.1);
+
+            score += data.noisy_history.get(piece, to, captured, threats);
             entry.score = Some(score);
         }
     }
 
-    fn score_quiet_moves(&mut self, board: &Board, data: &SearchData) {
+    fn score_quiet_moves(&mut self, data: &SearchData) {
+        let side = data.board.state.side_to_move;
+        let threats = data.board.state.threats;
+
         for entry in self.moves.iter_mut() {
             let mv = entry.mv;
-            let side = board.state.side_to_move;
-            let threats = board.state.threats;
-
             let score = data.quiet_history.get(threats, side, mv);
-
             entry.score = Some(score);
         }
     }
