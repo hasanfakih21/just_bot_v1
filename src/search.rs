@@ -378,9 +378,12 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> 
         }
     }
 
+    let eval;
     let mut best_score = if !in_check {
-        data.board.evaluate()
+        eval = data.board.evaluate();
+        eval
     } else {
+        eval = alpha;
         -INFINITY
     };
 
@@ -413,7 +416,7 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> 
             }
 
             //Static Exchange Evaluation Pruning (SEE Pruning)
-            if !data.board.see(m, -150) {
+            if !data.board.see(m, alpha - eval) {
                 continue;
             }
         }
