@@ -314,10 +314,10 @@ pub fn search<Node: NodeType>(
             //Cutoff
             if score >= beta {
                 let quiet_bonus = 300 * depth as i32 - 250; 
-                let quiet_malus = 250 * depth as i32 - 200 - 10 * quiets_searched.len() as i32;
+                let quiet_malus = 300 * depth as i32 - 250;
 
-                let noisy_bonus = 350 * depth as i32 - 250;
-                let noisy_malus = 250 * depth as i32 - 200 - 10 * quiets_searched.len() as i32;
+                let noisy_bonus = (82 * depth as i32).min(1000) - 250;
+                let noisy_malus = (150 * depth as i32).min(1200) - 50 - 10 * noisies_searched.len() as i32;
 
                 let threats = data.board.state.threats;
 
