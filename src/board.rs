@@ -1,6 +1,6 @@
 use crate::attacks::*;
 use crate::evaluation::GAMEPHASE;
-use crate::magics::*;
+use crate::tools::magics::*;
 use crate::types::*;
 use std::fmt::Display;
 
@@ -95,28 +95,33 @@ impl Board {
         let stm = self.state.side_to_move;
         let occ_bb = self.get_all_occupancy() ^ self.get_piece_bb(stm, Piece::King);
         let king_square = self.get_king_square(stm);
-        
+
         self.state.threats = self.pawn_attacks_setwise(side)
             | self.knight_attacks_setwise(side)
             | self.bishop_attacks_setwise(side, occ_bb)
             | self.rook_attacks_setwise(side, occ_bb)
             | self.queen_attacks_setwise(side, occ_bb)
             | self.get_king_attacks(self.get_king_square(side));
-        
+
         let pawn_attackers = self.get_piece_bb(stm.other(), Piece::Pawn);
         let knight_attackers = self.get_piece_bb(stm.other(), Piece::Knight);
-        self.state.checkers = (self.get_pawn_attacks(king_square, stm) & pawn_attackers) | (self.get_knight_attacks(king_square) & knight_attackers);
-        self.state.pinned[stm as usize] = BitBoard(0);        
+        self.state.checkers = (self.get_pawn_attacks(king_square, stm) & pawn_attackers)
+            | (self.get_knight_attacks(king_square) & knight_attackers);
+        self.state.pinned[stm as usize] = BitBoard(0);
 
-        let bishop_queens = self.get_piece_bb(stm.other(), Piece::Bishop) | self.get_piece_bb(stm.other(), Piece::Queen);
-        let rook_queens = self.get_piece_bb(stm.other(), Piece::Rook) | self.get_piece_bb(stm.other(), Piece::Queen);
+        let bishop_queens = self.get_piece_bb(stm.other(), Piece::Bishop)
+            | self.get_piece_bb(stm.other(), Piece::Queen);
+        let rook_queens = self.get_piece_bb(stm.other(), Piece::Rook)
+            | self.get_piece_bb(stm.other(), Piece::Queen);
 
         let opp_occ = self.state.occupancies[stm.other() as usize];
-        let diag_attackers = bishop_queens & self.get_bishop_attacks(king_square, opp_occ) & opp_occ;
+        let diag_attackers =
+            bishop_queens & self.get_bishop_attacks(king_square, opp_occ) & opp_occ;
         let straight_attackers = rook_queens & self.get_rook_attacks(king_square, opp_occ) & occ_bb;
 
         for square in (diag_attackers | straight_attackers).iter() {
-            let blockers = BETWEEN[square as usize][king_square as usize] & self.state.occupancies[stm as usize];
+            let blockers = BETWEEN[square as usize][king_square as usize]
+                & self.state.occupancies[stm as usize];
             let pieces_betweeen = blockers.count_bits();
             if pieces_betweeen == 1 {
                 self.state.pinned[stm as usize] |= blockers;
@@ -289,7 +294,7 @@ impl Board {
 
 impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut output = String::from("\n\n");
+        let mut output = String::from("\n");
         for rank in (0..8).rev() {
             output.push_str(&format!("{}   ", 1 + rank));
             for file in 0..8 {
@@ -309,10 +314,8 @@ impl Display for Board {
             output.push('\n');
         }
         output.push_str("\n     A  B  C  D  E  F  G  H\n");
-        output.push_str(&format!(
-            "\n     Side to move: {} \n     Castling: {}\n     Enpassant: {:?}\n",
-            self.state.side_to_move, self.state.castling_rights, self.state.enpassant
-        ));
+        output.push('\n');
+        output.push_str(&self.to_fen());
         write!(f, "{}", output)
     }
 }
@@ -412,10 +415,7 @@ mod tests {
     #[test]
     fn test_pinned_and_checkers() {
         let mut data = SearchData {
-            board: Board::from_fen(
-                "8/8/1Q3K2/8/1n6/1k6/8/8 b - - 0 1",
-            )
-            .unwrap(),
+            board: Board::from_fen("8/8/1Q3K2/8/1n6/1k6/8/8 b - - 0 1").unwrap(),
             ..Default::default()
         };
 
@@ -424,10 +424,7 @@ mod tests {
         data.board.state.pinned[stm as usize].print_board();
 
         let mut data = SearchData {
-            board: Board::from_fen(
-                "8/2K5/8/5k2/1n3p2/8/8/5Q2 b - - 0 1",
-            )
-            .unwrap(),
+            board: Board::from_fen("8/2K5/8/5k2/1n3p2/8/8/5Q2 b - - 0 1").unwrap(),
             ..Default::default()
         };
 

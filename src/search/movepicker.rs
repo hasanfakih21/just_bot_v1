@@ -61,7 +61,7 @@ impl MovePicker {
                 if !data.board.see(best_entry.mv, -150) {
                     self.bad_noisy.push_entry(best_entry);
                     continue;
-                } 
+                }
 
                 self.noisy_count += 1;
                 return Some(best_entry.mv);
@@ -91,7 +91,7 @@ impl MovePicker {
             self.bad_index += 1;
             return Some(m);
         }
-        
+
         None
     }
 
@@ -190,7 +190,15 @@ pub mod tests {
         //println!("{:?}", move_picker);
         while let Some(m) = move_picker.next(&data, true) {
             print!("{m}: ");
-            print!("Value: {}, Value: {}", if m.is_capture() { data.board.capture_move_value(m) } else { 2000 }, (data.board.move_value(m) - data.board.move_loss(m)));
+            print!(
+                "Value: {}, Value: {}",
+                if m.is_capture() {
+                    data.board.capture_move_value(m)
+                } else {
+                    2000
+                },
+                (data.board.move_value(m) - data.board.move_loss(m))
+            );
             println!();
         }
     }

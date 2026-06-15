@@ -1,8 +1,10 @@
 use super::Board;
 use crate::types::{
-    Piece, Side, Square, ZOBRIST, constants::{
+    Piece, Side, Square, ZOBRIST,
+    constants::{
         KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE,
-    }, moves::{Move, MoveKind}
+    },
+    moves::{Move, MoveKind},
 };
 
 pub struct LegalMove;
@@ -89,17 +91,22 @@ impl Board {
                 }
             }
         } else {
-            debug_assert!(if let Some((_, captured_piece)) = self.get_piece_at_square(to) {
-                if captured_piece == Piece::King {
-                    self.unmake_move();
-                    self.unmake_move();
-                    false
+            debug_assert!(
+                if let Some((_, captured_piece)) = self.get_piece_at_square(to) {
+                    if captured_piece == Piece::King {
+                        self.unmake_move();
+                        self.unmake_move();
+                        false
+                    } else {
+                        true
+                    }
                 } else {
                     true
-                }
-            } else {
-                true
-            }, "Tried capturing king? {}\nMove: {}", self, m);
+                },
+                "Tried capturing king? {}\nMove: {}",
+                self,
+                m
+            );
 
             if let Some((other_side, captured_piece)) = self.get_piece_at_square(to)
                 && captured_piece == Piece::Rook
@@ -199,16 +206,20 @@ impl Board {
 
             //Update occupancy as if enpassant pawn was taken for each possible ep taker
             let occupancies = self.get_all_occupancy() ^ enpassant.to_bb() ^ pawn_square.to_bb();
-            let possible_takers = self.get_pawn_attacks(enpassant, stm.other()) & self.get_piece_bb(stm, Piece::Pawn);
+            let possible_takers =
+                self.get_pawn_attacks(enpassant, stm.other()) & self.get_piece_bb(stm, Piece::Pawn);
 
             debug_assert!(possible_takers.count_bits() <= 2);
 
             for taker in possible_takers.iter() {
                 let new_occ = occupancies ^ taker.to_bb();
-                let bishop_queens = self.get_piece_bb(stm.other(), Piece::Bishop) | self.get_piece_bb(stm.other(), Piece::Queen);
-                let bishop_queen_checkers = self.get_bishop_attacks(king_square, new_occ) & bishop_queens;
-                
-                let rook_queens = self.get_piece_bb(stm.other(), Piece::Rook) | self.get_piece_bb(stm.other(), Piece::Queen);
+                let bishop_queens = self.get_piece_bb(stm.other(), Piece::Bishop)
+                    | self.get_piece_bb(stm.other(), Piece::Queen);
+                let bishop_queen_checkers =
+                    self.get_bishop_attacks(king_square, new_occ) & bishop_queens;
+
+                let rook_queens = self.get_piece_bb(stm.other(), Piece::Rook)
+                    | self.get_piece_bb(stm.other(), Piece::Queen);
                 let rook_queen_checkers = self.get_rook_attacks(king_square, new_occ) & rook_queens;
                 let checkers = bishop_queen_checkers | rook_queen_checkers;
 
@@ -264,7 +275,7 @@ impl Board {
 mod tests {
     use crate::board::Board;
     use crate::search::data::SearchData;
-use crate::types::{
+    use crate::types::{
         Piece, Side, Square,
         moves::{Move, MoveKind},
     };
@@ -387,7 +398,7 @@ use crate::types::{
 
     #[test]
     fn test_update_ep() {
-        let _ = SearchData{
+        let _ = SearchData {
             board: Board::from_fen("8/2p5/3p4/KP5r/1R3pPk/8/4P3/8 b - g3 0 1").unwrap(),
             ..Default::default()
         };

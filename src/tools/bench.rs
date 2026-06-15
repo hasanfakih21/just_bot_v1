@@ -1,8 +1,8 @@
 use std::time::Instant;
 
-use crate::{board::Board, search::data::SearchData, types::STARTING_FEN, uci::go};
+use crate::{board::Board, search::data::SearchData, tools::uci::go, types::STARTING_FEN};
 
-pub fn bench() {
+pub fn bench() -> (u64, u64) {
     let positions = [
         "3N4/2b4Q/3k2P1/5pR1/2BP3B/4K3/p2pN3/4q1r1 w - - 0 1",
         "8/1P1n4/3k4/N7/1nR4P/1QKpb3/1PPP1B2/5q2 w - - 0 1",
@@ -29,5 +29,5 @@ pub fn bench() {
     }
 
     let nps = (total_node_count as f32 / time.elapsed().as_secs_f32()) as usize;
-    println!("{} nodes {} nps", total_node_count, nps);
+    (total_node_count as u64, nps as u64)
 }
