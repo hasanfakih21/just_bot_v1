@@ -6,6 +6,7 @@ use crate::board::Board;
 use crate::search::data::{SearchData, SharedData};
 use crate::search::search_runner;
 use crate::tools::bench::bench;
+use crate::tools::datagen::generate_random_openings;
 use crate::types::*;
 
 pub fn input_loop(cli_args: String) {
@@ -64,7 +65,14 @@ pub fn input_loop(cli_args: String) {
                 println!("{} nodes {} nps", total_node_count, nps);
                 break;
             }
+            "genfens" => {
+                genfens(args);
+            }
             _ => (),
+        }
+
+        if input.contains("quit") {
+            break;
         }
 
         input.clear();
@@ -215,6 +223,29 @@ pub fn uci() {
     println!("option name Hash type spin default 16 min 1 max 512");
     println!("option name Clear Hash type button");
     println!("uciok");
+}
+
+pub fn genfens(args: &str) {
+    let args = args.to_ascii_lowercase();
+    let args: Vec<&str> = args.split_ascii_whitespace().collect();
+    let mut amount = 0;
+    let mut seed = 0;
+
+    match args.as_slice() {
+        [n, "seed", s, ..] => {
+            amount = n.parse::<usize>().unwrap_or(0); 
+            seed = s.parse::<u64>().unwrap_or(0); 
+        },
+        [n, ..] => {
+            amount = n.parse::<usize>().unwrap_or(0); 
+        },
+        _ => (),
+    }
+
+    let book = generate_random_openings(amount, 8, seed);
+    for opening in book {
+        println!("info string genfens {}", opening);
+    }
 }
 
 #[cfg(test)]
