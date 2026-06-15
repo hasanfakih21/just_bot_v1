@@ -326,7 +326,7 @@ pub fn search<Node: NodeType>(
                     }
                 } else {
                     //Add noisy moves to history
-                    let bonus = 100 * depth as i32 - 50;
+                    let bonus = 300 * depth as i32 - 250;
                     let piece = data.board.get_piece_at_square(m.get_from());
                     let to = m.get_to();
                     let captured = data
@@ -382,6 +382,44 @@ pub fn search<Node: NodeType>(
     }
 
     if let Some(m) = best_move {
+        if m.get_kind().is_quiet() {
+            let bonus = 300 * depth as i32 - 250;
+            let side = data.board.state.side_to_move;
+            let threats = data.board.state.threats;
+            data.quiet_history.update(threats, side, m, bonus);
+
+            //Add malus to previously searched quiet moves
+            for e in quiets_searched.iter() {
+                let quiet_move = e.mv;
+                data.quiet_history.update(threats, side, quiet_move, -bonus);
+            }
+        } else {
+            //Add noisy moves to history
+            let bonus = 300 * depth as i32 - 250;
+            let piece = data.board.get_piece_at_square(m.get_from());
+            let to = m.get_to();
+            let captured = data
+                .board
+                .get_piece_at_square(m.get_capture_square())
+                .map(|e| e.1);
+            let threats = data.board.state.threats;
+            data.noisy_history
+                .update(piece, to, captured, threats, bonus);
+
+            //Add maluses
+            for e in noisies_searched.iter() {
+                let m = e.mv;
+                let piece = data.board.get_piece_at_square(m.get_from());
+                let to = m.get_to();
+                let captured = data
+                    .board
+                    .get_piece_at_square(m.get_capture_square())
+                    .map(|e| e.1);
+                data.noisy_history
+                    .update(piece, to, captured, threats, -bonus);
+            }
+        }
+
         let tt_score = best_score;
         data.shared
             .tt
