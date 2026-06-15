@@ -60,7 +60,8 @@ pub fn input_loop(cli_args: String) {
             }
             "d" => println!("{}", data.board),
             "bench" => {
-                bench();
+                let (total_node_count, nps) = bench();
+                println!("{} nodes {} nps", total_node_count, nps);
                 break;
             }
             _ => (),
