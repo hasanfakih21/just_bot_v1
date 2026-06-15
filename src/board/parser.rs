@@ -153,7 +153,7 @@ impl Board {
         fen.push(' ');
         let ep_string = match self.state.enpassant {
             Some(square) => square.to_string(),
-            None => "-".to_string()
+            None => "-".to_string(),
         };
 
         fen.push_str(&ep_string);
@@ -209,8 +209,13 @@ mod tests {
         let board = Board::from_fen(STARTING_FEN).unwrap();
         assert_eq!(STARTING_FEN, board.to_fen());
 
-        let board = Board::from_fen("r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9").unwrap();
-        assert_eq!("r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9", board.to_fen());
+        let board =
+            Board::from_fen("r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9")
+                .unwrap();
+        assert_eq!(
+            "r2q1rk1/ppp2ppp/2n1bn2/2b1p3/3pP3/3P1NPP/PPP1NPB1/R1BQ1RK1 b - - 0 9",
+            board.to_fen()
+        );
 
         let board = Board::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1 ").unwrap();
         assert_eq!("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", board.to_fen());

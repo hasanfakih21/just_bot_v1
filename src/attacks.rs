@@ -1,6 +1,6 @@
 use std::sync::LazyLock;
 
-use crate::magics::{
+use crate::tools::magics::{
     BISHOP_MAGIC_NUMBERS, BISHOP_OCCUPANCY_BIT_COUNTS, ROOK_MAGIC_NUMBERS,
     ROOK_OCCUPANCY_BIT_COUNTS, get_magic_index, set_occupancy,
 };
@@ -109,7 +109,8 @@ pub static BETWEEN: [[BitBoard; 64]; 64] = {
     while square1 < 64 {
         let mut square2 = 0;
         while square2 < 64 {
-            between[square1][square2] = generate_between(Square::from(square1), Square::from(square2));
+            between[square1][square2] =
+                generate_between(Square::from(square1), Square::from(square2));
             square2 += 1;
         }
 
@@ -139,8 +140,14 @@ pub const DIAGONALS: [[BitBoard; 64]; 2] = {
     let mut diagonals = [[BitBoard(0); 64]; 2];
     let mut square = 0;
     while square < 64 {
-        diagonals[0][square] = BitBoard(generate_slide(Square::from(square), BitBoard(0), NORTH_EAST).0 | generate_slide(Square::from(square), BitBoard(0), SOUTH_WEST).0);
-        diagonals[1][square] = BitBoard(generate_slide(Square::from(square), BitBoard(0), SOUTH_EAST).0 | generate_slide(Square::from(square), BitBoard(0), NORTH_WEST).0);
+        diagonals[0][square] = BitBoard(
+            generate_slide(Square::from(square), BitBoard(0), NORTH_EAST).0
+                | generate_slide(Square::from(square), BitBoard(0), SOUTH_WEST).0,
+        );
+        diagonals[1][square] = BitBoard(
+            generate_slide(Square::from(square), BitBoard(0), SOUTH_EAST).0
+                | generate_slide(Square::from(square), BitBoard(0), NORTH_WEST).0,
+        );
 
         square += 1;
     }
@@ -149,7 +156,9 @@ pub const DIAGONALS: [[BitBoard; 64]; 2] = {
 };
 
 pub const fn generate_between(square1: Square, square2: Square) -> BitBoard {
-    let directions = [NORTH, SOUTH, EAST, WEST, NORTH_EAST, NORTH_WEST, SOUTH_EAST, SOUTH_WEST]; 
+    let directions = [
+        NORTH, SOUTH, EAST, WEST, NORTH_EAST, NORTH_WEST, SOUTH_EAST, SOUTH_WEST,
+    ];
     let mut between = 0;
     let mut i = 0;
 
@@ -168,7 +177,9 @@ pub const fn generate_between(square1: Square, square2: Square) -> BitBoard {
 }
 
 pub const fn generate_ray(square1: Square, square2: Square) -> BitBoard {
-    let directions = [NORTH, SOUTH, EAST, WEST, NORTH_EAST, NORTH_WEST, SOUTH_EAST, SOUTH_WEST]; 
+    let directions = [
+        NORTH, SOUTH, EAST, WEST, NORTH_EAST, NORTH_WEST, SOUTH_EAST, SOUTH_WEST,
+    ];
     let mut ray = 0;
     let mut i = 0;
 
@@ -226,7 +237,7 @@ pub const fn generate_slide(square: Square, occupancies: BitBoard, direction: i8
     let mut slide = BitBoard(0);
     let mut step = BitBoard(1 << square as usize);
     while (step.0 & (occupancies.0 | border(direction).0)) == 0 {
-        step = step.shift(direction); 
+        step = step.shift(direction);
         slide = BitBoard(step.0 | slide.0);
     }
 
@@ -614,12 +625,12 @@ mod tests {
     #[test]
     fn test_diagonals() {
         let bb = DIAGONALS[Side::White as usize][Square::E4 as usize];
-        bb.print_board(); 
+        bb.print_board();
     }
 
     #[test]
     fn test_rays() {
         let bb = RAYS[Square::E5 as usize][Square::H2 as usize];
-        bb.print_board(); 
+        bb.print_board();
     }
 }

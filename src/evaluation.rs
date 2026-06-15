@@ -233,7 +233,7 @@ impl Board {
     }
 
     pub fn has_legal_move(&mut self) -> bool {
-        let move_list = self.generate_moves(MoveGenKind::All); 
+        let move_list = self.generate_moves(MoveGenKind::All);
         !move_list.is_empty()
     }
 

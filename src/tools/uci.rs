@@ -2,10 +2,10 @@ use std::sync::Arc;
 use std::sync::mpsc::{Receiver, channel};
 use std::thread;
 
-use crate::bench::bench;
 use crate::board::Board;
 use crate::search::data::{SearchData, SharedData};
 use crate::search::search_runner;
+use crate::tools::bench::bench;
 use crate::types::*;
 
 pub fn input_loop(cli_args: String) {
@@ -53,7 +53,7 @@ pub fn input_loop(cli_args: String) {
             "quit" => break,
             "perft" => {
                 if let Ok(depth) = args.trim().parse::<usize>() {
-                    crate::perft::perft(depth, &mut data.board);
+                    crate::tools::perft::perft(depth, &mut data.board);
                 } else {
                     eprintln!("Invalid depth: {:?}", args);
                 }

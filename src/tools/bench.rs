@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use crate::{board::Board, search::data::SearchData, types::STARTING_FEN, uci::go};
+use crate::{board::Board, search::data::SearchData, tools::uci::go, types::STARTING_FEN};
 
 pub fn bench() {
     let positions = [
