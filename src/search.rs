@@ -382,42 +382,36 @@ pub fn search<Node: NodeType>(
     }
 
     if let Some(m) = best_move {
-        if m.get_kind().is_quiet() {
-            let bonus = 300 * depth as i32 - 250;
-            let side = data.board.state.side_to_move;
-            let threats = data.board.state.threats;
-            data.quiet_history.update(threats, side, m, bonus);
+        let noisy_bonus = 300 * depth as i32 - 250;
+        let quiet_bonus = 300 * depth as i32 - 250;
+        let threats = data.board.state.threats;
 
-            //Add malus to previously searched quiet moves
-            for e in quiets_searched.iter() {
-                let quiet_move = e.mv;
-                data.quiet_history.update(threats, side, quiet_move, -bonus);
-            }
+        if m.get_kind().is_quiet() {
+            let side = data.board.state.side_to_move;
+            data.quiet_history.update(threats, side, m, quiet_bonus);
         } else {
-            //Add noisy moves to history
-            let bonus = 300 * depth as i32 - 250;
+            //Add noisy moves to history 
             let piece = data.board.get_piece_at_square(m.get_from());
             let to = m.get_to();
             let captured = data
                 .board
                 .get_piece_at_square(m.get_capture_square())
                 .map(|e| e.1);
-            let threats = data.board.state.threats;
             data.noisy_history
-                .update(piece, to, captured, threats, bonus);
+                .update(piece, to, captured, threats, noisy_bonus);
+        }
 
-            //Add maluses
-            for e in noisies_searched.iter() {
-                let m = e.mv;
-                let piece = data.board.get_piece_at_square(m.get_from());
-                let to = m.get_to();
-                let captured = data
-                    .board
-                    .get_piece_at_square(m.get_capture_square())
-                    .map(|e| e.1);
-                data.noisy_history
-                    .update(piece, to, captured, threats, -bonus);
-            }
+        //Add maluses
+        for e in noisies_searched.iter() {
+            let m = e.mv;
+            let piece = data.board.get_piece_at_square(m.get_from());
+            let to = m.get_to();
+            let captured = data
+                .board
+                .get_piece_at_square(m.get_capture_square())
+                .map(|e| e.1);
+            data.noisy_history
+                .update(piece, to, captured, threats, -noisy_bonus);
         }
 
         let tt_score = best_score;
