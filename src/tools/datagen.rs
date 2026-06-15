@@ -16,11 +16,12 @@ pub fn generate_random_openings(amount: usize, plies: usize, seed: u64) -> Vec<S
 
     let mut openings = Vec::new();
     for _ in 0..amount {
-        let random_number = pseudo_rand(&mut SEED.lock().unwrap());
+        let mut random_number = pseudo_rand(&mut SEED.lock().unwrap());
         let mut random_board = randomize_from_startpos(plies, random_number);
 
         //Regenerate imbalanced positions
         while random_board.is_err() {
+            random_number = pseudo_rand(&mut SEED.lock().unwrap());
             random_board = randomize_from_startpos(plies, random_number);
         }
 
