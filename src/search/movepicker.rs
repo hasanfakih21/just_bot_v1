@@ -106,13 +106,9 @@ impl MovePicker {
                 score += 2000;
             }
 
-            if mv.get_kind().is_rook_promotion() | mv.get_kind().is_knight_promotion() {
-                score += 1000;
-            }
-
             let piece = data.board.get_piece_at_square(mv.get_from());
-            let to = mv.get_capture_square();
-            let captured = data.board.get_piece_at_square(to).map(|e| e.1);
+            let to = mv.get_to();
+            let captured = data.board.get_piece_at_square(mv.get_capture_square()).map(|e| e.1);
             if let Some(p) = captured {
                 score += p.value();
             }

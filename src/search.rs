@@ -329,8 +329,8 @@ pub fn search<Node: NodeType>(
                 {
                     let bonus = 300 * depth as i32 - 250;
                     let piece = data.board.get_piece_at_square(m.get_from());
-                    let to = m.get_capture_square();
-                    let captured = data.board.get_piece_at_square(to).map(|e| e.1);
+                    let to = m.get_to();
+                    let captured = data.board.get_piece_at_square(m.get_capture_square()).map(|e| e.1);
                     let threats = data.board.state.threats;
                     data.noisy_history
                         .update(piece, to, captured, threats, bonus);
@@ -339,8 +339,8 @@ pub fn search<Node: NodeType>(
                     for e in noisies_searched.iter() {
                         let m = e.mv;
                         let piece = data.board.get_piece_at_square(m.get_from());
-                        let to = m.get_capture_square();
-                        let captured = data.board.get_piece_at_square(to).map(|e| e.1);
+                        let to = m.get_to();
+                        let captured = data.board.get_piece_at_square(m.get_capture_square()).map(|e| e.1);
                         data.noisy_history
                             .update(piece, to, captured, threats, -bonus);
                     }
