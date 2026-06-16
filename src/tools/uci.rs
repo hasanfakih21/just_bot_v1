@@ -239,12 +239,12 @@ pub fn genfens(args: &str) {
 
     match args.as_slice() {
         [n, "seed", s, ..] => {
-            amount = n.parse::<usize>().unwrap_or(0); 
-            seed = s.parse::<u64>().unwrap_or(0); 
-        },
+            amount = n.parse::<usize>().unwrap_or(0);
+            seed = s.parse::<u64>().unwrap_or(0);
+        }
         [n, ..] => {
-            amount = n.parse::<usize>().unwrap_or(0); 
-        },
+            amount = n.parse::<usize>().unwrap_or(0);
+        }
         _ => (),
     }
 

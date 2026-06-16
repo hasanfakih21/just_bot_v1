@@ -251,6 +251,7 @@ pub fn search<Node: NodeType>(
 
     let mut move_picker = MovePicker::new(tt_move);
     let mut quiets_searched = MoveList::new();
+    let mut noisies_searched = MoveList::new();
     let mut skip_quiets = false;
 
     while let Some(m) = move_picker.next(data, skip_quiets) {
@@ -310,21 +311,50 @@ pub fn search<Node: NodeType>(
                 best_move = Some(m);
             }
 
+            //Cutoff
             if score >= beta {
-                //Add quiet moves to history
-                if m.get_kind().is_quiet() {
-                    let bonus = 300 * depth as i32 - 250;
-                    let side = data.board.state.side_to_move;
-                    let threats = data.board.state.threats;
-                    data.quiet_history.update(threats, side, m, bonus);
+                let quiet_bonus = 300 * depth as i32 - 250; 
+                let quiet_malus = 300 * depth as i32 - 250;
 
-                    //Add malus to previously searched quiet moves
+                let noisy_bonus = (250 * depth as i32).min(1000) - 250;
+                let noisy_malus = (300 * depth as i32).min(1000) - 250;
+
+                let threats = data.board.state.threats;
+
+                if m.get_kind().is_quiet() {
+                    //Add quiet bonus to history
+                    data.quiet_history.update(threats, stm, m, quiet_bonus);
+                    //Add malus to quiet moves
                     for e in quiets_searched.iter() {
                         let quiet_move = e.mv;
-                        data.quiet_history.update(threats, side, quiet_move, -bonus);
+                        data.quiet_history.update(threats, stm, quiet_move, -quiet_malus);
                     }
+                } else {
+                    //Add noisy bonus to history
+                    let piece = data.board.get_piece_at_square(m.get_from());
+                    let to = m.get_to();
+                    let captured = data
+                        .board
+                        .get_piece_at_square(m.get_capture_square())
+                        .map(|e| e.1);
+                    data.noisy_history
+                        .update(piece, to, captured, threats, noisy_bonus);
                 }
 
+                //Add malus to noisy moves
+                for e in noisies_searched.iter() {
+                    let m = e.mv;
+                    let piece = data.board.get_piece_at_square(m.get_from());
+                    let to = m.get_to();
+                    let captured = data
+                        .board
+                        .get_piece_at_square(m.get_capture_square())
+                        .map(|e| e.1);
+                    data.noisy_history
+                        .update(piece, to, captured, threats, -noisy_malus);
+                }
+
+                //Add TT entry
                 if let Some(m) = best_move {
                     let tt_score = best_score;
                     data.shared.tt.add_entry(
@@ -341,6 +371,8 @@ pub fn search<Node: NodeType>(
             //Add searched quiet moves to list
             if m.get_kind().is_quiet() {
                 quiets_searched.push(m);
+            } else {
+                noisies_searched.push(m);
             }
         }
     }
@@ -453,6 +485,16 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
             }
 
             if score >= beta {
+                //Add noisy bonus to history
+                let piece = data.board.get_piece_at_square(m.get_from());
+                let to = m.get_to();
+                let captured = data
+                    .board
+                    .get_piece_at_square(m.get_capture_square())
+                    .map(|e| e.1);
+                data.noisy_history
+                    .update(piece, to, captured, data.board.state.threats, 100);
+            
                 return score;
             }
             if score > best_score {

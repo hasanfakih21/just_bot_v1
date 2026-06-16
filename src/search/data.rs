@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use crate::board::Board;
 use crate::search::time::{TimeManager, TimeSettings};
-use crate::types::{Move, MoveList, STARTING_FEN};
+use crate::types::{Move, MoveList, NoisyHistory, STARTING_FEN};
 use crate::types::{QuietHistory, TranspositionTable};
 
 #[derive(Debug)]
@@ -75,6 +75,7 @@ pub struct SearchData {
     pub time: TimeManager,
 
     pub quiet_history: QuietHistory,
+    pub noisy_history: NoisyHistory,
 }
 
 impl SearchData {
@@ -85,11 +86,13 @@ impl SearchData {
             board: Board::from_fen(STARTING_FEN).unwrap(),
             time: TimeManager::new(),
             quiet_history: QuietHistory::new(),
+            noisy_history: NoisyHistory::new(),
         }
     }
 
-    pub fn clear_history(&mut self) {
+    pub fn clear_histories(&mut self) {
         self.quiet_history = QuietHistory::new();
+        self.noisy_history = NoisyHistory::new();
     }
 
     pub fn get_pv(&self) -> &MoveList {
@@ -127,9 +130,10 @@ impl SearchData {
 
     pub fn over_limit(&self) -> bool {
         if let Some(node_limt) = self.time.node_limit()
-            && self.shared.get_total_nodes_searched() >= node_limt {
-                return true
-            }
+            && self.shared.get_total_nodes_searched() >= node_limt
+        {
+            return true;
+        }
 
         self.time.over_limit()
     }

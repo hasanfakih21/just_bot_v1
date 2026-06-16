@@ -1,6 +1,10 @@
 use std::sync::Mutex;
 
-use crate::{board::{Board, movegen::MoveGenKind}, tools::bench::bench, types::{STARTING_FEN, pseudo_rand}};
+use crate::{
+    board::{Board, movegen::MoveGenKind},
+    tools::bench::bench,
+    types::{STARTING_FEN, pseudo_rand},
+};
 
 #[derive(Debug)]
 pub struct BadRandomBoard;
@@ -39,7 +43,7 @@ pub fn randomize_from_startpos(plies: usize, random_number: u64) -> Result<Board
         let move_list = board.generate_moves(MoveGenKind::All);
         //Check if there's atleast one legal move first
         if move_list.is_empty() {
-            return Err(BadRandomBoard)
+            return Err(BadRandomBoard);
         }
 
         let index = pseudo_rand(&mut state) % move_list.len() as u64;
@@ -49,7 +53,7 @@ pub fn randomize_from_startpos(plies: usize, random_number: u64) -> Result<Board
 
     //Check if eval is not too uneven
     if board.evaluate().abs() > 1000 {
-        return Err(BadRandomBoard)
+        return Err(BadRandomBoard);
     }
 
     Ok(board)
