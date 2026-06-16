@@ -217,13 +217,13 @@ pub fn search<Node: NodeType>(
     }
 
     let in_check = data.board.king_in_check(stm);
+    let static_eval = data.board.evaluate();
 
     //Reverse Futillity Pruning (RFP)
     if !in_check && !Node::PV && depth < 7 {
-        let eval = data.board.evaluate();
         let margin = 150 * depth as i32;
-        if eval >= beta + margin {
-            return eval;
+        if static_eval >= beta + margin {
+            return static_eval;
         }
     }
 
@@ -263,6 +263,16 @@ pub fn search<Node: NodeType>(
                 && !mating(beta)
                 && m.get_kind().is_quiet()
                 && move_count > 6 + 2 * depth as usize * depth as usize
+            {
+                skip_quiets = true;
+                continue;
+            }
+
+            //Futility Pruning (FP)
+            if !in_check
+                && m.get_kind().is_quiet()
+                && depth < 6
+                && static_eval + 100 * depth as i32 + 150 <= alpha
             {
                 skip_quiets = true;
                 continue;
@@ -313,7 +323,7 @@ pub fn search<Node: NodeType>(
 
             //Cutoff
             if score >= beta {
-                let quiet_bonus = 300 * depth as i32 - 250; 
+                let quiet_bonus = 300 * depth as i32 - 250;
                 let quiet_malus = 300 * depth as i32 - 250;
 
                 let noisy_bonus = (250 * depth as i32).min(1000) - 250;
@@ -327,7 +337,8 @@ pub fn search<Node: NodeType>(
                     //Add malus to quiet moves
                     for e in quiets_searched.iter() {
                         let quiet_move = e.mv;
-                        data.quiet_history.update(threats, stm, quiet_move, -quiet_malus);
+                        data.quiet_history
+                            .update(threats, stm, quiet_move, -quiet_malus);
                     }
                 } else {
                     //Add noisy bonus to history
@@ -494,7 +505,7 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
                     .map(|e| e.1);
                 data.noisy_history
                     .update(piece, to, captured, data.board.state.threats, 100);
-            
+
                 return score;
             }
             if score > best_score {
