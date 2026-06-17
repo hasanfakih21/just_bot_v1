@@ -179,15 +179,15 @@ impl Board {
         self.state.material_value[side as usize] - self.state.material_value[side.other() as usize]
     }
 
-    pub fn evaluate(&self) -> i32 {
-        let mut mop_up_bonus = 0;
-        //If only KQK or Lower then should mop up
-        if self.is_mop_up_pos() {
-            mop_up_bonus = self.mop_up();
-        }
+    // pub fn evaluate(&self) -> i32 {
+    //     let mut mop_up_bonus = 0;
+    //     //If only KQK or Lower then should mop up
+    //     if self.is_mop_up_pos() {
+    //         mop_up_bonus = self.mop_up();
+    //     }
 
-        self.get_piece_square_evaluation() + mop_up_bonus
-    }
+    //     self.get_piece_square_evaluation() + mop_up_bonus
+    // }
 
     pub const fn is_mop_up_pos(&self) -> bool {
         self.total_material_value() <= 900 && self.get_material_evaluation() > 0
@@ -369,24 +369,24 @@ mod tests {
         assert_eq!(14, manhattan_distance(square_1, square_2));
     }
 
-    #[test]
-    fn test_mop_up() {
-        let board = Board::from_fen("2K2R2/8/8/8/8/8/8/3k4 w - - 0 1").unwrap();
-        assert_eq!(board.total_material_value(), Piece::Rook.value());
-        println!("{}", board.mop_up());
-        println!("{}", board.evaluate());
-        let first_bonus = board.mop_up();
-        let first_score = board.evaluate();
+    // #[test]
+    // fn test_mop_up() {
+    //     let board = Board::from_fen("2K2R2/8/8/8/8/8/8/3k4 w - - 0 1").unwrap();
+    //     assert_eq!(board.total_material_value(), Piece::Rook.value());
+    //     println!("{}", board.mop_up());
+    //     println!("{}", board.evaluate());
+    //     let first_bonus = board.mop_up();
+    //     let first_score = board.evaluate();
 
-        let board = Board::from_fen("5R2/8/8/8/8/2K5/8/3k4 w - - 0 1").unwrap();
-        println!("{}", board.mop_up());
-        println!("{}", board.evaluate());
-        let second_bonus = board.mop_up();
-        let second_score = board.evaluate();
+    //     let board = Board::from_fen("5R2/8/8/8/8/2K5/8/3k4 w - - 0 1").unwrap();
+    //     println!("{}", board.mop_up());
+    //     println!("{}", board.evaluate());
+    //     let second_bonus = board.mop_up();
+    //     let second_score = board.evaluate();
 
-        assert!(second_bonus > first_bonus);
-        assert!(second_score > first_score);
-    }
+    //     assert!(second_bonus > first_bonus);
+    //     assert!(second_score > first_score);
+    // }
 
     #[test]
     fn test_mated_score() {

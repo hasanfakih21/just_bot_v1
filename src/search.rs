@@ -62,6 +62,9 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
     data.start_time();
     data.time.set_depth_limit();
 
+    data.clear_features();
+    data.initialize_nnue();
+
     let mut depth = 1;
 
     //Initialize with move from first depth
@@ -217,7 +220,7 @@ pub fn search<Node: NodeType>(
     }
 
     let in_check = data.board.king_in_check(stm);
-    let static_eval = data.board.evaluate();
+    let static_eval = data.nnue_evaluate();
 
     //Reverse Futillity Pruning (RFP)
     if !in_check && !Node::PV && depth < 7 {
@@ -279,6 +282,7 @@ pub fn search<Node: NodeType>(
             }
         }
 
+        data.make_move(m);
         if data.board.make_move(m).is_ok() {
             let mut score = best_score;
 
@@ -306,6 +310,8 @@ pub fn search<Node: NodeType>(
             }
 
             data.board.unmake_move();
+            data.unmake_move(m);
+
             if data.over_limit() || data.shared.status.get() == Status::STOPPED {
                 return TIMEOUT_SCORE;
             }
@@ -408,7 +414,7 @@ pub fn search<Node: NodeType>(
 
 pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) -> i32 {
     data.shared.add_nodes(1);
-    let mut best_score = data.board.evaluate();
+    let mut best_score = data.nnue_evaluate();
 
     if best_score >= beta {
         return best_score;
@@ -431,9 +437,13 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
             continue;
         }
 
+        data.make_move(m);
         if data.board.make_move(m).is_ok() {
             let score = -quiesce(data, -beta, -alpha, _ply + 1);
+
             data.board.unmake_move();
+            data.unmake_move(m);
+
             if data.over_limit() || data.shared.status.get() == Status::STOPPED {
                 return TIMEOUT_SCORE;
             }
@@ -488,9 +498,13 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
     while let Some(m) = move_picker.next(data, false) {
         move_count += 1;
 
+        data.make_move(m);
         if data.board.make_move(m).is_ok() {
             let score = -search_checks(data, -beta, -alpha, ply + 1);
+
             data.board.unmake_move();
+            data.unmake_move(m);
+
             if data.over_limit() || data.shared.status.get() == Status::STOPPED {
                 return TIMEOUT_SCORE;
             }
