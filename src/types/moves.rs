@@ -213,7 +213,7 @@ impl Display for Move {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MoveKind {
     QuietMove = 0b0000,
     DoublePawn = 0b0001,

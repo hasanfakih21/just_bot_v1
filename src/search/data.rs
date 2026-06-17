@@ -2,8 +2,12 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 use crate::board::Board;
+use crate::nnue::{Accumulator, NNUE};
 use crate::search::time::{TimeManager, TimeSettings};
-use crate::types::{Move, MoveList, NoisyHistory, STARTING_FEN};
+use crate::types::{
+    KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, Move, MoveKind, MoveList, NoisyHistory, Piece,
+    QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE, STARTING_FEN, Side, Square, to_file_bb,
+};
 use crate::types::{QuietHistory, TranspositionTable};
 
 #[derive(Debug)]
@@ -76,6 +80,9 @@ pub struct SearchData {
 
     pub quiet_history: QuietHistory,
     pub noisy_history: NoisyHistory,
+
+    pub white_features: Accumulator,
+    pub black_features: Accumulator,
 }
 
 impl SearchData {
@@ -87,6 +94,9 @@ impl SearchData {
             time: TimeManager::new(),
             quiet_history: QuietHistory::new(),
             noisy_history: NoisyHistory::new(),
+
+            white_features: Accumulator::new(&NNUE),
+            black_features: Accumulator::new(&NNUE),
         }
     }
 
@@ -140,6 +150,195 @@ impl SearchData {
 
     pub fn reset_pv(&mut self) {
         self.pv = vec![MoveList::new(); 128];
+    }
+
+    //Called before move is made on the board
+    pub fn make_move(&mut self, m: Move) {
+        let from = m.get_from();
+        let to = m.get_to();
+        let kind = m.get_kind();
+        let stm = self.board.state.side_to_move;
+
+        //Need to toggle off extra captured piece in case of capture
+        if kind.is_capture() {
+            let capture_square = m.get_capture_square();
+            let (captured_side, captured_piece) =
+                self.board.get_piece_at_square(capture_square).unwrap();
+
+            self.white_features.toggle_off(
+                captured_side == Side::White,
+                captured_piece,
+                capture_square,
+            );
+            self.black_features.toggle_off(
+                captured_side == Side::Black,
+                captured_piece,
+                capture_square,
+            );
+        } 
+
+        //Need to toggle rook in case of castling
+        if kind == MoveKind::KingCastle {
+            debug_assert!(!(from.to_bb() & to_file_bb(Square::E4)).is_empty());
+            let king_rook_square = match stm {
+                Side::White => KING_SIDE_ROOK_WHITE,
+                Side::Black => KING_SIDE_ROOK_BLACK,
+            };
+
+            self.white_features
+                .toggle_off(stm == Side::White, Piece::Rook, king_rook_square);
+            self.black_features
+                .toggle_off(stm == Side::Black, Piece::Rook, king_rook_square);
+
+            self.white_features
+                .toggle_on(stm == Side::White, Piece::Rook, from.shift(1).unwrap());
+            self.white_features
+                .toggle_on(stm == Side::Black, Piece::Rook, from.shift(1).unwrap());
+        }
+
+        //Need to toggle rook in case of castling
+        if kind == MoveKind::QueenCastle {
+            debug_assert!(!(from.to_bb() & to_file_bb(Square::E4)).is_empty());
+            let queen_rook_square = match stm {
+                Side::White => QUEEN_SIDE_ROOK_WHITE,
+                Side::Black => QUEEN_SIDE_ROOK_BLACK,
+            };
+
+            self.white_features
+                .toggle_off(stm == Side::White, Piece::Rook, queen_rook_square);
+            self.black_features
+                .toggle_off(stm == Side::Black, Piece::Rook, queen_rook_square);
+
+            self.white_features
+                .toggle_on(stm == Side::White, Piece::Rook, from.shift(-1).unwrap());
+            self.white_features
+                .toggle_on(stm == Side::Black, Piece::Rook, from.shift(-1).unwrap());
+        }
+
+        let moving_piece = self.board.get_piece_at_square(from).unwrap().1;
+        //Need to handle promotions
+        if kind.is_promotion() {
+            let promotion_piece = m.get_promoted_piece().unwrap();
+            self.white_features
+                .toggle_off(stm == Side::White, moving_piece, from);
+            self.white_features
+                .toggle_off(stm == Side::Black, moving_piece, from);
+
+            self.white_features
+                .toggle_on(stm == Side::White, promotion_piece, to);
+            self.white_features
+                .toggle_on(stm == Side::Black, promotion_piece, to);
+        } else {
+            self.white_features
+                .toggle_off(stm == Side::White, moving_piece, from);
+            self.white_features
+                .toggle_off(stm == Side::Black, moving_piece, from);
+
+            self.white_features
+                .toggle_on(stm == Side::White, moving_piece, to);
+            self.white_features
+                .toggle_on(stm == Side::Black, moving_piece, to);
+        }
+    }
+
+    //Called after move is already unmade on the board
+    pub fn unmake_move(&mut self, m: Move) {
+        let from = m.get_from();
+        let to = m.get_to();
+        let kind = m.get_kind();
+        let stm = self.board.state.side_to_move;
+
+        //Need to toggle off extra captured piece in case of capture
+        if kind.is_capture() {
+            let capture_square = m.get_capture_square();
+            let (captured_side, captured_piece) =
+                self.board.get_piece_at_square(capture_square).unwrap();
+
+            self.white_features.toggle_on(
+                captured_side == Side::White,
+                captured_piece,
+                capture_square,
+            );
+            self.black_features.toggle_on(
+                captured_side == Side::Black,
+                captured_piece,
+                capture_square,
+            );
+        } 
+
+        //Need to toggle rook in case of castling
+        if kind == MoveKind::KingCastle {
+            debug_assert!(!(from.to_bb() & to_file_bb(Square::E4)).is_empty());
+            let king_rook_square = match stm {
+                Side::White => KING_SIDE_ROOK_WHITE,
+                Side::Black => KING_SIDE_ROOK_BLACK,
+            };
+
+            self.white_features
+                .toggle_on(stm == Side::White, Piece::Rook, king_rook_square);
+            self.black_features
+                .toggle_on(stm == Side::Black, Piece::Rook, king_rook_square);
+
+            self.white_features
+                .toggle_off(stm == Side::White, Piece::Rook, from.shift(1).unwrap());
+            self.white_features
+                .toggle_off(stm == Side::Black, Piece::Rook, from.shift(1).unwrap());
+        }
+
+        //Need to toggle rook in case of castling
+        if kind == MoveKind::QueenCastle {
+            debug_assert!(!(from.to_bb() & to_file_bb(Square::E4)).is_empty());
+            let queen_rook_square = match stm {
+                Side::White => QUEEN_SIDE_ROOK_WHITE,
+                Side::Black => QUEEN_SIDE_ROOK_BLACK,
+            };
+
+            self.white_features
+                .toggle_on(stm == Side::White, Piece::Rook, queen_rook_square);
+            self.black_features
+                .toggle_on(stm == Side::Black, Piece::Rook, queen_rook_square);
+
+            self.white_features
+                .toggle_off(stm == Side::White, Piece::Rook, from.shift(-1).unwrap());
+            self.white_features
+                .toggle_off(stm == Side::Black, Piece::Rook, from.shift(-1).unwrap());
+        }
+
+        let moving_piece = self.board.get_piece_at_square(from).unwrap().1;
+        //Need to handle promotions
+        if kind.is_promotion() {
+            let promotion_piece = m.get_promoted_piece().unwrap();
+            self.white_features
+                .toggle_on(stm == Side::White, moving_piece, from);
+            self.white_features
+                .toggle_on(stm == Side::Black, moving_piece, from);
+
+            self.white_features
+                .toggle_off(stm == Side::White, promotion_piece, to);
+            self.white_features
+                .toggle_off(stm == Side::Black, promotion_piece, to);
+        } else {
+            self.white_features
+                .toggle_on(stm == Side::White, moving_piece, from);
+            self.white_features
+                .toggle_on(stm == Side::Black, moving_piece, from);
+
+            self.white_features
+                .toggle_off(stm == Side::White, moving_piece, to);
+            self.white_features
+                .toggle_off(stm == Side::Black, moving_piece, to);
+        }
+    }
+
+    pub fn nnue_evaluate(&self) -> i32 {
+        let stm = self.board.state.side_to_move;
+
+        let (us, them) = match stm {
+            Side::White => (&self.white_features, &self.black_features),
+            Side::Black => (&self.black_features, &self.white_features), 
+        };
+
+        NNUE.evaluate(us, them)
     }
 }
 
