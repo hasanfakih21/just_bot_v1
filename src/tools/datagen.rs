@@ -1,7 +1,9 @@
 use std::sync::Mutex;
 
+use rand::random;
+
 use crate::{
-    board::{Board, movegen::MoveGenKind}, search::data::SearchData, tools::bench::bench, types::pseudo_rand
+    board::{Board, movegen::MoveGenKind}, search::data::SearchData, types::pseudo_rand
 };
 
 #[derive(Debug)]
@@ -13,7 +15,7 @@ pub fn generate_random_openings(amount: usize, plies: usize, seed: u64) -> Vec<S
     if seed != 0 {
         *SEED.lock().unwrap() = seed;
     } else {
-        *SEED.lock().unwrap() = bench().1;
+        *SEED.lock().unwrap() = random();
     }
 
     let mut openings = Vec::new();
