@@ -116,7 +116,7 @@ impl Accumulator {
 
 #[cfg(test)]
 mod tests {
-    use crate::{board::Board, search::data::SearchData, tools::uci::go};
+    use crate::{board::{Board, movegen::MoveGenKind}, search::data::SearchData, tools::uci::go};
 
     use super::*;
 
@@ -148,5 +148,36 @@ mod tests {
 
         println!("NNUE: {}", eval);
         println!("TEST: {}", data.nnue_evaluate())
+    }
+
+    #[test]
+    fn test_nnue_make_unmake() {
+        let mut data = SearchData {
+            board: Board::from_fen("rnbq1rk1/pp3p2/4pnpp/1p1p2N1/3P4/1P2P3/PBPbKPPP/R6R w - - 2 4")
+                .unwrap(),
+            ..Default::default()
+        };
+
+        data.initialize_nnue();
+        let first_eval = data.nnue_evaluate();
+
+        println!("First Eval: {}", first_eval);
+        let move_list = data.board.generate_moves(MoveGenKind::All);
+        println!("{}", move_list);
+        let m = data.board.parse_move("e2d1").unwrap();
+
+        //Make the move
+        data.make_move(m);
+        let _ = data.board.make_move(m);
+
+        println!("Second Eval: {}", data.nnue_evaluate());
+
+        //Unmake the move
+        data.board.unmake_move();
+        data.unmake_move(m);
+
+        let final_eval = data.nnue_evaluate();
+        println!("Final Eval: {}", final_eval);
+        assert_eq!(final_eval, first_eval);
     }
 }

@@ -173,7 +173,7 @@ impl SearchData {
             self.black_features.toggle_off(
                 captured_side == Side::Black,
                 captured_piece,
-                capture_square,
+                capture_square ^ 56,
             );
         } 
 
@@ -188,12 +188,12 @@ impl SearchData {
             self.white_features
                 .toggle_off(stm == Side::White, Piece::Rook, king_rook_square);
             self.black_features
-                .toggle_off(stm == Side::Black, Piece::Rook, king_rook_square);
+                .toggle_off(stm == Side::Black, Piece::Rook, king_rook_square ^ 56);
 
             self.white_features
                 .toggle_on(stm == Side::White, Piece::Rook, from.shift(1).unwrap());
             self.black_features
-                .toggle_on(stm == Side::Black, Piece::Rook, from.shift(1).unwrap());
+                .toggle_on(stm == Side::Black, Piece::Rook, from.shift(1).unwrap() ^ 56);
         }
 
         //Need to toggle rook in case of castling
@@ -207,12 +207,12 @@ impl SearchData {
             self.white_features
                 .toggle_off(stm == Side::White, Piece::Rook, queen_rook_square);
             self.black_features
-                .toggle_off(stm == Side::Black, Piece::Rook, queen_rook_square);
+                .toggle_off(stm == Side::Black, Piece::Rook, queen_rook_square ^ 56);
 
             self.white_features
                 .toggle_on(stm == Side::White, Piece::Rook, from.shift(-1).unwrap());
             self.black_features
-                .toggle_on(stm == Side::Black, Piece::Rook, from.shift(-1).unwrap());
+                .toggle_on(stm == Side::Black, Piece::Rook, from.shift(-1).unwrap() ^ 56);
         }
 
         let moving_piece = self.board.get_piece_at_square(from).unwrap().1;
@@ -222,22 +222,22 @@ impl SearchData {
             self.white_features
                 .toggle_off(stm == Side::White, moving_piece, from);
             self.black_features
-                .toggle_off(stm == Side::Black, moving_piece, from);
+                .toggle_off(stm == Side::Black, moving_piece, from ^ 56);
 
             self.white_features
                 .toggle_on(stm == Side::White, promotion_piece, to);
             self.black_features
-                .toggle_on(stm == Side::Black, promotion_piece, to);
+                .toggle_on(stm == Side::Black, promotion_piece, to ^ 56);
         } else {
             self.white_features
                 .toggle_off(stm == Side::White, moving_piece, from);
             self.black_features
-                .toggle_off(stm == Side::Black, moving_piece, from);
+                .toggle_off(stm == Side::Black, moving_piece, from ^ 56);
 
             self.white_features
                 .toggle_on(stm == Side::White, moving_piece, to);
             self.black_features
-                .toggle_on(stm == Side::Black, moving_piece, to);
+                .toggle_on(stm == Side::Black, moving_piece, to ^ 56);
         }
     }
 
@@ -262,7 +262,7 @@ impl SearchData {
             self.black_features.toggle_on(
                 captured_side == Side::Black,
                 captured_piece,
-                capture_square,
+                capture_square ^ 56,
             );
         } 
 
@@ -277,12 +277,12 @@ impl SearchData {
             self.white_features
                 .toggle_on(stm == Side::White, Piece::Rook, king_rook_square);
             self.black_features
-                .toggle_on(stm == Side::Black, Piece::Rook, king_rook_square);
+                .toggle_on(stm == Side::Black, Piece::Rook, king_rook_square ^ 56);
 
             self.white_features
                 .toggle_off(stm == Side::White, Piece::Rook, from.shift(1).unwrap());
             self.black_features
-                .toggle_off(stm == Side::Black, Piece::Rook, from.shift(1).unwrap());
+                .toggle_off(stm == Side::Black, Piece::Rook, from.shift(1).unwrap() ^ 56);
         }
 
         //Need to toggle rook in case of castling
@@ -296,12 +296,12 @@ impl SearchData {
             self.white_features
                 .toggle_on(stm == Side::White, Piece::Rook, queen_rook_square);
             self.black_features
-                .toggle_on(stm == Side::Black, Piece::Rook, queen_rook_square);
+                .toggle_on(stm == Side::Black, Piece::Rook, queen_rook_square ^ 56);
 
             self.white_features
                 .toggle_off(stm == Side::White, Piece::Rook, from.shift(-1).unwrap());
             self.black_features
-                .toggle_off(stm == Side::Black, Piece::Rook, from.shift(-1).unwrap());
+                .toggle_off(stm == Side::Black, Piece::Rook, from.shift(-1).unwrap() ^ 56);
         }
 
         let moving_piece = self.board.get_piece_at_square(from).unwrap().1;
@@ -311,22 +311,22 @@ impl SearchData {
             self.white_features
                 .toggle_on(stm == Side::White, moving_piece, from);
             self.black_features
-                .toggle_on(stm == Side::Black, moving_piece, from);
+                .toggle_on(stm == Side::Black, moving_piece, from ^ 56);
 
             self.white_features
                 .toggle_off(stm == Side::White, promotion_piece, to);
             self.black_features
-                .toggle_off(stm == Side::Black, promotion_piece, to);
+                .toggle_off(stm == Side::Black, promotion_piece, to ^ 56);
         } else {
             self.white_features
                 .toggle_on(stm == Side::White, moving_piece, from);
             self.black_features
-                .toggle_on(stm == Side::Black, moving_piece, from);
+                .toggle_on(stm == Side::Black, moving_piece, from ^ 56);
 
             self.white_features
                 .toggle_off(stm == Side::White, moving_piece, to);
             self.black_features
-                .toggle_off(stm == Side::Black, moving_piece, to);
+                .toggle_off(stm == Side::Black, moving_piece, to ^ 56);
         }
     }
 
@@ -348,7 +348,7 @@ impl SearchData {
                 let side_piece = self.board.get_piece_at_square(square);
                 if let Some((side, piece)) = side_piece {
                     self.white_features.toggle_on(side == Side::White, piece, square);
-                    self.black_features.toggle_on(side == Side::Black, piece, square );
+                    self.black_features.toggle_on(side == Side::Black, piece, square ^ 56);
                 }
             }
         }
