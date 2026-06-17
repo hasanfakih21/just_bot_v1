@@ -192,7 +192,7 @@ impl SearchData {
 
             self.white_features
                 .toggle_on(stm == Side::White, Piece::Rook, from.shift(1).unwrap());
-            self.white_features
+            self.black_features
                 .toggle_on(stm == Side::Black, Piece::Rook, from.shift(1).unwrap());
         }
 
@@ -211,7 +211,7 @@ impl SearchData {
 
             self.white_features
                 .toggle_on(stm == Side::White, Piece::Rook, from.shift(-1).unwrap());
-            self.white_features
+            self.black_features
                 .toggle_on(stm == Side::Black, Piece::Rook, from.shift(-1).unwrap());
         }
 
@@ -221,22 +221,22 @@ impl SearchData {
             let promotion_piece = m.get_promoted_piece().unwrap();
             self.white_features
                 .toggle_off(stm == Side::White, moving_piece, from);
-            self.white_features
+            self.black_features
                 .toggle_off(stm == Side::Black, moving_piece, from);
 
             self.white_features
                 .toggle_on(stm == Side::White, promotion_piece, to);
-            self.white_features
+            self.black_features
                 .toggle_on(stm == Side::Black, promotion_piece, to);
         } else {
             self.white_features
                 .toggle_off(stm == Side::White, moving_piece, from);
-            self.white_features
+            self.black_features
                 .toggle_off(stm == Side::Black, moving_piece, from);
 
             self.white_features
                 .toggle_on(stm == Side::White, moving_piece, to);
-            self.white_features
+            self.black_features
                 .toggle_on(stm == Side::Black, moving_piece, to);
         }
     }
@@ -281,7 +281,7 @@ impl SearchData {
 
             self.white_features
                 .toggle_off(stm == Side::White, Piece::Rook, from.shift(1).unwrap());
-            self.white_features
+            self.black_features
                 .toggle_off(stm == Side::Black, Piece::Rook, from.shift(1).unwrap());
         }
 
@@ -300,7 +300,7 @@ impl SearchData {
 
             self.white_features
                 .toggle_off(stm == Side::White, Piece::Rook, from.shift(-1).unwrap());
-            self.white_features
+            self.black_features
                 .toggle_off(stm == Side::Black, Piece::Rook, from.shift(-1).unwrap());
         }
 
@@ -310,22 +310,22 @@ impl SearchData {
             let promotion_piece = m.get_promoted_piece().unwrap();
             self.white_features
                 .toggle_on(stm == Side::White, moving_piece, from);
-            self.white_features
+            self.black_features
                 .toggle_on(stm == Side::Black, moving_piece, from);
 
             self.white_features
                 .toggle_off(stm == Side::White, promotion_piece, to);
-            self.white_features
+            self.black_features
                 .toggle_off(stm == Side::Black, promotion_piece, to);
         } else {
             self.white_features
                 .toggle_on(stm == Side::White, moving_piece, from);
-            self.white_features
+            self.black_features
                 .toggle_on(stm == Side::Black, moving_piece, from);
 
             self.white_features
                 .toggle_off(stm == Side::White, moving_piece, to);
-            self.white_features
+            self.black_features
                 .toggle_off(stm == Side::Black, moving_piece, to);
         }
     }
@@ -339,6 +339,19 @@ impl SearchData {
         };
 
         NNUE.evaluate(us, them)
+    }
+
+    pub fn initialize_nnue(&mut self) {
+        for rank in 0..8 {
+            for file in 0..8 {
+                let square = Square::from_rank_and_file(rank, file);
+                let side_piece = self.board.get_piece_at_square(square);
+                if let Some((side, piece)) = side_piece {
+                    self.white_features.toggle_on(side == Side::White, piece, square);
+                    self.black_features.toggle_on(side == Side::Black, piece, square );
+                }
+            }
+        }
     }
 }
 

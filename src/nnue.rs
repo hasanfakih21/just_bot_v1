@@ -123,7 +123,7 @@ mod tests {
     #[test]
     fn test_nnue() {
         let mut data = SearchData {
-            board: Board::from_fen("rnbqk2r/pp3p2/4pnpp/1p1p2N1/3P4/1P2P3/PBPbKPPP/R6R b kq - 1 3")
+            board: Board::from_fen("rnbq1rk1/pp3p2/4pnpp/1p1p2N1/3P4/1P2P3/PBPbKPPP/R6R w - - 2 4")
                 .unwrap(),
             ..Default::default()
         };
@@ -147,5 +147,6 @@ mod tests {
         go("nodes 40000", &mut data);
 
         println!("NNUE: {}", eval);
+        println!("TEST: {}", data.nnue_evaluate())
     }
 }

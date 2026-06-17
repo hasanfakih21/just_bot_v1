@@ -61,6 +61,7 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
     data.reset_pv();
     data.start_time();
     data.time.set_depth_limit();
+    data.initialize_nnue();
 
     let mut depth = 1;
 
