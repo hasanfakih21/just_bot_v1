@@ -123,7 +123,7 @@ mod tests {
     #[test]
     fn test_nnue() {
         let mut data = SearchData {
-            board: Board::from_fen("rnbq1rk1/pp3p2/4pnpp/1p1p2N1/3P4/1P2P3/PBPbKPPP/R6R w - - 2 4")
+            board: Board::from_fen("rn1qkbnr/ppp1p1p1/3p1P1p/8/6b1/8/PPPP1PPP/RNB1KBNR w KQkq - 0 5")
                 .unwrap(),
             ..Default::default()
         };
@@ -138,7 +138,7 @@ mod tests {
                 let stm = data.board.state.side_to_move;
                 if let Some((side, piece)) = side_piece {
                     us.toggle_on(side == stm, piece, square);
-                    them.toggle_on(side != stm, piece, square ^ 56);
+                    them.toggle_on(side != stm, piece, square);
                 }
             }
         }

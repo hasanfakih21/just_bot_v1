@@ -167,19 +167,10 @@ impl SearchData {
         //Need to toggle off extra captured piece in case of capture
         if kind.is_capture() {
             let capture_square = m.get_capture_square();
-            let (captured_side, captured_piece) =
+            let (_, captured_piece) =
                 self.board.get_piece_at_square(capture_square).unwrap();
-
-            self.white_features.toggle_off(
-                captured_side == Side::White,
-                captured_piece,
-                capture_square,
-            );
-            self.black_features.toggle_off(
-                captured_side == Side::Black,
-                captured_piece,
-                capture_square,
-            );
+ 
+            self.toggle_accumulators_off(stm.other(), captured_piece, capture_square);
         } 
 
         //Need to toggle rook in case of castling
@@ -190,15 +181,8 @@ impl SearchData {
                 Side::Black => KING_SIDE_ROOK_BLACK,
             };
 
-            self.white_features
-                .toggle_off(stm == Side::White, Piece::Rook, king_rook_square);
-            self.black_features
-                .toggle_off(stm == Side::Black, Piece::Rook, king_rook_square);
-
-            self.white_features
-                .toggle_on(stm == Side::White, Piece::Rook, from.shift(1).unwrap());
-            self.black_features
-                .toggle_on(stm == Side::Black, Piece::Rook, from.shift(1).unwrap());
+            self.toggle_accumulators_off(stm, Piece::Rook, king_rook_square);
+            self.toggle_accumulators_on(stm, Piece::Rook, from.shift(1).unwrap());    
         }
 
         //Need to toggle rook in case of castling
@@ -209,40 +193,19 @@ impl SearchData {
                 Side::Black => QUEEN_SIDE_ROOK_BLACK,
             };
 
-            self.white_features
-                .toggle_off(stm == Side::White, Piece::Rook, queen_rook_square);
-            self.black_features
-                .toggle_off(stm == Side::Black, Piece::Rook, queen_rook_square);
-
-            self.white_features
-                .toggle_on(stm == Side::White, Piece::Rook, from.shift(-1).unwrap());
-            self.black_features
-                .toggle_on(stm == Side::Black, Piece::Rook, from.shift(-1).unwrap());
+            self.toggle_accumulators_off(stm, Piece::Rook, queen_rook_square);
+            self.toggle_accumulators_on(stm, Piece::Rook, from.shift(-1).unwrap());       
         }
 
         let moving_piece = self.board.get_piece_at_square(from).unwrap().1;
         //Need to handle promotions
         if kind.is_promotion() {
             let promotion_piece = m.get_promoted_piece().unwrap();
-            self.white_features
-                .toggle_off(stm == Side::White, moving_piece, from);
-            self.black_features
-                .toggle_off(stm == Side::Black, moving_piece, from);
-
-            self.white_features
-                .toggle_on(stm == Side::White, promotion_piece, to);
-            self.black_features
-                .toggle_on(stm == Side::Black, promotion_piece, to);
+            self.toggle_accumulators_off(stm, moving_piece, from);
+            self.toggle_accumulators_on(stm, promotion_piece, to);
         } else {
-            self.white_features
-                .toggle_off(stm == Side::White, moving_piece, from);
-            self.black_features
-                .toggle_off(stm == Side::Black, moving_piece, from);
-
-            self.white_features
-                .toggle_on(stm == Side::White, moving_piece, to);
-            self.black_features
-                .toggle_on(stm == Side::Black, moving_piece, to);
+            self.toggle_accumulators_off(stm, moving_piece, from);
+            self.toggle_accumulators_on(stm, moving_piece, to);
         }
     }
 
@@ -256,19 +219,10 @@ impl SearchData {
         //Need to toggle off extra captured piece in case of capture
         if kind.is_capture() {
             let capture_square = m.get_capture_square();
-            let (captured_side, captured_piece) =
+            let (_, captured_piece) =
                 self.board.get_piece_at_square(capture_square).unwrap();
-
-            self.white_features.toggle_on(
-                captured_side == Side::White,
-                captured_piece,
-                capture_square,
-            );
-            self.black_features.toggle_on(
-                captured_side == Side::Black,
-                captured_piece,
-                capture_square,
-            );
+        
+            self.toggle_accumulators_on(stm.other(), captured_piece, capture_square);
         } 
 
         //Need to toggle rook in case of castling
@@ -279,15 +233,8 @@ impl SearchData {
                 Side::Black => KING_SIDE_ROOK_BLACK,
             };
 
-            self.white_features
-                .toggle_on(stm == Side::White, Piece::Rook, king_rook_square);
-            self.black_features
-                .toggle_on(stm == Side::Black, Piece::Rook, king_rook_square);
-
-            self.white_features
-                .toggle_off(stm == Side::White, Piece::Rook, from.shift(1).unwrap());
-            self.black_features
-                .toggle_off(stm == Side::Black, Piece::Rook, from.shift(1).unwrap());
+            self.toggle_accumulators_on(stm, Piece::Rook, king_rook_square);
+            self.toggle_accumulators_off(stm, Piece::Rook, from.shift(1).unwrap());            
         }
 
         //Need to toggle rook in case of castling
@@ -298,40 +245,19 @@ impl SearchData {
                 Side::Black => QUEEN_SIDE_ROOK_BLACK,
             };
 
-            self.white_features
-                .toggle_on(stm == Side::White, Piece::Rook, queen_rook_square);
-            self.black_features
-                .toggle_on(stm == Side::Black, Piece::Rook, queen_rook_square);
-
-            self.white_features
-                .toggle_off(stm == Side::White, Piece::Rook, from.shift(-1).unwrap());
-            self.black_features
-                .toggle_off(stm == Side::Black, Piece::Rook, from.shift(-1).unwrap());
+            self.toggle_accumulators_on(stm, Piece::Rook, queen_rook_square);
+            self.toggle_accumulators_off(stm, Piece::Rook, from.shift(-1).unwrap());            
         }
 
         let moving_piece = self.board.get_piece_at_square(from).unwrap().1;
         //Need to handle promotions
         if kind.is_promotion() {
             let promotion_piece = m.get_promoted_piece().unwrap();
-            self.white_features
-                .toggle_on(stm == Side::White, moving_piece, from);
-            self.black_features
-                .toggle_on(stm == Side::Black, moving_piece, from);
-
-            self.white_features
-                .toggle_off(stm == Side::White, promotion_piece, to);
-            self.black_features
-                .toggle_off(stm == Side::Black, promotion_piece, to);
+            self.toggle_accumulators_on(stm, moving_piece, from);
+            self.toggle_accumulators_off(stm, promotion_piece, to);
         } else {
-            self.white_features
-                .toggle_on(stm == Side::White, moving_piece, from);
-            self.black_features
-                .toggle_on(stm == Side::Black, moving_piece, from);
-
-            self.white_features
-                .toggle_off(stm == Side::White, moving_piece, to);
-            self.black_features
-                .toggle_off(stm == Side::Black, moving_piece, to);
+            self.toggle_accumulators_on(stm, moving_piece, from);
+            self.toggle_accumulators_off(stm, moving_piece, to);
         }
     }
 
@@ -346,14 +272,27 @@ impl SearchData {
         NNUE.evaluate(us, them)
     }
 
+    pub fn toggle_accumulators_off(&mut self, piece_side: Side, piece: Piece, square: Square) {  
+        self.white_features
+            .toggle_off(piece_side == Side::White, piece, square);
+        self.black_features
+            .toggle_off(piece_side == Side::Black, piece, square ^ 56);
+    }
+
+    pub fn toggle_accumulators_on(&mut self, piece_side: Side, piece: Piece, square: Square) {  
+        self.white_features
+            .toggle_on(piece_side == Side::White, piece, square);
+        self.black_features
+            .toggle_on(piece_side == Side::Black, piece, square ^ 56);
+    }
+
     pub fn initialize_nnue(&mut self) {
         for rank in 0..8 {
             for file in 0..8 {
                 let square = Square::from_rank_and_file(rank, file);
                 let side_piece = self.board.get_piece_at_square(square);
                 if let Some((side, piece)) = side_piece {
-                    self.white_features.toggle_on(side == Side::White, piece, square);
-                    self.black_features.toggle_on(side == Side::Black, piece, square);
+                    self.toggle_accumulators_on(side, piece, square);
                 }
             }
         }

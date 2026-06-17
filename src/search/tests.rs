@@ -55,6 +55,8 @@ fn test_repetion_detection() {
     let _ = board.make_move(Move::new(C2, C1, QuietMove));
     let _ = board.make_move(Move::new(E4, F4, QuietMove));
 
+    println!("{}", board);
+
     let mut data = SearchData {
         board,
         ..Default::default()
