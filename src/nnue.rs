@@ -5,7 +5,7 @@ const SCALE: i32 = 400;
 const QA: i16 = 255;
 const QB: i16 = 64;
 
-pub static NNUE: Network = unsafe { std::mem::transmute(*include_bytes!("../quantised.nnue")) };
+pub static NNUE: Network = unsafe { std::mem::transmute(*include_bytes!("../model.nnue")) };
 
 #[inline]
 fn screlu(x: i16) -> i32 {

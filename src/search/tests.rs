@@ -62,6 +62,9 @@ fn test_repetion_detection() {
         ..Default::default()
     };
 
+    data.clear_features();
+    data.initialize_nnue();
+
     let score = search::<Root>(&mut data, 3, -INFINITY, INFINITY, 0);
     println!("{score}");
     let m = data.get_best_move();
