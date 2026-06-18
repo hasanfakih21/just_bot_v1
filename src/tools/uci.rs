@@ -139,8 +139,7 @@ pub fn position(args: &str, board: &mut Board) {
     if !moves.trim().is_empty() {
         for m_str in moves.split_ascii_whitespace() {
             let result = board.parse_move(m_str);
-            if let Ok(m) = result
-                && board.make_move(m).is_err()
+            if let Err(m) = result
             {
                 eprintln!("Illegal Move! {m}");
                 return;

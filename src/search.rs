@@ -282,115 +282,115 @@ pub fn search<Node: NodeType>(
             }
         }
 
+        //Make Move
         data.make_move(m);
-        if data.board.make_move(m).is_ok() {
-            let mut score = best_score;
 
-            //Late Move Reductions (LMR)
-            if depth > 3 && !Node::PV {
-                //let reduction = (0.99 + f32::ln(depth as f32) * f32::ln(move_count as f32)) / PI; //https://www.chessprogramming.org/Late_Move_Reductions Obsidian formula
-                let mut reduction = 0.7844 + f32::ln(depth as f32) * f32::ln(move_count as f32);
-                if m.get_kind().is_quiet() {
-                    reduction /= 2.4696;
-                } else {
-                    reduction /= 3.0;
-                }
-                let reduced_depth = (depth - 1).saturating_sub(reduction as u8);
-                score = -search::<NonPV>(data, reduced_depth, -alpha - 1, -alpha, ply + 1);
-                if score > alpha && reduced_depth < depth - 1 {
-                    score = -search::<NonPV>(data, depth - 1, -alpha - 1, -alpha, ply + 1);
-                }
-            } else if !Node::PV || move_count > 1 {
+        let mut score = best_score;
+
+        //Late Move Reductions (LMR)
+        if depth > 3 && !Node::PV {
+            //let reduction = (0.99 + f32::ln(depth as f32) * f32::ln(move_count as f32)) / PI; //https://www.chessprogramming.org/Late_Move_Reductions Obsidian formula
+            let mut reduction = 0.7844 + f32::ln(depth as f32) * f32::ln(move_count as f32);
+            if m.get_kind().is_quiet() {
+                reduction /= 2.4696;
+            } else {
+                reduction /= 3.0;
+            }
+            let reduced_depth = (depth - 1).saturating_sub(reduction as u8);
+            score = -search::<NonPV>(data, reduced_depth, -alpha - 1, -alpha, ply + 1);
+            if score > alpha && reduced_depth < depth - 1 {
                 score = -search::<NonPV>(data, depth - 1, -alpha - 1, -alpha, ply + 1);
             }
+        } else if !Node::PV || move_count > 1 {
+            score = -search::<NonPV>(data, depth - 1, -alpha - 1, -alpha, ply + 1);
+        }
 
-            //Principal Variation Search (PVS)
-            if Node::PV && (move_count == 1 || score > alpha) {
-                score = -search::<PV>(data, depth - 1, -beta, -alpha, ply + 1);
-            }
+        //Principal Variation Search (PVS)
+        if Node::PV && (move_count == 1 || score > alpha) {
+            score = -search::<PV>(data, depth - 1, -beta, -alpha, ply + 1);
+        }
 
-            data.board.unmake_move();
-            data.unmake_move(m);
+        //Unmake Move
+        data.unmake_move(m);
 
-            if data.over_limit() || data.shared.status.get() == Status::STOPPED {
-                return TIMEOUT_SCORE;
-            }
+        if data.over_limit() || data.shared.status.get() == Status::STOPPED {
+            return TIMEOUT_SCORE;
+        }
 
-            if score > alpha {
-                bound = Bound::Exact;
-                data.add_pv_move(m, ply);
-                alpha = score;
-            }
+        if score > alpha {
+            bound = Bound::Exact;
+            data.add_pv_move(m, ply);
+            alpha = score;
+        }
 
-            if score > best_score {
-                best_score = score;
-                best_move = Some(m);
-            }
+        if score > best_score {
+            best_score = score;
+            best_move = Some(m);
+        }
 
-            //Cutoff
-            if score >= beta {
-                let quiet_bonus = 300 * depth as i32 - 250;
-                let quiet_malus = 300 * depth as i32 - 250;
+        //Cutoff
+        if score >= beta {
+            let quiet_bonus = 300 * depth as i32 - 250;
+            let quiet_malus = 300 * depth as i32 - 250;
 
-                let noisy_bonus = (250 * depth as i32).min(1000) - 250;
-                let noisy_malus = (300 * depth as i32).min(1000) - 250;
+            let noisy_bonus = (250 * depth as i32).min(1000) - 250;
+            let noisy_malus = (300 * depth as i32).min(1000) - 250;
 
-                let threats = data.board.state.threats;
+            let threats = data.board.state.threats;
 
-                if m.get_kind().is_quiet() {
-                    //Add quiet bonus to history
-                    data.quiet_history.update(threats, stm, m, quiet_bonus);
-                    //Add malus to quiet moves
-                    for e in quiets_searched.iter() {
-                        let quiet_move = e.mv;
-                        data.quiet_history
-                            .update(threats, stm, quiet_move, -quiet_malus);
-                    }
-                } else {
-                    //Add noisy bonus to history
-                    let piece = data.board.get_piece_at_square(m.get_from());
-                    let to = m.get_to();
-                    let captured = data
-                        .board
-                        .get_piece_at_square(m.get_capture_square())
-                        .map(|e| e.1);
-                    data.noisy_history
-                        .update(piece, to, captured, threats, noisy_bonus);
-                }
-
-                //Add malus to noisy moves
-                for e in noisies_searched.iter() {
-                    let m = e.mv;
-                    let piece = data.board.get_piece_at_square(m.get_from());
-                    let to = m.get_to();
-                    let captured = data
-                        .board
-                        .get_piece_at_square(m.get_capture_square())
-                        .map(|e| e.1);
-                    data.noisy_history
-                        .update(piece, to, captured, threats, -noisy_malus);
-                }
-
-                //Add TT entry
-                if let Some(m) = best_move {
-                    let tt_score = best_score;
-                    data.shared.tt.add_entry(
-                        m,
-                        tt_score,
-                        Bound::Lower,
-                        data.board.state.hash,
-                        depth,
-                    );
-                }
-                return best_score;
-            }
-
-            //Add searched quiet moves to list
             if m.get_kind().is_quiet() {
-                quiets_searched.push(m);
+                //Add quiet bonus to history
+                data.quiet_history.update(threats, stm, m, quiet_bonus);
+                //Add malus to quiet moves
+                for e in quiets_searched.iter() {
+                    let quiet_move = e.mv;
+                    data.quiet_history
+                        .update(threats, stm, quiet_move, -quiet_malus);
+                }
             } else {
-                noisies_searched.push(m);
+                //Add noisy bonus to history
+                let piece = data.board.get_piece_at_square(m.get_from());
+                let to = m.get_to();
+                let captured = data
+                    .board
+                    .get_piece_at_square(m.get_capture_square())
+                    .map(|e| e.1);
+                data.noisy_history
+                    .update(piece, to, captured, threats, noisy_bonus);
             }
+
+            //Add malus to noisy moves
+            for e in noisies_searched.iter() {
+                let m = e.mv;
+                let piece = data.board.get_piece_at_square(m.get_from());
+                let to = m.get_to();
+                let captured = data
+                    .board
+                    .get_piece_at_square(m.get_capture_square())
+                    .map(|e| e.1);
+                data.noisy_history
+                    .update(piece, to, captured, threats, -noisy_malus);
+            }
+
+            //Add TT entry
+            if let Some(m) = best_move {
+                let tt_score = best_score;
+                data.shared.tt.add_entry(
+                    m,
+                    tt_score,
+                    Bound::Lower,
+                    data.board.state.hash,
+                    depth,
+                );
+            }
+            return best_score;
+        }
+
+        //Add searched quiet moves to list
+        if m.get_kind().is_quiet() {
+            quiets_searched.push(m);
+        } else {
+            noisies_searched.push(m);
         }
     }
 
@@ -438,27 +438,23 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
         }
 
         data.make_move(m);
-        if data.board.make_move(m).is_ok() {
-            let score = -quiesce(data, -beta, -alpha, _ply + 1);
+        let score = -quiesce(data, -beta, -alpha, _ply + 1);
+        data.unmake_move(m);
 
-            data.board.unmake_move();
-            data.unmake_move(m);
+        if data.over_limit() || data.shared.status.get() == Status::STOPPED {
+            return TIMEOUT_SCORE;
+        }
 
-            if data.over_limit() || data.shared.status.get() == Status::STOPPED {
-                return TIMEOUT_SCORE;
-            }
+        if score >= beta {
+            return score;
+        }
 
-            if score >= beta {
-                return score;
-            }
+        if score > best_score {
+            best_score = score;
+        }
 
-            if score > best_score {
-                best_score = score;
-            }
-
-            if score > alpha {
-                alpha = score;
-            }
+        if score > alpha {
+            alpha = score;
         }
     }
 
@@ -499,35 +495,32 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
         move_count += 1;
 
         data.make_move(m);
-        if data.board.make_move(m).is_ok() {
-            let score = -search_checks(data, -beta, -alpha, ply + 1);
+        let score = -search_checks(data, -beta, -alpha, ply + 1);
 
-            data.board.unmake_move();
-            data.unmake_move(m);
+        data.unmake_move(m);
 
-            if data.over_limit() || data.shared.status.get() == Status::STOPPED {
-                return TIMEOUT_SCORE;
-            }
+        if data.over_limit() || data.shared.status.get() == Status::STOPPED {
+            return TIMEOUT_SCORE;
+        }
 
-            if score >= beta {
-                //Add noisy bonus to history
-                let piece = data.board.get_piece_at_square(m.get_from());
-                let to = m.get_to();
-                let captured = data
-                    .board
-                    .get_piece_at_square(m.get_capture_square())
-                    .map(|e| e.1);
-                data.noisy_history
-                    .update(piece, to, captured, data.board.state.threats, 100);
+        if score >= beta {
+            //Add noisy bonus to history
+            let piece = data.board.get_piece_at_square(m.get_from());
+            let to = m.get_to();
+            let captured = data
+                .board
+                .get_piece_at_square(m.get_capture_square())
+                .map(|e| e.1);
+            data.noisy_history
+                .update(piece, to, captured, data.board.state.threats, 100);
 
-                return score;
-            }
-            if score > best_score {
-                best_score = score;
-            }
-            if score > alpha {
-                alpha = score;
-            }
+            return score;
+        }
+        if score > best_score {
+            best_score = score;
+        }
+        if score > alpha {
+            alpha = score;
         }
     }
 

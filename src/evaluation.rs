@@ -1,16 +1,9 @@
 use std::cmp::max;
 
 use crate::board::Board;
-use crate::types::{BitBoard, MATE_CUTOFF, Piece, Side, Square};
+use crate::types::{BitBoard, MATE_CUTOFF, Piece, Square};
 
 impl Board {
-    pub fn get_king_square(&self, side: Side) -> Square {
-        debug_assert!(self.get_piece_bb(side, Piece::King).0 != 0, "{}", self);
-        self.get_piece_bb(side, Piece::King)
-            .least_sig_bit()
-            .unwrap()
-    }
-
     //Only checks for the current side to move
     pub fn only_king_and_pawns(&self) -> bool {
         let side = self.state.side_to_move;

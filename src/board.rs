@@ -89,6 +89,13 @@ impl Board {
         threats.contains(square)
     }
 
+    pub fn get_king_square(&self, side: Side) -> Square {
+        debug_assert!(self.get_piece_bb(side, Piece::King).0 != 0, "{}", self);
+        self.get_piece_bb(side, Piece::King)
+            .least_sig_bit()
+            .unwrap()
+    }
+
     pub fn update_all_threats(&mut self) {
         let side = self.state.side_to_move.other();
         let stm = self.state.side_to_move;

@@ -207,10 +207,14 @@ impl SearchData {
             self.toggle_accumulators_off(stm, moving_piece, from);
             self.toggle_accumulators_on(stm, moving_piece, to);
         }
+        
+        self.board.make_move(m)
     }
 
     //Called after move is already unmade on the board
     pub fn unmake_move(&mut self, m: Move) {
+        self.board.unmake_move();
+
         let from = m.get_from();
         let to = m.get_to();
         let kind = m.get_kind();

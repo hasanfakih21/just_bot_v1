@@ -47,7 +47,6 @@ pub fn randomize_from_startpos(plies: usize, random_number: u64) -> Result<Board
         let index = pseudo_rand(&mut state) % move_list.len() as u64;
         let random_move = move_list.get(index as usize).mv;
         data.make_move(random_move);
-        let _ = data.board.make_move(random_move);
     }
 
     //Check if eval is not too uneven

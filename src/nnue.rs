@@ -168,12 +168,10 @@ mod tests {
 
         //Make the move
         data.make_move(m);
-        let _ = data.board.make_move(m);
 
         println!("Second Eval: {}", data.nnue_evaluate());
 
         //Unmake the move
-        data.board.unmake_move();
         data.unmake_move(m);
 
         let final_eval = data.nnue_evaluate();
