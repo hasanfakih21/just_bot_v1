@@ -116,15 +116,21 @@ impl Accumulator {
 
 #[cfg(test)]
 mod tests {
-    use crate::{board::{Board, movegen::MoveGenKind}, search::data::SearchData, tools::uci::go};
+    use crate::{
+        board::{Board, movegen::MoveGenKind},
+        search::data::SearchData,
+        tools::uci::go,
+    };
 
     use super::*;
 
     #[test]
     fn test_nnue() {
         let mut data = SearchData {
-            board: Board::from_fen("rn1qkbnr/ppp1p1p1/3p1P1p/8/6b1/8/PPPP1PPP/RNB1KBNR w KQkq - 0 5")
-                .unwrap(),
+            board: Board::from_fen(
+                "rn1qkbnr/ppp1p1p1/3p1P1p/8/6b1/8/PPPP1PPP/RNB1KBNR w KQkq - 0 5",
+            )
+            .unwrap(),
             ..Default::default()
         };
 

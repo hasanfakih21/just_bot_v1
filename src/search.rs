@@ -375,13 +375,9 @@ pub fn search<Node: NodeType>(
             //Add TT entry
             if let Some(m) = best_move {
                 let tt_score = best_score;
-                data.shared.tt.add_entry(
-                    m,
-                    tt_score,
-                    Bound::Lower,
-                    data.board.state.hash,
-                    depth,
-                );
+                data.shared
+                    .tt
+                    .add_entry(m, tt_score, Bound::Lower, data.board.state.hash, depth);
             }
             return best_score;
         }

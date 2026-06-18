@@ -1,7 +1,10 @@
 use std::sync::Mutex;
 
 use crate::{
-    board::{Board, movegen::MoveGenKind}, search::data::SearchData, tools::bench::bench, types::pseudo_rand
+    board::{Board, movegen::MoveGenKind},
+    search::data::SearchData,
+    tools::bench::bench,
+    types::pseudo_rand,
 };
 
 #[derive(Debug)]
