@@ -141,10 +141,10 @@ pub fn position(args: &str, board: &mut Board) {
             let result = board.parse_move(m_str);
             if let Ok(m) = result {
                 board.make_move(m);
+            } else {
+                eprintln!("Illegal Move!");
                 return;
             }
-
-            eprintln!("Illegal Move!");
         }
     }
 }
