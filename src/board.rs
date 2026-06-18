@@ -1,5 +1,4 @@
 use crate::attacks::*;
-use crate::evaluation::GAMEPHASE;
 use crate::tools::magics::*;
 use crate::types::*;
 use std::fmt::Display;
@@ -90,6 +89,13 @@ impl Board {
         threats.contains(square)
     }
 
+    pub fn get_king_square(&self, side: Side) -> Square {
+        debug_assert!(self.get_piece_bb(side, Piece::King).0 != 0, "{}", self);
+        self.get_piece_bb(side, Piece::King)
+            .least_sig_bit()
+            .unwrap()
+    }
+
     pub fn update_all_threats(&mut self) {
         let side = self.state.side_to_move.other();
         let stm = self.state.side_to_move;
@@ -145,13 +151,6 @@ impl Board {
         self.state.occupancies[side as usize].set_bit(square);
         //Mailbox
         self.state.mailbox[square as usize] = Some((side, piece));
-        //Material Eval
-        self.state.material_value[side as usize] += piece.value();
-        //Piece Square Table
-        self.state.pq_mg_value[side as usize] += self.get_mg_score(piece, square, side);
-        self.state.pq_eg_value[side as usize] += self.get_eg_score(piece, square, side);
-        //Game Phase
-        self.state.game_phase += GAMEPHASE[piece as usize];
         //Zobrist Hash
         self.state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
     }
@@ -162,13 +161,6 @@ impl Board {
         self.state.occupancies[side as usize].clear_bit(square);
         //Mailbox
         self.state.mailbox[square as usize] = None;
-        //Material Eval
-        self.state.material_value[side as usize] -= piece.value();
-        //Piece Square Table
-        self.state.pq_mg_value[side as usize] -= self.get_mg_score(piece, square, side);
-        self.state.pq_eg_value[side as usize] -= self.get_eg_score(piece, square, side);
-        //Game Phase
-        self.state.game_phase -= GAMEPHASE[piece as usize];
         //Zobrist Hash
         self.state.hash ^= ZOBRIST.get_piece_num(side, piece, square);
     }

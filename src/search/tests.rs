@@ -47,13 +47,13 @@ fn test_repetion_detection() {
     use Square::*;
 
     let mut board = Board::from_fen("8/6K1/3N4/8/5Q2/8/1kr5/8 w - - 0 1").unwrap();
-    let _ = board.make_move(Move::new(F4, E4, QuietMove));
-    let _ = board.make_move(Move::new(C2, C1, QuietMove));
-    let _ = board.make_move(Move::new(E4, F4, QuietMove));
-    let _ = board.make_move(Move::new(C1, C2, QuietMove));
-    let _ = board.make_move(Move::new(F4, E4, QuietMove));
-    let _ = board.make_move(Move::new(C2, C1, QuietMove));
-    let _ = board.make_move(Move::new(E4, F4, QuietMove));
+    board.make_move(Move::new(F4, E4, QuietMove));
+    board.make_move(Move::new(C2, C1, QuietMove));
+    board.make_move(Move::new(E4, F4, QuietMove));
+    board.make_move(Move::new(C1, C2, QuietMove));
+    board.make_move(Move::new(F4, E4, QuietMove));
+    board.make_move(Move::new(C2, C1, QuietMove));
+    board.make_move(Move::new(E4, F4, QuietMove));
 
     println!("{}", board);
 

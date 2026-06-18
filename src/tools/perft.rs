@@ -5,12 +5,11 @@ pub fn perft(depth: usize, board: &mut Board) -> usize {
     let mut nodes_count = 0;
 
     for m in board.generate_moves(MoveGenKind::All).iter() {
-        if board.make_move(m.mv).is_ok() {
-            let divided_nodes = perft_divide(depth - 1, board);
-            println!("{}: {divided_nodes}", m.mv);
-            nodes_count += divided_nodes;
-            board.unmake_move();
-        }
+        board.make_move(m.mv);
+        let divided_nodes = perft_divide(depth - 1, board);
+        println!("{}: {divided_nodes}", m.mv);
+        nodes_count += divided_nodes;
+        board.unmake_move();
     }
 
     println!(
@@ -29,10 +28,9 @@ pub fn perft_divide(depth: usize, board: &mut Board) -> usize {
     let mut nodes = 0;
 
     for m in board.generate_moves(MoveGenKind::All).iter() {
-        if board.make_move(m.mv).is_ok() {
-            nodes += perft_divide(depth - 1, board);
-            board.unmake_move();
-        }
+        board.make_move(m.mv);
+        nodes += perft_divide(depth - 1, board);
+        board.unmake_move()
     }
 
     nodes

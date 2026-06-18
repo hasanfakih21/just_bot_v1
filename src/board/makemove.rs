@@ -7,15 +7,12 @@ use crate::types::{
     moves::{Move, MoveKind},
 };
 
-pub struct LegalMove;
-pub struct IllegalMove;
-
 impl Board {
-    pub fn make_move(&mut self, m: Move) -> Result<LegalMove, IllegalMove> {
+    pub fn make_move(&mut self, m: Move) {
         let from = m.get_from();
         let to = m.get_to();
         let kind = m.get_kind();
-        let (side, piece) = self.get_piece_at_square(from).ok_or(IllegalMove)?;
+        let (side, piece) = self.get_piece_at_square(from).unwrap();
 
         let king_rook_square = match side {
             Side::White => KING_SIDE_ROOK_WHITE,
@@ -194,8 +191,6 @@ impl Board {
         self.game_history.push(self.state.hash);
         self.update_all_threats();
         self.update_en_passant();
-
-        Ok(LegalMove)
     }
 
     pub fn update_en_passant(&mut self) {
@@ -287,7 +282,7 @@ mod tests {
         println!("{board}");
 
         let m = Move::new(Square::B4, Square::A3, MoveKind::EnPassant);
-        let _ = board.make_move(m);
+        board.make_move(m);
         println!("{board}");
         assert_eq!(
             board.get_piece_at_square(Square::A3).unwrap(),
@@ -303,7 +298,7 @@ mod tests {
         );
 
         let m = Move::new(Square::C4, Square::B2, MoveKind::Capture);
-        let _ = board.make_move(m);
+        board.make_move(m);
         println!("{board}");
         assert_eq!(
             board.get_piece_at_square(Square::B2).unwrap(),
@@ -317,7 +312,7 @@ mod tests {
         println!("{board}");
 
         let m = Move::new(Square::E1, Square::G1, MoveKind::KingCastle);
-        let _ = board.make_move(m);
+        board.make_move(m);
         println!("{board}");
         assert_eq!(
             board.get_piece_at_square(Square::G1).unwrap(),
@@ -330,7 +325,7 @@ mod tests {
         assert!(board.get_piece_at_square(Square::E1).is_none());
 
         let m = Move::new(Square::E8, Square::C8, MoveKind::QueenCastle);
-        let _ = board.make_move(m);
+        board.make_move(m);
         println!("{board}");
         assert_eq!(
             board.get_piece_at_square(Square::C8).unwrap(),
@@ -348,7 +343,7 @@ mod tests {
         println!("{board}");
 
         let m = Move::new(Square::E2, Square::E1, MoveKind::BPromotion);
-        let _ = board.make_move(m);
+        board.make_move(m);
         println!("{board}");
         assert_eq!(
             board.get_piece_at_square(Square::E1).unwrap(),
@@ -358,7 +353,7 @@ mod tests {
 
         board.unmake_move();
         let m = Move::new(Square::E2, Square::F1, MoveKind::QPromCapture);
-        let _ = board.make_move(m);
+        board.make_move(m);
         println!("{board}");
         assert_eq!(
             board.get_piece_at_square(Square::F1).unwrap(),
@@ -372,7 +367,7 @@ mod tests {
         println!("{board}");
 
         let m = Move::new(Square::G2, Square::H1, MoveKind::NPromCapture);
-        assert!(board.make_move(m).is_ok());
+        board.make_move(m);
         assert!(!board.state.castling_rights.can_king_side(Side::White));
         println!("{board}");
     }

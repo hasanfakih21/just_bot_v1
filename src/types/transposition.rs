@@ -205,7 +205,7 @@ mod tests {
         assert_eq!(best_move, m);
         assert_eq!(score, s);
 
-        let _ = data.board.make_move(best_move);
+        data.board.make_move(best_move);
         search::<Root>(&mut data, 2, -INFINITY, INFINITY, 0);
 
         let entry = data.shared.tt.get_entry(hash).unwrap();
