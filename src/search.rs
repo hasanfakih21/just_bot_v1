@@ -280,6 +280,11 @@ pub fn search<Node: NodeType>(
                 skip_quiets = true;
                 continue;
             }
+
+            //Static Exchange Evaluation Pruning (SEE Pruning)
+            if !in_check && !data.board.see(m, -150) {
+                continue;
+            }
         }
 
         //Make Move
