@@ -169,12 +169,8 @@ pub fn search<Node: NodeType>(
 ) -> i32 {
     let stm = data.board.state.side_to_move;
 
-    if depth == 0 {
-        if data.board.king_in_check(stm) {
-            return search_checks(data, alpha, beta, ply);
-        } else {
-            return quiesce(data, alpha, beta, ply); //Horizon Node
-        }
+    if depth == 0 { 
+        return quiesce(data, alpha, beta, ply); //Horizon Node 
     }
 
     data.shared.add_nodes(1);
@@ -451,80 +447,6 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
 
         if score > alpha {
             alpha = score;
-        }
-    }
-
-    best_score
-}
-
-pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> i32 {
-    let mut best_score = -INFINITY;
-    let mut move_count = 0;
-    let stm = data.board.state.side_to_move;
-
-    data.shared.add_nodes(1);
-
-    if data.board.state.half_move_clock > 4 {
-        //50 move rule
-        if data.board.state.half_move_clock >= 100 {
-            return 0;
-        }
-        //We need to check history if positions were repeated only for the side to move.
-        let count = data.board.detect_repetitions();
-        if count >= 2 {
-            return 0;
-        }
-    }
-
-    if !data.board.king_in_check(stm) {
-        return quiesce(data, alpha, beta, ply);
-    }
-
-    let tt_move = data
-        .shared
-        .tt
-        .get_entry(data.board.state.hash)
-        .map(|e| e.get_best_move());
-    let mut move_picker = MovePicker::new(tt_move);
-
-    while let Some(m) = move_picker.next(data, false) {
-        move_count += 1;
-
-        data.make_move(m);
-        let score = -search_checks(data, -beta, -alpha, ply + 1);
-
-        data.unmake_move(m);
-
-        if data.over_limit() || data.shared.status.get() == Status::STOPPED {
-            return TIMEOUT_SCORE;
-        }
-
-        if score >= beta {
-            //Add noisy bonus to history
-            let piece = data.board.get_piece_at_square(m.get_from());
-            let to = m.get_to();
-            let captured = data
-                .board
-                .get_piece_at_square(m.get_capture_square())
-                .map(|e| e.1);
-            data.noisy_history
-                .update(piece, to, captured, data.board.state.threats, 100);
-
-            return score;
-        }
-        if score > best_score {
-            best_score = score;
-        }
-        if score > alpha {
-            alpha = score;
-        }
-    }
-
-    if move_count == 0 {
-        if data.board.king_in_check(stm) {
-            return -MATE_SCORE + ply as i32;
-        } else {
-            return 0;
         }
     }
 
