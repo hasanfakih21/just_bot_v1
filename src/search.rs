@@ -193,16 +193,17 @@ pub fn search<Node: NodeType>(
             return 0;
         }
     }
+    
+    let tt_entry = data.shared.tt.get_entry(data.board.state.hash);
 
     //TT Cutoffs only if depth of entry is greater or equal to the depth of the current node
-    if let Some(e) = data.shared.tt.get_entry(data.board.state.hash)
+    if let Some(e) = tt_entry
         && !Node::PV
         && e.get_depth() >= depth
         && e.get_score().abs() < MATE_CUTOFF
     //Mate scores need to be properly adjusted for cutoffs
     {
         let tt_score = e.get_score();
-
         match e.get_bound() {
             Bound::Exact => return tt_score,
             Bound::Lower => {
@@ -220,7 +221,13 @@ pub fn search<Node: NodeType>(
     }
 
     let in_check = data.board.king_in_check(stm);
-    let static_eval = data.nnue_evaluate();
+    let static_eval = if in_check {
+        -INFINITY
+    } else if let Some(e) = tt_entry {
+        e.get_score()
+    } else {
+        data.nnue_evaluate()
+    };
 
     //Reverse Futillity Pruning (RFP)
     if !in_check && !Node::PV && depth < 7 {
