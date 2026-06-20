@@ -162,7 +162,7 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
 
 pub fn search<Node: NodeType>(
     data: &mut SearchData,
-    depth: u8,
+    mut depth: u8,
     mut alpha: i32,
     beta: i32,
     ply: usize,
@@ -170,7 +170,11 @@ pub fn search<Node: NodeType>(
     let stm = data.board.state.side_to_move;
 
     if depth == 0 { 
-        return quiesce(data, alpha, beta, ply); //Horizon Node 
+        if data.board.king_in_check(stm) {
+            depth += 1;
+        } else {
+            return quiesce(data, alpha, beta, ply); //Horizon Node 
+        }
     }
 
     data.shared.add_nodes(1);
