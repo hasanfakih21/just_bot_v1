@@ -104,14 +104,13 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
 
     //Iterative Deepening
     loop {
+        let deeper_move_score = search::<Root>(data, depth, alpha, beta, 0);
         if data.over_limit()
             || depth > data.time.depth_limit()
             || data.shared.status.get() == Status::STOPPED
         {
             break;
         }
-
-        let deeper_move_score = search::<Root>(data, depth, alpha, beta, 0);
 
         let new_score = deeper_move_score;
         if new_score <= alpha {
@@ -193,7 +192,7 @@ pub fn search<Node: NodeType>(
             return 0;
         }
     }
-    
+
     let tt_entry = data.shared.tt.get_entry(data.board.state.hash);
 
     //TT Cutoffs only if depth of entry is greater or equal to the depth of the current node
@@ -320,8 +319,9 @@ pub fn search<Node: NodeType>(
         //Unmake Move
         data.unmake_move(m);
 
-        if data.over_limit() || data.shared.status.get() == Status::STOPPED {
-            return TIMEOUT_SCORE;
+        if data.over_limit() || data.shared.status.get() == Status::STOPPED || ply as u8 > MAX_DEPTH
+        {
+            return best_score;
         }
 
         if score > alpha {
@@ -415,7 +415,7 @@ pub fn search<Node: NodeType>(
     best_score
 }
 
-pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) -> i32 {
+pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> i32 {
     data.shared.add_nodes(1);
     let mut best_score = data.nnue_evaluate();
 
@@ -441,11 +441,12 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
         }
 
         data.make_move(m);
-        let score = -quiesce(data, -beta, -alpha, _ply + 1);
+        let score = -quiesce(data, -beta, -alpha, ply + 1);
         data.unmake_move(m);
 
-        if data.over_limit() || data.shared.status.get() == Status::STOPPED {
-            return TIMEOUT_SCORE;
+        if data.over_limit() || data.shared.status.get() == Status::STOPPED || ply as u8 > MAX_DEPTH
+        {
+            return best_score;
         }
 
         if score >= beta {
@@ -512,8 +513,9 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
 
         data.unmake_move(m);
 
-        if data.over_limit() || data.shared.status.get() == Status::STOPPED {
-            return TIMEOUT_SCORE;
+        if data.over_limit() || data.shared.status.get() == Status::STOPPED || ply as u8 > MAX_DEPTH
+        {
+            return best_score;
         }
 
         if score >= beta {
