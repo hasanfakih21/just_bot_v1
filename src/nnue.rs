@@ -1,6 +1,6 @@
 use crate::types::{Piece, Square};
 
-const HIDDEN_SIZE: usize = 64;
+const HIDDEN_SIZE: usize = 128;
 const SCALE: i32 = 400;
 const QA: i16 = 255;
 const QB: i16 = 64;
