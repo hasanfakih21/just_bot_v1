@@ -2,6 +2,7 @@ use crate::board::Board;
 use crate::evaluation::{mated, mating};
 use crate::search::data::{SearchData, Status};
 use crate::search::movepicker::MovePicker;
+use crate::types::stackvec::StackVec;
 use crate::types::*;
 
 pub mod data;
@@ -193,7 +194,7 @@ pub fn search<Node: NodeType>(
             return 0;
         }
     }
-    
+
     let tt_entry = data.shared.tt.get_entry(data.board.state.hash);
 
     //TT Cutoffs only if depth of entry is greater or equal to the depth of the current node
@@ -260,8 +261,8 @@ pub fn search<Node: NodeType>(
         .map(|e| e.get_best_move());
 
     let mut move_picker = MovePicker::new(tt_move);
-    let mut quiets_searched = MoveList::new();
-    let mut noisies_searched = MoveList::new();
+    let mut quiets_searched = StackVec::<Move, 256>::new();
+    let mut noisies_searched = StackVec::<Move, 256>::new();
     let mut skip_quiets = false;
 
     while let Some(m) = move_picker.next(data, skip_quiets) {
@@ -350,9 +351,9 @@ pub fn search<Node: NodeType>(
                 data.quiet_history.update(threats, stm, m, quiet_bonus);
                 //Add malus to quiet moves
                 for e in quiets_searched.iter() {
-                    let quiet_move = e.mv;
+                    let quiet_move = e;
                     data.quiet_history
-                        .update(threats, stm, quiet_move, -quiet_malus);
+                        .update(threats, stm, *quiet_move, -quiet_malus);
                 }
             } else {
                 //Add noisy bonus to history
@@ -367,8 +368,7 @@ pub fn search<Node: NodeType>(
             }
 
             //Add malus to noisy moves
-            for e in noisies_searched.iter() {
-                let m = e.mv;
+            for m in noisies_searched.iter() {
                 let piece = data.board.get_piece_at_square(m.get_from());
                 let to = m.get_to();
                 let captured = data
@@ -436,7 +436,7 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
 
     while let Some(m) = move_picker.next(data, true) {
         //Static Exchange Evaluation Pruning (SEE Pruning)
-        if !mated(best_score) && !data.board.see(m, -159) {
+        if !mated(best_score) && !data.board.see(m, -150) {
             continue;
         }
 

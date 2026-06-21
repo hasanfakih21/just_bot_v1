@@ -1,7 +1,7 @@
 use crate::{
     board::movegen::MoveGenKind,
     search::data::SearchData,
-    types::{Move, MoveEntry, MoveList},
+    types::{Move, MoveEntry, MoveList, stackvec::StackVec},
 };
 
 #[derive(Debug, PartialEq)]
@@ -18,7 +18,7 @@ pub struct MovePicker {
     moves: MoveList,
     tt_move: Option<Move>,
     status: Status,
-    bad_noisy: MoveList,
+    bad_noisy: StackVec<Move, 256>,
     bad_index: usize,
     noisy_count: usize,
 }
@@ -33,7 +33,7 @@ impl MovePicker {
             } else {
                 Status::FirstNoisy
             },
-            bad_noisy: MoveList::new(),
+            bad_noisy: StackVec::new(),
             bad_index: 0,
             noisy_count: 0,
         }
@@ -59,7 +59,7 @@ impl MovePicker {
             while !self.moves.is_empty() {
                 let best_entry = self.best_entry();
                 if !data.board.see(best_entry.mv, -150) {
-                    self.bad_noisy.push_entry(best_entry);
+                    self.bad_noisy.push(best_entry.mv);
                     continue;
                 }
 
@@ -87,7 +87,7 @@ impl MovePicker {
 
         //Bad Noisy
         if self.bad_index < self.bad_noisy.len() {
-            let m = self.bad_noisy.get(self.bad_index).mv;
+            let m = self.bad_noisy.get(self.bad_index);
             self.bad_index += 1;
             return Some(m);
         }
