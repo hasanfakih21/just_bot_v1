@@ -8,7 +8,7 @@ use crate::types::{BitBoard, Piece, Square};
 #[derive(Debug, Clone, Copy)]
 pub struct MoveEntry {
     pub mv: Move,
-    pub score: Option<i32>,
+    pub score: i32,
 }
 
 #[derive(Debug, Clone)]
@@ -29,7 +29,7 @@ impl MoveList {
     }
 
     pub fn push(&mut self, m: Move) {
-        self.inner[self.len].write(MoveEntry { mv: m, score: None });
+        self.inner[self.len].write(MoveEntry { mv: m, score: 0 });
         self.len += 1;
     }
 

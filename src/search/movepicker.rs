@@ -117,7 +117,7 @@ impl MovePicker {
             }
 
             score += data.noisy_history.get(piece, to, captured, threats);
-            entry.score = Some(score);
+            entry.score = score;
         }
     }
 
@@ -128,7 +128,7 @@ impl MovePicker {
         for entry in self.moves.iter_mut() {
             let mv = entry.mv;
             let score = data.quiet_history.get(threats, side, mv);
-            entry.score = Some(score);
+            entry.score = score;
         }
     }
 
@@ -137,9 +137,8 @@ impl MovePicker {
         let mut best_score = i32::MIN;
 
         for (index, entry) in self.moves.iter().enumerate() {
-            let entry_score = entry.score.unwrap_or(i32::MIN);
-            if entry_score >= best_score {
-                best_score = entry_score;
+            if entry.score >= best_score {
+                best_score = entry.score;
                 best_index = index;
             }
         }
