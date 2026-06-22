@@ -1,20 +1,16 @@
-use std::{
-    fmt::Display,
-    mem::{self, MaybeUninit},
-};
+use std::fmt::Display;
 
-use crate::types::{BitBoard, Piece, Square};
+use crate::types::{BitBoard, Piece, Square, stackvec::StackVec};
 
 #[derive(Debug, Clone, Copy)]
 pub struct MoveEntry {
     pub mv: Move,
-    pub score: Option<i32>,
+    pub score: i32,
 }
 
 #[derive(Debug, Clone)]
 pub struct MoveList {
-    inner: [MaybeUninit<MoveEntry>; 256],
-    len: usize,
+    inner: StackVec<MoveEntry, 256>,
 }
 
 #[derive(Debug, Clone)]
@@ -22,45 +18,25 @@ pub struct MoveListError;
 
 impl MoveList {
     pub fn new() -> Self {
-        Self {
-            inner: [mem::MaybeUninit::uninit(); 256],
-            len: 0,
+        MoveList {
+            inner: StackVec::new(),
         }
     }
 
     pub fn push(&mut self, m: Move) {
-        self.inner[self.len].write(MoveEntry { mv: m, score: None });
-        self.len += 1;
+        self.inner.push(MoveEntry { mv: m, score: 0 });
     }
 
     pub fn push_entry(&mut self, e: MoveEntry) {
-        self.inner[self.len].write(e);
-        self.len += 1;
+        self.inner.push(e);
     }
 
-    pub fn replace(&mut self, m: MoveEntry, index: usize) -> MoveEntry {
-        if index < self.len {
-            let old_move = self.get(index);
-            self.inner[index].write(m);
-            old_move
-        } else {
-            panic!("Not a valid index!");
-        }
-    }
-
-    //Instead of shifting entire list, pop the last element and place it at the removed spot
     pub fn remove(&mut self, index: usize) -> Option<MoveEntry> {
-        if index == self.len - 1 {
-            return self.pop();
-        }
-
-        let last = self.pop().unwrap();
-        Some(self.replace(last, index))
+        self.inner.remove(index)
     }
 
     pub fn get(&self, index: usize) -> MoveEntry {
-        debug_assert!(index < self.len);
-        unsafe { self.inner[index].assume_init() }
+        self.inner.get(index)
     }
 
     pub fn push_promotion_captures_setwise(&mut self, offset: i8, targets: BitBoard) {
@@ -83,33 +59,27 @@ impl MoveList {
     }
 
     pub fn clear(&mut self) {
-        self.len = 0;
+        self.inner.clear();
     }
 
     pub fn pop(&mut self) -> Option<MoveEntry> {
-        if self.len == 0 {
-            None
-        } else {
-            let e = unsafe { Some(self.inner[self.len - 1].assume_init()) };
-            self.len -= 1;
-            e
-        }
+        self.inner.pop()
     }
 
     pub fn len(&self) -> usize {
-        self.len
+        self.inner.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.len == 0
+        self.inner.len() == 0
     }
 
     pub fn iter(&self) -> std::slice::Iter<'_, MoveEntry> {
-        unsafe { self.inner[..self.len].assume_init_ref().iter() }
+        self.inner.iter()
     }
 
     pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, MoveEntry> {
-        unsafe { self.inner[..self.len].assume_init_mut().iter_mut() }
+        self.inner.iter_mut()
     }
 }
 

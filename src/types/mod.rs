@@ -5,6 +5,7 @@ pub mod moves;
 pub mod pieces;
 pub mod sides;
 pub mod squares;
+pub mod stackvec;
 pub mod transposition;
 pub mod zobrist;
 
