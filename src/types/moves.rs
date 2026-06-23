@@ -141,7 +141,10 @@ impl Move {
     }
 
     pub const fn is_castling(&self) -> bool {
-        matches!(self.get_kind(), MoveKind::KingCastle | MoveKind::QueenCastle)
+        matches!(
+            self.get_kind(),
+            MoveKind::KingCastle | MoveKind::QueenCastle
+        )
     }
 
     pub const fn is_promotion(&self) -> bool {

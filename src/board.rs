@@ -3,11 +3,11 @@ use crate::tools::magics::*;
 use crate::types::*;
 use std::fmt::Display;
 
+pub mod legal;
 pub mod makemove;
 pub mod movegen;
 pub mod parser;
 pub mod see;
-pub mod legal;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BoardState {
