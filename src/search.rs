@@ -226,7 +226,7 @@ pub fn search<Node: NodeType>(
     let static_eval = if in_check {
         -INFINITY
     } else if let Some(e) = tt_entry {
-        e.get_score()
+        e.get_eval()
     } else {
         data.nnue_evaluate()
     };
