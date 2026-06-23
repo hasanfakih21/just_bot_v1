@@ -43,9 +43,11 @@ impl MovePicker {
         let board = &data.board;
         if self.status == Status::HashMove {
             self.status = Status::FirstNoisy;
-            if !skip_quiets || !self.tt_move.unwrap().get_kind().is_quiet() {
-                return self.tt_move;
-            }
+            let tt_move = self.tt_move.unwrap();
+            if (!skip_quiets || !tt_move.get_kind().is_quiet())
+                && data.board.is_legal(tt_move) {
+                    return Some(tt_move)
+                }
         }
 
         if self.status == Status::FirstNoisy {

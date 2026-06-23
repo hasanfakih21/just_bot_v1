@@ -59,6 +59,7 @@ impl NodeType for Root {
 
 pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
     data.shared.clear_node_count();
+    data.shared.tt.increase_age();
     data.reset_pv();
     data.start_time();
     data.time.set_depth_limit();
@@ -382,9 +383,16 @@ pub fn search<Node: NodeType>(
             //Add TT entry
             if let Some(m) = best_move {
                 let tt_score = best_score;
-                data.shared
-                    .tt
-                    .add_entry(m, tt_score, Bound::Lower, data.board.state.hash, depth);
+                data.shared.tt.add_entry(
+                    m,
+                    tt_score,
+                    static_eval,
+                    Bound::Lower,
+                    data.board.state.hash,
+                    depth,
+                    ply,
+                    Node::PV,
+                );
             }
             return best_score;
         }
@@ -407,9 +415,16 @@ pub fn search<Node: NodeType>(
 
     if let Some(m) = best_move {
         let tt_score = best_score;
-        data.shared
-            .tt
-            .add_entry(m, tt_score, bound, data.board.state.hash, depth);
+        data.shared.tt.add_entry(
+            m,
+            tt_score,
+            static_eval,
+            bound,
+            data.board.state.hash,
+            depth,
+            ply,
+            Node::PV,
+        );
     }
 
     best_score

@@ -5,6 +5,8 @@ pub fn perft(depth: usize, board: &mut Board) -> usize {
     let mut nodes_count = 0;
 
     for m in board.generate_moves(MoveGenKind::All).iter() {
+        debug_assert!(board.is_legal(m.mv), "Tried making move: {}\n{}", m.mv, board);
+
         board.make_move(m.mv);
         let divided_nodes = perft_divide(depth - 1, board);
         println!("{}: {divided_nodes}", m.mv);

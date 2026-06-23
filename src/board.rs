@@ -7,6 +7,7 @@ pub mod makemove;
 pub mod movegen;
 pub mod parser;
 pub mod see;
+pub mod legal;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BoardState {
