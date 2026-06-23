@@ -3,6 +3,7 @@ use crate::tools::magics::*;
 use crate::types::*;
 use std::fmt::Display;
 
+pub mod legal;
 pub mod makemove;
 pub mod movegen;
 pub mod parser;

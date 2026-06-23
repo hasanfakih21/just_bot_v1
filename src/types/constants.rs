@@ -13,8 +13,10 @@ pub const AB: BitBoard = BitBoard(A_FILE | B_FILE);
 pub const HG: BitBoard = BitBoard(H_FILE | G_FILE);
 
 pub const RANK_1: u64 = 0x00000000000000FF;
+pub const RANK_2: u64 = 0x000000000000FF00;
 pub const RANK_4: u64 = 0x00000000FF000000;
 pub const RANK_5: u64 = 0x000000FF00000000;
+pub const RANK_7: u64 = 0x00FF000000000000;
 pub const RANK_8: u64 = 0xFF00000000000000;
 
 pub const FULL: u64 = 0xFFFFFFFFFFFFFFFF;

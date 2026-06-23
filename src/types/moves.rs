@@ -140,6 +140,13 @@ impl Move {
         MoveKind::from(((0xF000 & self.0) >> 12) as u8)
     }
 
+    pub const fn is_castling(&self) -> bool {
+        matches!(
+            self.get_kind(),
+            MoveKind::KingCastle | MoveKind::QueenCastle
+        )
+    }
+
     pub const fn is_promotion(&self) -> bool {
         self.get_kind().is_promotion()
     }
