@@ -36,7 +36,7 @@ impl Board {
             if m.get_kind() == MoveKind::QueenCastle {
                 let queen_side_path = match stm {
                     Side::White => BitBoard(WQ_SIDE),
-                    Side::Black => BitBoard(WK_SIDE).shift(NORTH * 7),
+                    Side::Black => BitBoard(WQ_SIDE).shift(NORTH * 7),
                 };
 
                 let need_to_be_safe = (queen_side_path ^ BitBoard(B_FILE)) & queen_side_path;
