@@ -12,7 +12,8 @@
 ## Releases
 |        Version             |      Elo         |
 |         :---:              |     :---:        |
-| [JustBot v0.1.0][v0.1.0]   |     ~2448        |
+|  JustBot v0.2.0            |     ~3000        |
+| [JustBot v0.1.0][v0.1.0]   |     ~2400        |
 
 [v0.1.0]: https://github.com/HasanFakih21/JustBot/releases/tag/v0.1.0
 
@@ -37,10 +38,10 @@ cargo rustc --release --bin justbot -- -C target-cpu=native
 The binary should be located within `./target/release/`
 
 ## Features
-- Basic UCI compatibility
-- Transposition Tables with Hash Moves
 - Alpha-Beta search
-- PeSTO's Evaluation Function
+- Basic UCI compatibility
+- Clustered Transposition Table
+- (768 -> 128)x2 -> 1 NNUE
 - Quiescence Search
 - Iterative Deepening
 - Time management
@@ -50,8 +51,11 @@ The binary should be located within `./target/release/`
 - Aspiration Windows
 - Reverse Futility Pruning
 - Late Move Reductions
-- Butterfly History
+- Noisy and Quiet History
 - Late Move Pruning
+- Futility Pruning
+- Check Extensions
+- SEE Pruning in Qsearch
 
 ### Supported UCI Options
 | Name        |    Default   |                Description                     |
@@ -64,3 +68,5 @@ The binary should be located within `./target/release/`
 - [Maksim Korzh](https://www.youtube.com/watch?v=QUNP-UjujBM&list=PLmN0neTso3Jxh8ZIylk74JpwfiWNI76Cs) for helpful introductory videos, and where my magic numbers are from
 - [Reckless](https://github.com/codedeliveryservice/Reckless) and [Stockfish](https://github.com/official-stockfish/stockfish)
 - The very helpful members of the [Stockfish Discord Server](https://discord.com/invite/GWDRS3kU6R)
+- [OpenBench](https://github.com/andygrant/openbench) as the testing framework, and for data generation
+- [Bullet](https://github.com/jw1912/bullet) for NNUE training
