@@ -100,7 +100,7 @@ fn test_mate_in_four() {
     let board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36").unwrap();
     data.board = board;
 
-    search::<Root>(&mut data, 4, -INFINITY, INFINITY, 0);
+    search::<Root>(&mut data, 7, -INFINITY, INFINITY, 0);
     let best_move = data.get_best_move();
     println!("Best Move: {}", best_move);
     assert_eq!(

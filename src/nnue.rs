@@ -1,6 +1,6 @@
 use crate::types::{Piece, Square};
 
-const HIDDEN_SIZE: usize = 128;
+const HIDDEN_SIZE: usize = 192;
 const SCALE: i32 = 400;
 const QA: i16 = 255;
 const QB: i16 = 64;
@@ -183,5 +183,16 @@ mod tests {
         let final_eval = data.nnue_evaluate();
         println!("Final Eval: {}", final_eval);
         assert_eq!(final_eval, first_eval);
+    }
+
+    #[test]
+    fn test_fuck() {
+        let data = SearchData {
+            board: Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+                .unwrap(),
+            ..Default::default()
+        };
+
+        println!("{}", data.nnue_evaluate()); 
     }
 }
