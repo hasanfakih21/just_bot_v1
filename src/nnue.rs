@@ -150,7 +150,7 @@ mod tests {
         }
 
         let eval = NNUE.evaluate(&us, &them);
-        go("nodes 40000", &mut data);
+        go("nodes 40000", &mut data, 1, false);
 
         println!("NNUE: {}", eval);
         println!("TEST: {}", data.nnue_evaluate())

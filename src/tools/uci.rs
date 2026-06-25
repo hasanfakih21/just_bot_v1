@@ -4,13 +4,14 @@ use std::thread;
 
 use crate::board::Board;
 use crate::search::data::{SearchData, SharedData};
-use crate::search::search_runner;
+use crate::threads::ThreadPool;
 use crate::tools::bench::bench;
 use crate::tools::datagen::generate_random_openings;
 use crate::types::*;
 
 pub fn input_loop(cli_args: String) {
     let mut data = SearchData::default();
+    let mut thread_amount = 1;
     let rx = listen(data.shared.clone());
 
     let mut input = if !cli_args.is_empty() {
@@ -35,7 +36,7 @@ pub fn input_loop(cli_args: String) {
             "position" => position(args, &mut data.board),
             "uci" => uci(),
             "isready" => println!("readyok"),
-            "setoption" => set_option(args, &mut data),
+            "setoption" => set_option(args, &mut data, &mut thread_amount),
             "ucinewgame" => {
                 data.shared.tt.clear();
                 data = SearchData {
@@ -47,7 +48,7 @@ pub fn input_loop(cli_args: String) {
                 data.time.clear_settings();
                 data.shared.status.run();
 
-                if let Some(e) = go(args, &mut data) {
+                if let Some(e) = go(args, &mut data, thread_amount, false) {
                     println!("bestmove {}", e.mv);
                 }
             }
@@ -149,7 +150,7 @@ pub fn position(args: &str, board: &mut Board) {
     }
 }
 
-pub fn set_option(args: &str, data: &mut SearchData) {
+pub fn set_option(args: &str, data: &mut SearchData, thread_amoount: &mut usize) {
     let args = args.to_ascii_lowercase();
     let args: Vec<&str> = args.split_ascii_whitespace().collect();
     match args.as_slice() {
@@ -158,8 +159,9 @@ pub fn set_option(args: &str, data: &mut SearchData) {
             data.shared.tt.resize(amount);
             println!("info string Resized TT to {amount} mb");
         }
-        ["name", "threads", "value", ..] => {
-            println!("info string Only 1 thread is supported");
+        ["name", "threads", "value", amount] => {
+            let amount = amount.parse::<usize>().unwrap_or(1);
+            *thread_amoount = amount;
         }
         ["name", "clear", "hash"] => {
             data.shared.tt.clear();
@@ -169,61 +171,72 @@ pub fn set_option(args: &str, data: &mut SearchData) {
     }
 }
 
-pub fn go(args: &str, data: &mut SearchData) -> Option<MoveEntry> {
+pub fn go(
+    args: &str,
+    data: &mut SearchData,
+    thread_amoount: usize,
+    mute: bool,
+) -> Option<MoveEntry> {
     let (command, args) = args.split_once(" ").unwrap_or((args, ""));
     if args.is_empty() {
-        return search_runner(data);
+        let mut thread_pool = ThreadPool::new(
+            data.board.clone(),
+            data.time.clone(),
+            data.shared.clone(),
+            thread_amoount,
+        );
+        return thread_pool.start(data.shared.clone(), mute);
     }
 
     match command.trim() {
         "depth" => {
             let (depth, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().depth = depth.trim().parse().unwrap_or(MAX_DEPTH - 1);
-            go(args, data)
+            go(args, data, thread_amoount, mute)
         }
         "wtime" => {
             //Example: go wtime 900000 btime 900000 winc 0 binc 0
             let (wtime, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().wtime = wtime.trim().parse().unwrap_or(500);
-            go(args, data)
+            go(args, data, thread_amoount, mute)
         }
         "btime" => {
             let (btime, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().btime = btime.trim().parse().unwrap_or(500);
-            go(args, data)
+            go(args, data, thread_amoount, mute)
         }
         "winc" => {
             let (winc, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().winc = winc.trim().parse().unwrap_or(0);
-            go(args, data)
+            go(args, data, thread_amoount, mute)
         }
         "binc" => {
             let (binc, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().binc = binc.trim().parse().unwrap_or(0);
-            go(args, data)
+            go(args, data, thread_amoount, mute)
         }
         "movestogo" => {
             let (movestogo, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().movestogo = movestogo.trim().parse().unwrap_or(0);
-            go(args, data)
+            go(args, data, thread_amoount, mute)
         }
         "movetime" => {
             let (movetime, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().movetime = movetime.trim().parse().unwrap_or(0);
-            go(args, data)
+            go(args, data, thread_amoount, mute)
         }
         "nodes" => {
             let (nodes, args) = args.split_once(" ").unwrap_or((args, ""));
             data.get_time_settings().nodes = nodes.trim().parse().unwrap_or(0);
             data.time.set_nodes_limit();
-            go(args, data)
+            go(args, data, thread_amoount, mute)
         }
-        _ => go(args, data),
+        _ => go(args, data, thread_amoount, mute),
     }
 }
 
 pub fn uci() {
-    println!("id name JustBot 0.1.0");
+    println!("id name JustBot 0.2.0");
     println!("id author Hasan Fakih");
     println!("option name Threads type spin default 1 min 1 max 1");
     println!("option name Hash type spin default 16 min 1 max 512");
@@ -273,6 +286,8 @@ pub mod tests {
         go(
             "wtime 5000 btime 5000 winc 0 binc 0",
             &mut SearchData::default(),
+            1,
+            false,
         );
     }
 
@@ -282,6 +297,8 @@ pub mod tests {
         let bm = go(
             "wtime 5000 btime 5000 winc 5 binc 8 movetime 100",
             &mut data,
+            1,
+            false,
         );
         println!(
             "{:?}\nBestmove: {}",
@@ -293,6 +310,7 @@ pub mod tests {
     #[test]
     fn test_set_option() {
         let mut data = SearchData::default();
-        set_option("name Hash value 32", &mut data);
+        let mut thread_amount = 1;
+        set_option("name Hash value 32", &mut data, &mut thread_amount);
     }
 }

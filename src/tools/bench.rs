@@ -23,8 +23,7 @@ pub fn bench() -> (u64, u64) {
             board: Board::from_fen(fen).unwrap(),
             ..Default::default()
         };
-        data.shared.mute();
-        go("depth 8", &mut data);
+        go("depth 8", &mut data, 1, true);
         total_node_count += data.shared.get_total_nodes_searched();
     }
 

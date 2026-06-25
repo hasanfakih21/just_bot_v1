@@ -3,5 +3,6 @@ pub mod board;
 pub mod evaluation;
 pub mod nnue;
 pub mod search;
+pub mod threads;
 pub mod tools;
 pub mod types;

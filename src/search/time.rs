@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 
 use crate::types::{MAX_DEPTH, Side};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TimeManager {
     pub clock: Instant,
     pub settings: TimeSettings,
@@ -10,7 +10,7 @@ pub struct TimeManager {
 }
 
 //Some settings don't do anything yet
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TimeSettings {
     pub wtime: u64,
     pub btime: u64,
