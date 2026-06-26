@@ -3,7 +3,7 @@ use std::{sync::Arc, time::Instant};
 use crate::{
     board::Board,
     search::{data::SharedData, time::TimeManager},
-    threads::ThreadPool,
+    threads::SearchThreads,
     tools::uci::go,
     types::STARTING_FEN,
 };
@@ -27,7 +27,7 @@ pub fn bench() -> (u64, u64) {
     for fen in positions {
         let mut board = Board::from_fen(fen).unwrap();
         let shared = Arc::new(SharedData::default());
-        let mut pool = ThreadPool::new(shared.clone(), 1);
+        let mut pool = SearchThreads::new(shared.clone(), 1);
         let mut time = TimeManager::new();
 
         go("depth 8", &mut pool, &mut board, &mut time, &shared, true);

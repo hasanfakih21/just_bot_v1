@@ -5,14 +5,14 @@ use std::thread;
 use crate::board::Board;
 use crate::search::data::SharedData;
 use crate::search::time::TimeManager;
-use crate::threads::ThreadPool;
+use crate::threads::SearchThreads;
 use crate::tools::bench::bench;
 use crate::tools::datagen::generate_random_openings;
 use crate::types::*;
 
 pub fn input_loop(cli_args: String) {
     let shared = Arc::new(SharedData::default());
-    let mut pool = ThreadPool::new(shared.clone(), 1);
+    let mut pool = SearchThreads::new(shared.clone(), 1);
     let mut board = Board::from_fen(STARTING_FEN).unwrap();
     let mut time = TimeManager::new();
 
@@ -44,7 +44,7 @@ pub fn input_loop(cli_args: String) {
             "ucinewgame" => {
                 shared.tt.clear();
                 let thread_count = pool.threads.len();
-                pool = ThreadPool::new(shared.clone(), thread_count);
+                pool = SearchThreads::new(shared.clone(), thread_count);
             }
             "go" => {
                 time.clear_settings();
@@ -152,7 +152,7 @@ pub fn position(args: &str, board: &mut Board) {
     }
 }
 
-pub fn set_option(args: &str, shared: Arc<SharedData>, pool: &mut ThreadPool) {
+pub fn set_option(args: &str, shared: Arc<SharedData>, pool: &mut SearchThreads) {
     let args = args.to_ascii_lowercase();
     let args: Vec<&str> = args.split_ascii_whitespace().collect();
     match args.as_slice() {
@@ -163,7 +163,7 @@ pub fn set_option(args: &str, shared: Arc<SharedData>, pool: &mut ThreadPool) {
         }
         ["name", "threads", "value", amount] => {
             let amount = amount.parse::<usize>().unwrap_or(1);
-            *pool = ThreadPool::new(shared, amount);
+            *pool = SearchThreads::new(shared, amount);
         }
         ["name", "clear", "hash"] => {
             shared.tt.clear();
@@ -175,7 +175,7 @@ pub fn set_option(args: &str, shared: Arc<SharedData>, pool: &mut ThreadPool) {
 
 pub fn go(
     args: &str,
-    pool: &mut ThreadPool,
+    pool: &mut SearchThreads,
     board: &mut Board,
     time: &mut TimeManager,
     shared: &Arc<SharedData>,
@@ -282,7 +282,7 @@ pub mod tests {
     #[test]
     fn test_parse_times() {
         let shared = Arc::new(SharedData::default());
-        let mut pool = ThreadPool::new(shared.clone(), 1);
+        let mut pool = SearchThreads::new(shared.clone(), 1);
         let mut board = Board::from_fen(STARTING_FEN).unwrap();
         let mut time = TimeManager::new();
 
@@ -299,7 +299,7 @@ pub mod tests {
     #[test]
     fn test_parse_go() {
         let shared = Arc::new(SharedData::default());
-        let mut pool = ThreadPool::new(shared.clone(), 1);
+        let mut pool = SearchThreads::new(shared.clone(), 1);
         let mut board = Board::from_fen(STARTING_FEN).unwrap();
         let mut time = TimeManager::new();
         let bm = go(
@@ -316,7 +316,7 @@ pub mod tests {
     #[test]
     fn test_set_option() {
         let shared = Arc::new(SharedData::default());
-        let mut pool = ThreadPool::new(shared.clone(), 1);
+        let mut pool = SearchThreads::new(shared.clone(), 1);
 
         set_option("name Hash value 32", shared, &mut pool);
     }

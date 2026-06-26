@@ -121,7 +121,7 @@ mod tests {
     use crate::{
         board::{Board, movegen::MoveGenKind},
         search::{data::SearchData, time::TimeManager},
-        threads::ThreadPool,
+        threads::SearchThreads,
         tools::uci::go,
     };
 
@@ -130,7 +130,7 @@ mod tests {
     #[test]
     fn test_nnue() {
         let shared = Arc::new(crate::search::data::SharedData::default());
-        let mut pool = ThreadPool::new(shared.clone(), 1);
+        let mut pool = SearchThreads::new(shared.clone(), 1);
         let mut board =
             Board::from_fen("rn1qkbnr/ppp1p1p1/3p1P1p/8/6b1/8/PPPP1PPP/RNB1KBNR w KQkq - 0 5")
                 .unwrap();

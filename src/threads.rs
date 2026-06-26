@@ -10,18 +10,18 @@ use crate::{
     types::Move,
 };
 
-pub struct ThreadPool {
+pub struct SearchThreads {
     pub threads: Vec<SearchData>,
 }
 
-impl ThreadPool {
+impl SearchThreads {
     pub fn new(shared: std::sync::Arc<SharedData>, count: usize) -> Self {
         let mut threads = Vec::new();
         for _ in 0..count {
             threads.push(SearchData::new(shared.clone()));
         }
 
-        ThreadPool { threads }
+        SearchThreads { threads }
     }
 
     pub fn start(
@@ -69,7 +69,7 @@ mod tests {
     use crate::{
         board::Board,
         search::{data::SharedData, time::TimeManager},
-        threads::ThreadPool,
+        threads::SearchThreads,
         types::STARTING_FEN,
     };
 
@@ -85,7 +85,7 @@ mod tests {
 
         let board = Board::from_fen(STARTING_FEN).unwrap();
 
-        let mut pool = ThreadPool::new(shared.clone(), 3);
+        let mut pool = SearchThreads::new(shared.clone(), 3);
         let m = pool.start(&board, time, &shared, false).unwrap();
         println!("{}", m);
     }
