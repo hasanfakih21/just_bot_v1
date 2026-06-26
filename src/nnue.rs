@@ -116,9 +116,12 @@ impl Accumulator {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use crate::{
         board::{Board, movegen::MoveGenKind},
-        search::data::SearchData,
+        search::{data::SearchData, time::TimeManager},
+        threads::ThreadPool,
         tools::uci::go,
     };
 
@@ -126,13 +129,12 @@ mod tests {
 
     #[test]
     fn test_nnue() {
-        let mut data = SearchData {
-            board: Board::from_fen(
-                "rn1qkbnr/ppp1p1p1/3p1P1p/8/6b1/8/PPPP1PPP/RNB1KBNR w KQkq - 0 5",
-            )
-            .unwrap(),
-            ..Default::default()
-        };
+        let shared = Arc::new(crate::search::data::SharedData::default());
+        let mut pool = ThreadPool::new(shared.clone(), 1);
+        let mut board =
+            Board::from_fen("rn1qkbnr/ppp1p1p1/3p1P1p/8/6b1/8/PPPP1PPP/RNB1KBNR w KQkq - 0 5")
+                .unwrap();
+        let mut time = TimeManager::new();
 
         let mut us = Accumulator::new(&NNUE);
         let mut them = Accumulator::new(&NNUE);
@@ -140,8 +142,8 @@ mod tests {
         for rank in 0..8 {
             for file in 0..8 {
                 let square = Square::from_rank_and_file(rank, file);
-                let side_piece = data.board.get_piece_at_square(square);
-                let stm = data.board.state.side_to_move;
+                let side_piece = board.get_piece_at_square(square);
+                let stm = board.state.side_to_move;
                 if let Some((side, piece)) = side_piece {
                     us.toggle_on(side == stm, piece, square);
                     them.toggle_on(side != stm, piece, square);
@@ -150,10 +152,17 @@ mod tests {
         }
 
         let eval = NNUE.evaluate(&us, &them);
-        go("nodes 40000", &mut data, 1, false);
+        go(
+            "nodes 40000",
+            &mut pool,
+            &mut board,
+            &mut time,
+            &shared,
+            false,
+        );
 
         println!("NNUE: {}", eval);
-        println!("TEST: {}", data.nnue_evaluate())
+        println!("TEST: {}", pool.threads[0].nnue_evaluate())
     }
 
     #[test]

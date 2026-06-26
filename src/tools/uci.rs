@@ -3,16 +3,20 @@ use std::sync::mpsc::{Receiver, channel};
 use std::thread;
 
 use crate::board::Board;
-use crate::search::data::{SearchData, SharedData};
+use crate::search::data::SharedData;
+use crate::search::time::TimeManager;
 use crate::threads::ThreadPool;
 use crate::tools::bench::bench;
 use crate::tools::datagen::generate_random_openings;
 use crate::types::*;
 
 pub fn input_loop(cli_args: String) {
-    let mut data = SearchData::default();
-    let mut thread_amount = 1;
-    let rx = listen(data.shared.clone());
+    let shared = Arc::new(SharedData::default());
+    let mut pool = ThreadPool::new(shared.clone(), 1);
+    let mut board = Board::from_fen(STARTING_FEN).unwrap();
+    let mut time = TimeManager::new();
+
+    let rx = listen(shared.clone());
 
     let mut input = if !cli_args.is_empty() {
         cli_args
@@ -25,7 +29,7 @@ pub fn input_loop(cli_args: String) {
             if let Ok(s) = rx.recv() {
                 input = s;
             } else {
-                data.shared.status.stop();
+                shared.status.stop();
                 break;
             }
         }
@@ -33,34 +37,32 @@ pub fn input_loop(cli_args: String) {
         let (command, args) = input.split_once(" ").unwrap_or((&input, ""));
 
         match command.trim() {
-            "position" => position(args, &mut data.board),
+            "position" => position(args, &mut board),
             "uci" => uci(),
             "isready" => println!("readyok"),
-            "setoption" => set_option(args, &mut data, &mut thread_amount),
+            "setoption" => set_option(args, shared.clone(), &mut pool),
             "ucinewgame" => {
-                data.shared.tt.clear();
-                data = SearchData {
-                    shared: data.shared,
-                    ..Default::default()
-                };
+                shared.tt.clear();
+                let thread_count = pool.threads.len();
+                pool = ThreadPool::new(shared.clone(), thread_count);
             }
             "go" => {
-                data.time.clear_settings();
-                data.shared.status.run();
+                time.clear_settings();
+                shared.status.run();
 
-                if let Some(e) = go(args, &mut data, thread_amount, false) {
-                    println!("bestmove {}", e.mv);
+                if let Some(m) = go(args, &mut pool, &mut board, &mut time, &shared, false) {
+                    println!("bestmove {}", m);
                 }
             }
             "quit" => break,
             "perft" => {
                 if let Ok(depth) = args.trim().parse::<usize>() {
-                    crate::tools::perft::perft(depth, &mut data.board);
+                    crate::tools::perft::perft(depth, &mut board);
                 } else {
                     eprintln!("Invalid depth: {:?}", args);
                 }
             }
-            "d" => println!("{}", data.board),
+            "d" => println!("{}", board),
             "bench" => {
                 let (total_node_count, nps) = bench();
                 println!("{} nodes {} nps", total_node_count, nps);
@@ -150,21 +152,21 @@ pub fn position(args: &str, board: &mut Board) {
     }
 }
 
-pub fn set_option(args: &str, data: &mut SearchData, thread_amoount: &mut usize) {
+pub fn set_option(args: &str, shared: Arc<SharedData>, pool: &mut ThreadPool) {
     let args = args.to_ascii_lowercase();
     let args: Vec<&str> = args.split_ascii_whitespace().collect();
     match args.as_slice() {
         ["name", "hash", "value", amount] => {
             let amount = amount.parse::<usize>().unwrap_or(16);
-            data.shared.tt.resize(amount);
+            shared.tt.resize(amount);
             println!("info string Resized TT to {amount} mb");
         }
         ["name", "threads", "value", amount] => {
             let amount = amount.parse::<usize>().unwrap_or(1);
-            *thread_amoount = amount;
+            *pool = ThreadPool::new(shared, amount);
         }
         ["name", "clear", "hash"] => {
-            data.shared.tt.clear();
+            shared.tt.clear();
             println!("info string TT cleared");
         }
         _ => eprintln!("Unkown option"),
@@ -173,65 +175,61 @@ pub fn set_option(args: &str, data: &mut SearchData, thread_amoount: &mut usize)
 
 pub fn go(
     args: &str,
-    data: &mut SearchData,
-    thread_amoount: usize,
+    pool: &mut ThreadPool,
+    board: &mut Board,
+    time: &mut TimeManager,
+    shared: &Arc<SharedData>,
     mute: bool,
-) -> Option<MoveEntry> {
+) -> Option<Move> {
     let (command, args) = args.split_once(" ").unwrap_or((args, ""));
     if args.is_empty() {
-        let mut thread_pool = ThreadPool::new(
-            data.board.clone(),
-            data.time.clone(),
-            data.shared.clone(),
-            thread_amoount,
-        );
-        return thread_pool.start(data.shared.clone(), mute);
+        return pool.start(board, time.clone(), shared, mute);
     }
 
     match command.trim() {
         "depth" => {
             let (depth, args) = args.split_once(" ").unwrap_or((args, ""));
-            data.get_time_settings().depth = depth.trim().parse().unwrap_or(MAX_DEPTH - 1);
-            go(args, data, thread_amoount, mute)
+            time.settings.depth = depth.trim().parse().unwrap_or(MAX_DEPTH - 1);
+            go(args, pool, board, time, shared, mute)
         }
         "wtime" => {
             //Example: go wtime 900000 btime 900000 winc 0 binc 0
             let (wtime, args) = args.split_once(" ").unwrap_or((args, ""));
-            data.get_time_settings().wtime = wtime.trim().parse().unwrap_or(500);
-            go(args, data, thread_amoount, mute)
+            time.settings.wtime = wtime.trim().parse().unwrap_or(500);
+            go(args, pool, board, time, shared, mute)
         }
         "btime" => {
             let (btime, args) = args.split_once(" ").unwrap_or((args, ""));
-            data.get_time_settings().btime = btime.trim().parse().unwrap_or(500);
-            go(args, data, thread_amoount, mute)
+            time.settings.btime = btime.trim().parse().unwrap_or(500);
+            go(args, pool, board, time, shared, mute)
         }
         "winc" => {
             let (winc, args) = args.split_once(" ").unwrap_or((args, ""));
-            data.get_time_settings().winc = winc.trim().parse().unwrap_or(0);
-            go(args, data, thread_amoount, mute)
+            time.settings.winc = winc.trim().parse().unwrap_or(0);
+            go(args, pool, board, time, shared, mute)
         }
         "binc" => {
             let (binc, args) = args.split_once(" ").unwrap_or((args, ""));
-            data.get_time_settings().binc = binc.trim().parse().unwrap_or(0);
-            go(args, data, thread_amoount, mute)
+            time.settings.binc = binc.trim().parse().unwrap_or(0);
+            go(args, pool, board, time, shared, mute)
         }
         "movestogo" => {
             let (movestogo, args) = args.split_once(" ").unwrap_or((args, ""));
-            data.get_time_settings().movestogo = movestogo.trim().parse().unwrap_or(0);
-            go(args, data, thread_amoount, mute)
+            time.settings.movestogo = movestogo.trim().parse().unwrap_or(0);
+            go(args, pool, board, time, shared, mute)
         }
         "movetime" => {
             let (movetime, args) = args.split_once(" ").unwrap_or((args, ""));
-            data.get_time_settings().movetime = movetime.trim().parse().unwrap_or(0);
-            go(args, data, thread_amoount, mute)
+            time.settings.movetime = movetime.trim().parse().unwrap_or(0);
+            go(args, pool, board, time, shared, mute)
         }
         "nodes" => {
             let (nodes, args) = args.split_once(" ").unwrap_or((args, ""));
-            data.get_time_settings().nodes = nodes.trim().parse().unwrap_or(0);
-            data.time.set_nodes_limit();
-            go(args, data, thread_amoount, mute)
+            time.settings.nodes = nodes.trim().parse().unwrap_or(0);
+            time.set_nodes_limit();
+            go(args, pool, board, time, shared, mute)
         }
-        _ => go(args, data, thread_amoount, mute),
+        _ => go(args, pool, board, time, shared, mute),
     }
 }
 
@@ -283,34 +281,43 @@ pub mod tests {
 
     #[test]
     fn test_parse_times() {
+        let shared = Arc::new(SharedData::default());
+        let mut pool = ThreadPool::new(shared.clone(), 1);
+        let mut board = Board::from_fen(STARTING_FEN).unwrap();
+        let mut time = TimeManager::new();
+
         go(
             "wtime 5000 btime 5000 winc 0 binc 0",
-            &mut SearchData::default(),
-            1,
+            &mut pool,
+            &mut board,
+            &mut time,
+            &shared,
             false,
         );
     }
 
     #[test]
     fn test_parse_go() {
-        let mut data = SearchData::default();
+        let shared = Arc::new(SharedData::default());
+        let mut pool = ThreadPool::new(shared.clone(), 1);
+        let mut board = Board::from_fen(STARTING_FEN).unwrap();
+        let mut time = TimeManager::new();
         let bm = go(
             "wtime 5000 btime 5000 winc 5 binc 8 movetime 100",
-            &mut data,
-            1,
+            &mut pool,
+            &mut board,
+            &mut time,
+            &shared,
             false,
         );
-        println!(
-            "{:?}\nBestmove: {}",
-            data.get_time_settings(),
-            bm.unwrap().mv
-        );
+        println!("{:?}\nBestmove: {}", time.settings, bm.unwrap());
     }
 
     #[test]
     fn test_set_option() {
-        let mut data = SearchData::default();
-        let mut thread_amount = 1;
-        set_option("name Hash value 32", &mut data, &mut thread_amount);
+        let shared = Arc::new(SharedData::default());
+        let mut pool = ThreadPool::new(shared.clone(), 1);
+
+        set_option("name Hash value 32", shared, &mut pool);
     }
 }

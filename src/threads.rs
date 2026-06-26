@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     board::Board,
@@ -7,34 +7,30 @@ use crate::{
         search_runner,
         time::TimeManager,
     },
-    types::MoveEntry,
+    types::Move,
 };
 
 pub struct ThreadPool {
-    threads: Vec<SearchData>,
+    pub threads: Vec<SearchData>,
 }
 
 impl ThreadPool {
-    pub fn new(
-        board: Board,
-        time: TimeManager,
-        shared: std::sync::Arc<SharedData>,
-        count: usize,
-    ) -> Self {
+    pub fn new(shared: std::sync::Arc<SharedData>, count: usize) -> Self {
         let mut threads = Vec::new();
         for _ in 0..count {
-            threads.push(SearchData {
-                board: board.clone(),
-                time: time.clone(),
-                shared: shared.clone(),
-                ..Default::default()
-            });
+            threads.push(SearchData::new(shared.clone()));
         }
 
         ThreadPool { threads }
     }
 
-    pub fn start(&mut self, shared: std::sync::Arc<SharedData>, mute: bool) -> Option<MoveEntry> {
+    pub fn start(
+        &mut self,
+        board: &Board,
+        time: TimeManager,
+        shared: &Arc<SharedData>,
+        mute: bool,
+    ) -> Option<Move> {
         shared.clear_node_count();
         shared.tt.increase_age();
 
@@ -45,14 +41,16 @@ impl ThreadPool {
                     t.mute();
                 }
 
+                t.board = board.clone();
+                t.time = time.clone();
+
                 handles.push(scope.spawn(|| search_runner(t)));
             }
 
             let mut best_moves = HashMap::new();
-
             for handle in handles {
                 if let Ok(Some(m)) = handle.join() {
-                    best_moves.insert(m, best_moves.get(&m).unwrap_or(&0) + 1);
+                    best_moves.insert(m.mv, best_moves.get(&m.mv).unwrap_or(&0) + 1);
                 }
             }
 
@@ -87,8 +85,8 @@ mod tests {
 
         let board = Board::from_fen(STARTING_FEN).unwrap();
 
-        let mut pool = ThreadPool::new(board, time, shared.clone(), 3);
-        let m = pool.start(shared.clone(), false).unwrap();
-        println!("{} : {}", m.mv, m.score);
+        let mut pool = ThreadPool::new(shared.clone(), 3);
+        let m = pool.start(&board, time, &shared, false).unwrap();
+        println!("{}", m);
     }
 }

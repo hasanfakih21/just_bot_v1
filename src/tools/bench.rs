@@ -1,6 +1,12 @@
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
 
-use crate::{board::Board, search::data::SearchData, tools::uci::go, types::STARTING_FEN};
+use crate::{
+    board::Board,
+    search::{data::SharedData, time::TimeManager},
+    threads::ThreadPool,
+    tools::uci::go,
+    types::STARTING_FEN,
+};
 
 pub fn bench() -> (u64, u64) {
     let positions = [
@@ -19,12 +25,13 @@ pub fn bench() -> (u64, u64) {
     let time = Instant::now();
     let mut total_node_count = 0;
     for fen in positions {
-        let mut data = SearchData {
-            board: Board::from_fen(fen).unwrap(),
-            ..Default::default()
-        };
-        go("depth 8", &mut data, 1, true);
-        total_node_count += data.shared.get_total_nodes_searched();
+        let mut board = Board::from_fen(fen).unwrap();
+        let shared = Arc::new(SharedData::default());
+        let mut pool = ThreadPool::new(shared.clone(), 1);
+        let mut time = TimeManager::new();
+
+        go("depth 8", &mut pool, &mut board, &mut time, &shared, true);
+        total_node_count += shared.get_total_nodes_searched();
     }
 
     let nps = (total_node_count as f32 / time.elapsed().as_secs_f32()) as usize;
