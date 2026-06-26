@@ -1,4 +1,4 @@
-use crate::types::{BitBoard, MAX_HISTORY, Move, Piece, Side, Square};
+use crate::types::{BitBoard, MAX_HISTORY, Move, Piece, Side, Square, to_piece_index};
 
 type FromToHistory<T> = [[T; 64]; 64];
 type PieceToHistory<T> = [[T; 64]; 13];
@@ -89,6 +89,45 @@ impl NoisyHistory {
     }
 }
 
+#[derive(Debug, Clone)]
+//[In Check][Capture][Piece][To][Piece][To]
+pub struct ContinuationHistory(pub Box<[[PieceToHistory<PieceToHistory<i16>>; 2]; 2]>);
+
+impl ContinuationHistory {
+    pub fn new() -> Self {
+        Self(allocate_empty_history())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn update(
+        &mut self,
+        in_check: bool,
+        is_capture: bool,
+        prev_piece: Option<(Side, Piece)>,
+        prev_to: Square,
+        piece: Option<(Side, Piece)>,
+        to: Square,
+        bonus: i32,
+    ) {
+        let entry = &mut self.0[in_check as usize][is_capture as usize][to_piece_index(prev_piece)]
+            [prev_to as usize][to_piece_index(piece)][to as usize];
+        update_entry(bonus, entry);
+    }
+
+    pub fn get(
+        &self,
+        in_check: bool,
+        is_capture: bool,
+        prev_piece: Option<(Side, Piece)>,
+        prev_to: Square,
+        piece: Option<(Side, Piece)>,
+        to: Square,
+    ) -> i32 {
+        self.0[in_check as usize][is_capture as usize][to_piece_index(prev_piece)][prev_to as usize]
+            [to_piece_index(piece)][to as usize] as i32
+    }
+}
+
 fn allocate_empty_history<T>() -> Box<T> {
     let layout = std::alloc::Layout::new::<T>();
     unsafe {
@@ -111,6 +150,12 @@ impl Default for QuietHistory {
 impl Default for NoisyHistory {
     fn default() -> Self {
         NoisyHistory::new()
+    }
+}
+
+impl Default for ContinuationHistory {
+    fn default() -> Self {
+        ContinuationHistory::new()
     }
 }
 
