@@ -35,7 +35,6 @@ pub struct SharedData {
     pub tt: TranspositionTable,
     pub total_nodes: AtomicUsize,
     pub status: Status,
-    pub mute: AtomicBool,
 }
 
 impl SharedData {
@@ -50,14 +49,6 @@ impl SharedData {
     pub fn clear_node_count(&self) {
         self.total_nodes.store(0, Ordering::Release);
     }
-
-    pub fn report(&self) -> bool {
-        !self.mute.load(Ordering::Relaxed)
-    }
-
-    pub fn mute(&self) {
-        self.mute.store(true, Ordering::Relaxed);
-    }
 }
 
 impl Default for SharedData {
@@ -66,7 +57,6 @@ impl Default for SharedData {
             tt: TranspositionTable::default(),
             total_nodes: AtomicUsize::new(0),
             status: Status(AtomicBool::new(Status::RUNNING)),
-            mute: AtomicBool::new(false),
         }
     }
 }
@@ -77,6 +67,7 @@ pub struct SearchData {
     pub pv: Vec<MoveList>,
     pub board: Board,
     pub time: TimeManager,
+    pub report: bool,
 
     pub quiet_history: QuietHistory,
     pub noisy_history: NoisyHistory,
@@ -86,18 +77,27 @@ pub struct SearchData {
 }
 
 impl SearchData {
-    pub fn new(shared: SharedData) -> Self {
+    pub fn new(shared: Arc<SharedData>) -> Self {
         SearchData {
-            shared: Arc::new(shared),
+            shared,
             pv: vec![MoveList::new(); 128],
             board: Board::from_fen(STARTING_FEN).unwrap(),
             time: TimeManager::new(),
             quiet_history: QuietHistory::new(),
             noisy_history: NoisyHistory::new(),
+            report: true,
 
             white_features: Accumulator::new(&NNUE),
             black_features: Accumulator::new(&NNUE),
         }
+    }
+
+    pub fn mute(&mut self) {
+        self.report = false;
+    }
+
+    pub fn report(&mut self) {
+        self.report = true;
     }
 
     pub fn clear_histories(&mut self) {
@@ -303,6 +303,6 @@ impl SearchData {
 
 impl Default for SearchData {
     fn default() -> Self {
-        Self::new(SharedData::default())
+        Self::new(Arc::new(SharedData::default()))
     }
 }

@@ -62,7 +62,7 @@ impl Default for BoardState {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Board {
     pub state: BoardState,
     pub state_stack: Vec<BoardState>,

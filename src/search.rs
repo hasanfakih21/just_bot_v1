@@ -58,8 +58,6 @@ impl NodeType for Root {
 }
 
 pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
-    data.shared.clear_node_count();
-    data.shared.tt.increase_age();
     data.reset_pv();
     data.start_time();
     data.time.set_depth_limit();
@@ -82,7 +80,7 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
     let mut beta = score + beta_window;
 
     //All infos belonging to the pv should be sent together e.g. info depth 2 score cp 214 time 1242 nodes 2124 nps 34928 pv e2e4 e7e5 g1f3
-    if data.shared.report() {
+    if data.report {
         //Report mate score
         let score_print = if score.abs() > MATE_CUTOFF {
             let num_plies = MATE_SCORE - score.abs();
@@ -132,11 +130,12 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
 
         score = new_score;
         best_move = data.get_pv().get(0);
+        best_move.score = score;
         alpha_window = 25;
         beta_window = 25;
         alpha = score - alpha_window;
         beta = score + beta_window;
-        if data.shared.report() {
+        if data.report {
             //Report mate score
             let score_print = if score.abs() > MATE_CUTOFF {
                 let num_plies = MATE_SCORE - score.abs();

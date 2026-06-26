@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::types::{BitBoard, Piece, Square, stackvec::StackVec};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MoveEntry {
     pub mv: Move,
     pub score: i32,
@@ -112,7 +112,7 @@ impl Display for MoveList {
 }
 
 //12 bits for to and from square and 4 bits for move type
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Move(u16);
 
 impl Move {
