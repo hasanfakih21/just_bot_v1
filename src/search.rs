@@ -347,8 +347,8 @@ pub fn search<Node: NodeType>(
             let noisy_bonus = (250 * depth as i32).min(1000) - 250;
             let noisy_malus = (300 * depth as i32).min(1000) - 250;
 
-            let cont_bonus = (250 * depth as i32).min(1000) - 250;
-            let cont_malus = (250 * depth as i32).min(1000) - 250;
+            let cont_bonus = (450 * depth as i32) - 250;
+            let cont_malus = (350 * depth as i32) - 250;
 
             let threats = data.board.state.threats;
 
@@ -362,7 +362,7 @@ pub fn search<Node: NodeType>(
                         .update(threats, stm, *quiet_move, -quiet_malus);
 
                     //Conthistory malus
-                    if ply >= 1 {
+                    if ply >= 1 && ply < MAX_PLY as usize {
                         let prev_ply = data.ply_table[ply - 1];
                         data.conthistory.update(
                             prev_ply.in_check, 
@@ -399,7 +399,7 @@ pub fn search<Node: NodeType>(
                     .update(piece, to, captured, threats, -noisy_malus);
 
                 //Conthistory malus
-                if ply >= 1 {
+                if ply >= 1 && ply < MAX_PLY as usize {
                     let prev_ply = data.ply_table[ply - 1];
                     data.conthistory.update(
                         prev_ply.in_check, 
@@ -429,7 +429,7 @@ pub fn search<Node: NodeType>(
             }
 
             //Conthistory Bonus
-            if ply >= 1 {
+            if ply >= 1 && ply < MAX_PLY as usize {
                 let prev_ply = data.ply_table[ply - 1];
                 data.conthistory.update(
                     prev_ply.in_check, 
