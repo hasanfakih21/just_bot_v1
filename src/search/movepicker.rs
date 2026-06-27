@@ -39,7 +39,7 @@ impl MovePicker {
         }
     }
 
-    pub fn next(&mut self, data: &SearchData, skip_quiets: bool) -> Option<Move> {
+    pub fn next(&mut self, data: &SearchData, skip_quiets: bool, ply: usize) -> Option<Move> {
         let board = &data.board;
         if self.status == Status::HashMove {
             self.status = Status::FirstNoisy;
@@ -72,7 +72,7 @@ impl MovePicker {
                 self.status = Status::Quiet;
                 board.append_moves(MoveGenKind::Quiet, &mut self.moves);
                 self.remove_tt_move();
-                self.score_quiet_moves(data);
+                self.score_quiet_moves(data, ply);
             } else {
                 self.status = Status::BadNoisy;
             }
@@ -122,14 +122,27 @@ impl MovePicker {
         }
     }
 
-    fn score_quiet_moves(&mut self, data: &SearchData) {
+    fn score_quiet_moves(&mut self, data: &SearchData, ply: usize) {
         let side = data.board.state.side_to_move;
         let threats = data.board.state.threats;
 
         for entry in self.moves.iter_mut() {
             let mv = entry.mv;
-            let score = data.quiet_history.get(threats, side, mv);
-            entry.score = score;
+            let conthistory_score = if ply > 0 {
+                let prev_ply = data.ply_table[ply - 1];
+                data.conthistory.get(
+                    prev_ply.in_check,
+                    prev_ply.m.is_capture(), 
+                    prev_ply.piece, 
+                    prev_ply.m.get_to(), 
+                    data.board.get_piece_at_square(mv.get_from()), 
+                    mv.get_to()
+                )
+            } else {
+                0
+            };
+
+            entry.score = data.quiet_history.get(threats, side, mv) + conthistory_score; 
         }
     }
 
@@ -191,7 +204,7 @@ pub mod tests {
         let mut move_picker = MovePicker::new(None);
         println!("{}", move_picker.moves);
         //println!("{:?}", move_picker);
-        while let Some(m) = move_picker.next(&data, true) {
+        while let Some(m) = move_picker.next(&data, true, 0) {
             print!("{m}: ");
             print!(
                 "Value: {}, Value: {}",

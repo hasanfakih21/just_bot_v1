@@ -2,6 +2,7 @@ use crate::board::Board;
 use crate::evaluation::{mated, mating};
 use crate::search::data::{SearchData, Status};
 use crate::search::movepicker::MovePicker;
+use crate::types::plytable::PlyTable;
 use crate::types::stackvec::StackVec;
 use crate::types::*;
 
@@ -104,6 +105,8 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
 
     //Iterative Deepening
     loop {
+        *data.ply_table = PlyTable::new();
+
         if data.over_limit()
             || depth > data.time.depth_limit()
             || data.shared.status.get() == Status::STOPPED
@@ -265,7 +268,7 @@ pub fn search<Node: NodeType>(
     let mut noisies_searched = StackVec::<Move, 256>::new();
     let mut skip_quiets = false;
 
-    while let Some(m) = move_picker.next(data, skip_quiets) {
+    while let Some(m) = move_picker.next(data, skip_quiets, ply) {
         move_count += 1;
 
         if !Node::ROOT && !mated(best_score) {
@@ -344,6 +347,8 @@ pub fn search<Node: NodeType>(
             let noisy_bonus = (250 * depth as i32).min(1000) - 250;
             let noisy_malus = (300 * depth as i32).min(1000) - 250;
 
+            let cont_bonus = (250 * depth as i32).min(1000) - 250;
+
             let threats = data.board.state.threats;
 
             if m.get_kind().is_quiet() {
@@ -393,6 +398,20 @@ pub fn search<Node: NodeType>(
                     Node::PV,
                 );
             }
+
+            if ply > 1 {
+                let prev_ply = data.ply_table[ply - 1];
+                data.conthistory.update(
+                    prev_ply.in_check, 
+                    prev_ply.m.is_capture(), 
+                    prev_ply.piece, 
+                    prev_ply.m.get_to(), 
+                    data.board.get_piece_at_square(m.get_from()), 
+                    m.get_to(), 
+                    cont_bonus
+                );
+            }
+
             return best_score;
         }
 
@@ -448,7 +467,7 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> 
         .map(|e| e.get_best_move());
     let mut move_picker = MovePicker::new(tt_move);
 
-    while let Some(m) = move_picker.next(data, true) {
+    while let Some(m) = move_picker.next(data, true, ply) {
         //Static Exchange Evaluation Pruning (SEE Pruning)
         if !mated(best_score) && !data.board.see(m, -150) {
             continue;
@@ -517,7 +536,7 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
         .map(|e| e.get_best_move());
     let mut move_picker = MovePicker::new(tt_move);
 
-    while let Some(m) = move_picker.next(data, false) {
+    while let Some(m) = move_picker.next(data, false, ply) {
         move_count += 1;
 
         data.make_move(m, ply);
