@@ -6,7 +6,7 @@ use crate::nnue::{Accumulator, NNUE};
 use crate::search::time::{TimeManager, TimeSettings};
 use crate::types::plytable::PlyTable;
 use crate::types::{
-    ContinuationHistory, KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, MAX_PLY, Move, MoveKind,
+    ContinuationHistory, KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, Move, MoveKind,
     MoveList, NoisyHistory, Piece, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE, STARTING_FEN,
     Side, Square, to_file_bb,
 };
@@ -87,7 +87,7 @@ impl SearchData {
             pv: vec![MoveList::new(); 128],
             board: Board::from_fen(STARTING_FEN).unwrap(),
             time: TimeManager::new(),
-            ply_table: Box::new(PlyTable::new()),
+            ply_table: PlyTable::new(),
 
             quiet_history: QuietHistory::new(),
             noisy_history: NoisyHistory::new(),
@@ -129,16 +129,16 @@ impl SearchData {
         self.time.reset_clock();
     }
 
-    pub fn add_pv_move(&mut self, m: Move, ply: usize) {
-        self.pv[ply].clear();
-        self.pv[ply].push(m);
-        for child_m in self.pv[ply + 1].clone().iter() {
-            self.pv[ply].push(child_m.mv);
+    pub fn add_pv_move(&mut self, m: Move, ply: isize) {
+        self.pv[ply as usize].clear();
+        self.pv[ply as usize].push(m);
+        for child_m in self.pv[(ply + 1) as usize].clone().iter() {
+            self.pv[ply as usize].push(child_m.mv);
         }
     }
 
-    pub fn clear_pv(&mut self, ply: usize) {
-        self.pv[ply].clear();
+    pub fn clear_pv(&mut self, ply: isize) {
+        self.pv[ply as usize].clear();
     }
 
     pub fn get_time_settings(&mut self) -> &mut TimeSettings {
@@ -160,7 +160,7 @@ impl SearchData {
     }
 
     //Called before move is made on the board
-    pub fn make_move(&mut self, m: Move, ply: usize) {
+    pub fn make_move(&mut self, m: Move, ply: isize) {
         let from = m.get_from();
         let to = m.get_to();
         let kind = m.get_kind();
@@ -209,11 +209,9 @@ impl SearchData {
             self.toggle_accumulators_on(stm, moving_piece, to);
         }
 
-        if ply <= MAX_PLY as usize {
-            self.ply_table[ply].in_check = self.board.king_in_check();
-            self.ply_table[ply].m = m;
-            self.ply_table[ply].piece = Some((stm, moving_piece));
-        }
+        self.ply_table[ply].m = m;
+        self.ply_table[ply].piece = Some((stm, moving_piece));
+        self.ply_table[ply].conthistory = self.conthistory.subtable(Some((stm, moving_piece)), m.get_to());
 
         self.board.make_move(m)
     }

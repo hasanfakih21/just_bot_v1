@@ -145,7 +145,7 @@ impl TranspositionTable {
         bound: Bound,
         hash: u64,
         depth: u8,
-        ply: usize,
+        ply: isize,
         pv: bool,
     ) {
         let index = index(hash, self.len());

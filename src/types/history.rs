@@ -1,7 +1,7 @@
 use crate::types::{BitBoard, MAX_HISTORY, Move, Piece, Side, Square, to_piece_index};
 
-type FromToHistory<T> = [[T; 64]; 64];
-type PieceToHistory<T> = [[T; 64]; 13];
+pub type FromToHistory<T> = [[T; 64]; 64];
+pub type PieceToHistory<T> = [[T; 64]; 13];
 
 #[derive(Debug, Clone)]
 //[Side to Move][From Threatened][To Threatened][From][To]
@@ -90,41 +90,40 @@ impl NoisyHistory {
 }
 
 #[derive(Debug, Clone)]
-//[In Check][Capture][Piece][To][Piece][To]
-pub struct ContinuationHistory(pub Box<[[PieceToHistory<PieceToHistory<i16>>; 2]; 2]>);
+//[Piece][To][Piece][To]
+pub struct ContinuationHistory(pub Box<PieceToHistory<PieceToHistory<i16>>>);
 
 impl ContinuationHistory {
     pub fn new() -> Self {
         Self(allocate_empty_history())
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn update(
+    pub fn subtable(&mut self, piece: Option<(Side, Piece)>, to: Square) -> *mut PieceToHistory<i16> {
+        &raw mut self.0[to_piece_index(piece)][to as usize]
+    }
+
+    /// # Safety
+    /// 'subtable' needs to point to a valid subtable owned by the history
+    pub unsafe fn update(
         &mut self,
-        in_check: bool,
-        is_capture: bool,
-        prev_piece: Option<(Side, Piece)>,
-        prev_to: Square,
+        subtable: *mut PieceToHistory<i16>,
         piece: Option<(Side, Piece)>,
         to: Square,
         bonus: i32,
     ) {
-        let entry = &mut self.0[in_check as usize][is_capture as usize][to_piece_index(prev_piece)]
-            [prev_to as usize][to_piece_index(piece)][to as usize];
+        let entry = &mut unsafe {&mut *subtable}[to_piece_index(piece)][to as usize];
         update_entry(bonus, entry);
     }
 
-    pub fn get(
+    /// # Safety
+    /// 'subtable' needs to point to a valid subtable owned by the history
+    pub unsafe fn get(
         &self,
-        in_check: bool,
-        is_capture: bool,
-        prev_piece: Option<(Side, Piece)>,
-        prev_to: Square,
+        subtable: *mut PieceToHistory<i16>,
         piece: Option<(Side, Piece)>,
         to: Square,
     ) -> i32 {
-        self.0[in_check as usize][is_capture as usize][to_piece_index(prev_piece)][prev_to as usize]
-            [to_piece_index(piece)][to as usize] as i32
+        (unsafe {&*subtable}[to_piece_index(piece)][to as usize]) as i32
     }
 }
 

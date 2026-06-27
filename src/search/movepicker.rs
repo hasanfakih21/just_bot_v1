@@ -39,7 +39,7 @@ impl MovePicker {
         }
     }
 
-    pub fn next(&mut self, data: &SearchData, skip_quiets: bool, ply: usize) -> Option<Move> {
+    pub fn next(&mut self, data: &SearchData, skip_quiets: bool, ply: isize) -> Option<Move> {
         let board = &data.board;
         if self.status == Status::HashMove {
             self.status = Status::FirstNoisy;
@@ -122,27 +122,23 @@ impl MovePicker {
         }
     }
 
-    fn score_quiet_moves(&mut self, data: &SearchData, ply: usize) {
+    fn score_quiet_moves(&mut self, data: &SearchData, ply: isize) {
         let side = data.board.state.side_to_move;
         let threats = data.board.state.threats;
 
         for entry in self.moves.iter_mut() {
             let mv = entry.mv;
-            let conthistory_score = if ply > 0 {
-                let prev_ply = data.ply_table[ply - 1];
-                data.conthistory.get(
-                    prev_ply.in_check,
-                    prev_ply.m.is_capture(), 
-                    prev_ply.piece, 
-                    prev_ply.m.get_to(), 
-                    data.board.get_piece_at_square(mv.get_from()), 
-                    mv.get_to()
-                )
-            } else {
-                0
-            };
-
-            entry.score = data.quiet_history.get(threats, side, mv) + conthistory_score * 2; 
+            let conthistory_score = 
+                unsafe {
+                    let prev_ply = data.ply_table[ply - 1];
+                    data.conthistory.get(
+                        prev_ply.conthistory,
+                        data.board.get_piece_at_square(mv.get_from()), 
+                        mv.get_to()
+                    )
+                };
+            
+            entry.score = (data.quiet_history.get(threats, side, mv) + conthistory_score) / 2; 
         }
     }
 
