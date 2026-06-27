@@ -584,16 +584,6 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: isiz
         }
 
         if score >= beta {
-            //Add noisy bonus to history
-            let piece = data.board.get_piece_at_square(m.get_from());
-            let to = m.get_to();
-            let captured = data
-                .board
-                .get_piece_at_square(m.get_capture_square())
-                .map(|e| e.1);
-            data.noisy_history
-                .update(piece, to, captured, data.board.state.threats, 100);
-
             return score;
         }
 
