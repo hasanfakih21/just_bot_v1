@@ -4,9 +4,11 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use crate::board::Board;
 use crate::nnue::{Accumulator, NNUE};
 use crate::search::time::{TimeManager, TimeSettings};
+use crate::types::plytable::PlyTable;
 use crate::types::{
-    KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, Move, MoveKind, MoveList, NoisyHistory, Piece,
-    QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE, STARTING_FEN, Side, Square, to_file_bb,
+    ContinuationHistory, KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, Move, MoveKind,
+    MoveList, NoisyHistory, Piece, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE, STARTING_FEN,
+    Side, Square, to_file_bb,
 };
 use crate::types::{QuietHistory, TranspositionTable};
 
@@ -68,9 +70,11 @@ pub struct SearchData {
     pub board: Board,
     pub time: TimeManager,
     pub report: bool,
+    pub ply_table: Box<PlyTable>,
 
     pub quiet_history: QuietHistory,
     pub noisy_history: NoisyHistory,
+    pub conthistory: ContinuationHistory,
 
     pub white_features: Accumulator,
     pub black_features: Accumulator,
@@ -83,8 +87,11 @@ impl SearchData {
             pv: vec![MoveList::new(); 128],
             board: Board::from_fen(STARTING_FEN).unwrap(),
             time: TimeManager::new(),
+            ply_table: PlyTable::new(),
+
             quiet_history: QuietHistory::new(),
             noisy_history: NoisyHistory::new(),
+            conthistory: ContinuationHistory::new(),
             report: true,
 
             white_features: Accumulator::new(&NNUE),
@@ -98,11 +105,6 @@ impl SearchData {
 
     pub fn report(&mut self) {
         self.report = true;
-    }
-
-    pub fn clear_histories(&mut self) {
-        self.quiet_history = QuietHistory::new();
-        self.noisy_history = NoisyHistory::new();
     }
 
     pub fn clear_features(&mut self) {
@@ -127,16 +129,16 @@ impl SearchData {
         self.time.reset_clock();
     }
 
-    pub fn add_pv_move(&mut self, m: Move, ply: usize) {
-        self.pv[ply].clear();
-        self.pv[ply].push(m);
-        for child_m in self.pv[ply + 1].clone().iter() {
-            self.pv[ply].push(child_m.mv);
+    pub fn add_pv_move(&mut self, m: Move, ply: isize) {
+        self.pv[ply as usize].clear();
+        self.pv[ply as usize].push(m);
+        for child_m in self.pv[(ply + 1) as usize].clone().iter() {
+            self.pv[ply as usize].push(child_m.mv);
         }
     }
 
-    pub fn clear_pv(&mut self, ply: usize) {
-        self.pv[ply].clear();
+    pub fn clear_pv(&mut self, ply: isize) {
+        self.pv[ply as usize].clear();
     }
 
     pub fn get_time_settings(&mut self) -> &mut TimeSettings {
@@ -158,7 +160,7 @@ impl SearchData {
     }
 
     //Called before move is made on the board
-    pub fn make_move(&mut self, m: Move) {
+    pub fn make_move(&mut self, m: Move, ply: isize) {
         let from = m.get_from();
         let to = m.get_to();
         let kind = m.get_kind();
@@ -206,6 +208,10 @@ impl SearchData {
             self.toggle_accumulators_off(stm, moving_piece, from);
             self.toggle_accumulators_on(stm, moving_piece, to);
         }
+
+        self.ply_table[ply].m = m;
+        self.ply_table[ply].piece = Some((stm, moving_piece));
+        self.ply_table[ply].conthistory = self.conthistory.subtable(Some((stm, moving_piece)), m.get_to());
 
         self.board.make_move(m)
     }

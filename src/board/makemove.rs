@@ -242,12 +242,8 @@ impl Board {
         self.state_stack.push(self.state.clone());
     }
 
-    pub fn king_in_check(&self, side: Side) -> bool {
-        let king_square = self
-            .get_piece_bb(side, Piece::King)
-            .least_sig_bit()
-            .unwrap();
-        self.is_attacked(king_square)
+    pub fn king_in_check(&self) -> bool {
+        !self.state.checkers.is_empty()
     }
 
     pub fn make_null_move(&mut self) {

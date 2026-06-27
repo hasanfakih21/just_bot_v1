@@ -2,6 +2,7 @@ use crate::board::Board;
 use crate::evaluation::{mated, mating};
 use crate::search::data::{SearchData, Status};
 use crate::search::movepicker::MovePicker;
+use crate::types::plytable::PlyTable;
 use crate::types::stackvec::StackVec;
 use crate::types::*;
 
@@ -104,6 +105,8 @@ pub fn search_runner(data: &mut SearchData) -> Option<MoveEntry> {
 
     //Iterative Deepening
     loop {
+        data.ply_table = PlyTable::new();
+
         if data.over_limit()
             || depth > data.time.depth_limit()
             || data.shared.status.get() == Status::STOPPED
@@ -166,12 +169,12 @@ pub fn search<Node: NodeType>(
     depth: u8,
     mut alpha: i32,
     beta: i32,
-    ply: usize,
+    ply: isize,
 ) -> i32 {
     let stm = data.board.state.side_to_move;
 
     if depth == 0 {
-        if data.board.king_in_check(stm) {
+        if data.board.king_in_check() {
             return search_checks(data, alpha, beta, ply);
         } else {
             return quiesce(data, alpha, beta, ply); //Horizon Node
@@ -221,7 +224,7 @@ pub fn search<Node: NodeType>(
         }
     }
 
-    let in_check = data.board.king_in_check(stm);
+    let in_check = data.board.king_in_check();
     let static_eval = if in_check {
         -INFINITY
     } else if let Some(e) = tt_entry {
@@ -241,6 +244,10 @@ pub fn search<Node: NodeType>(
     //Null Move Pruning
     if !Node::PV && !in_check && !data.board.only_king_and_pawns() {
         let r = 4;
+        data.ply_table[ply].conthistory = data.ply_table.sentinel();
+        data.ply_table[ply].m = Move::default();
+        data.ply_table[ply].piece = None;
+
         data.board.make_null_move();
         let null_move_score =
             -search::<NonPV>(data, depth.saturating_sub(r), -beta, -(beta - 1), ply + 1);
@@ -265,7 +272,7 @@ pub fn search<Node: NodeType>(
     let mut noisies_searched = StackVec::<Move, 256>::new();
     let mut skip_quiets = false;
 
-    while let Some(m) = move_picker.next(data, skip_quiets) {
+    while let Some(m) = move_picker.next(data, skip_quiets, ply) {
         move_count += 1;
 
         if !Node::ROOT && !mated(best_score) {
@@ -291,7 +298,7 @@ pub fn search<Node: NodeType>(
         }
 
         //Make Move
-        data.make_move(m);
+        data.make_move(m, ply);
 
         let mut score = best_score;
 
@@ -344,6 +351,9 @@ pub fn search<Node: NodeType>(
             let noisy_bonus = (250 * depth as i32).min(1000) - 250;
             let noisy_malus = (300 * depth as i32).min(1000) - 250;
 
+            let cont_bonus = (350 * depth as i32).min(1000) - 250;
+            let cont_malus = (250 * depth as i32).min(1000) - 250;
+
             let threats = data.board.state.threats;
 
             if m.get_kind().is_quiet() {
@@ -354,6 +364,17 @@ pub fn search<Node: NodeType>(
                     let quiet_move = e;
                     data.quiet_history
                         .update(threats, stm, *quiet_move, -quiet_malus);
+
+                    //Conthistory malus
+                    let prev_ply = data.ply_table[ply - 1];
+                    unsafe {
+                        data.conthistory.update(
+                            prev_ply.conthistory,
+                            data.board.get_piece_at_square(quiet_move.get_from()), 
+                            quiet_move.get_to(), 
+                            -cont_malus
+                        );
+                    }
                 }
             } else {
                 //Add noisy bonus to history
@@ -377,6 +398,17 @@ pub fn search<Node: NodeType>(
                     .map(|e| e.1);
                 data.noisy_history
                     .update(piece, to, captured, threats, -noisy_malus);
+
+                //Conthistory malus
+                let prev_ply = data.ply_table[ply - 1];
+                unsafe {
+                    data.conthistory.update(
+                        prev_ply.conthistory,
+                        data.board.get_piece_at_square(m.get_from()), 
+                        m.get_to(), 
+                        -cont_malus
+                    );
+                }
             }
 
             //Add TT entry
@@ -393,6 +425,18 @@ pub fn search<Node: NodeType>(
                     Node::PV,
                 );
             }
+
+            //Conthistory Bonus
+            let prev_ply = data.ply_table[ply - 1];
+            unsafe {
+                data.conthistory.update(
+                    prev_ply.conthistory,
+                    data.board.get_piece_at_square(m.get_from()), 
+                    m.get_to(), 
+                    cont_bonus
+                );
+            }
+
             return best_score;
         }
 
@@ -429,9 +473,13 @@ pub fn search<Node: NodeType>(
     best_score
 }
 
-pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) -> i32 {
+pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, ply: isize) -> i32 {
     data.shared.add_nodes(1);
     let mut best_score = data.nnue_evaluate();
+
+    if ply >= MAX_PLY as isize - 1 {
+        return best_score;
+    }
 
     if best_score >= beta {
         return best_score;
@@ -448,14 +496,14 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
         .map(|e| e.get_best_move());
     let mut move_picker = MovePicker::new(tt_move);
 
-    while let Some(m) = move_picker.next(data, true) {
+    while let Some(m) = move_picker.next(data, true, ply) {
         //Static Exchange Evaluation Pruning (SEE Pruning)
         if !mated(best_score) && !data.board.see(m, -150) {
             continue;
         }
 
-        data.make_move(m);
-        let score = -quiesce(data, -beta, -alpha, _ply + 1);
+        data.make_move(m, ply);
+        let score = -quiesce(data, -beta, -alpha, ply + 1);
         data.unmake_move(m);
 
         if data.over_limit() || data.shared.status.get() == Status::STOPPED {
@@ -488,10 +536,9 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
     best_score
 }
 
-pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> i32 {
+pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: isize) -> i32 {
     let mut best_score = -INFINITY;
     let mut move_count = 0;
-    let stm = data.board.state.side_to_move;
 
     data.shared.add_nodes(1);
 
@@ -507,7 +554,13 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
         }
     }
 
-    if !data.board.king_in_check(stm) {
+    let in_check = data.board.king_in_check();
+
+    if ply >= MAX_PLY as isize - 1 {
+        return if in_check {0} else {data.nnue_evaluate()};
+    }
+
+    if !in_check {
         return quiesce(data, alpha, beta, ply);
     }
 
@@ -518,10 +571,10 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
         .map(|e| e.get_best_move());
     let mut move_picker = MovePicker::new(tt_move);
 
-    while let Some(m) = move_picker.next(data, false) {
+    while let Some(m) = move_picker.next(data, false, ply) {
         move_count += 1;
 
-        data.make_move(m);
+        data.make_move(m, ply);
         let score = -search_checks(data, -beta, -alpha, ply + 1);
 
         data.unmake_move(m);
@@ -543,16 +596,18 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
 
             return score;
         }
+
         if score > best_score {
             best_score = score;
         }
+
         if score > alpha {
             alpha = score;
         }
     }
 
     if move_count == 0 {
-        if data.board.king_in_check(stm) {
+        if data.board.king_in_check() {
             return -MATE_SCORE + ply as i32;
         } else {
             return 0;

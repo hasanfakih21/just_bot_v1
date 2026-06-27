@@ -1,4 +1,4 @@
-use crate::types::{BitBoard, Square};
+use crate::types::{BitBoard, Piece, Side, Square};
 
 pub const A_FILE: u64 = 0x0101010101010101;
 pub const B_FILE: u64 = 0x0202020202020202;
@@ -47,10 +47,17 @@ pub const MATE_SCORE: i32 = 9000;
 pub const MATE_CUTOFF: i32 = 8900;
 pub const TIMEOUT_SCORE: i32 = 111111;
 
-pub const MAX_DEPTH: u8 = 128;
+pub const MAX_PLY: u8 = 128;
 pub const MAX_HISTORY: i32 = 8000;
 
 pub const fn to_file_bb(square: Square) -> BitBoard {
     let file = square.to_file();
     BitBoard(A_FILE).shift(EAST * file as i8)
+}
+
+pub const fn to_piece_index(piece: Option<(Side, Piece)>) -> usize {
+    match piece {
+        Some((s, p)) => (s as usize * 6) + p as usize,
+        None => 12,
+    }
 }

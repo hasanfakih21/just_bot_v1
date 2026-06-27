@@ -3,6 +3,7 @@ pub mod constants;
 pub mod history;
 pub mod moves;
 pub mod pieces;
+pub mod plytable;
 pub mod sides;
 pub mod squares;
 pub mod stackvec;

@@ -20,7 +20,7 @@ fn test_order_moves() {
     };
 
     let mut move_picker = MovePicker::new(None);
-    let first_move = move_picker.next(&data, false).unwrap();
+    let first_move = move_picker.next(&data, false, 0).unwrap();
 
     assert_eq!(
         first_move,
@@ -33,7 +33,7 @@ fn test_order_moves() {
         ..Default::default()
     };
     let mut move_picker = MovePicker::new(None);
-    let first_move = move_picker.next(&data, false).unwrap();
+    let first_move = move_picker.next(&data, false, 0).unwrap();
 
     assert_eq!(
         first_move,

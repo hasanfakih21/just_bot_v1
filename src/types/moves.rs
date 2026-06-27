@@ -112,7 +112,7 @@ impl Display for MoveList {
 }
 
 //12 bits for to and from square and 4 bits for move type
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Move(u16);
 
 impl Move {
@@ -173,6 +173,10 @@ impl Move {
             promoted_piece = Some(Piece::Queen)
         }
         promoted_piece
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.0 == 0
     }
 }
 

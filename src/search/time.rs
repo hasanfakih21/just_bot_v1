@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use crate::types::{MAX_DEPTH, Side};
+use crate::types::{MAX_PLY, Side};
 
 #[derive(Debug, Clone)]
 pub struct TimeManager {
@@ -31,7 +31,7 @@ impl Default for TimeSettings {
             winc: 0,
             binc: 0,
             movestogo: 0,
-            depth: MAX_DEPTH - 1,
+            depth: MAX_PLY - 1,
             nodes: 0,
             mate: 0,
             movetime: 0,
@@ -50,7 +50,7 @@ impl Default for Limits {
     fn default() -> Self {
         Self {
             time: 300000,
-            depth: MAX_DEPTH - 1,
+            depth: MAX_PLY - 1,
             nodes: None,
         }
     }

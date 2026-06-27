@@ -12,7 +12,7 @@ pub struct BadRandomBoard;
 
 static SEED: Mutex<u64> = Mutex::new(0);
 
-pub fn generate_random_openings(amount: usize, plies: usize, seed: u64) -> Vec<String> {
+pub fn generate_random_openings(amount: usize, plies: isize, seed: u64) -> Vec<String> {
     if seed != 0 {
         *SEED.lock().unwrap() = seed;
     } else {
@@ -36,11 +36,11 @@ pub fn generate_random_openings(amount: usize, plies: usize, seed: u64) -> Vec<S
     openings
 }
 
-pub fn randomize_from_startpos(plies: usize, random_number: u64) -> Result<Board, BadRandomBoard> {
+pub fn randomize_from_startpos(plies: isize, random_number: u64) -> Result<Board, BadRandomBoard> {
     let mut data = SearchData::default();
     let mut state = random_number;
 
-    for _ in 0..plies {
+    for ply in 0..plies {
         let move_list = data.board.generate_moves(MoveGenKind::All);
         //Check if there's atleast one legal move first
         if move_list.is_empty() {
@@ -49,7 +49,7 @@ pub fn randomize_from_startpos(plies: usize, random_number: u64) -> Result<Board
 
         let index = pseudo_rand(&mut state) % move_list.len() as u64;
         let random_move = move_list.get(index as usize).mv;
-        data.make_move(random_move);
+        data.make_move(random_move, ply);
     }
 
     //Check if eval is not too uneven
