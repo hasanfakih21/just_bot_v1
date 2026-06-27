@@ -47,7 +47,7 @@ impl Board {
         let pawns = self.get_piece_bb(stm, Piece::Pawn);
         let occupied = self.get_all_occupancy();
 
-        let target = if self.king_in_check(stm) {
+        let target = if self.king_in_check() {
             debug_assert!(self.state.checkers.count_bits() == 1);
             //Only moves that can block the check
             let checking_piece_square = self.state.checkers.least_sig_bit().unwrap();
@@ -197,7 +197,7 @@ impl Board {
         let occupied = self.get_all_occupancy();
         let pinned = self.state.pinned[stm as usize];
 
-        let target = if self.king_in_check(stm) {
+        let target = if self.king_in_check() {
             debug_assert!(self.state.checkers.count_bits() == 1);
             //Only moves that can block the check
             let checking_piece_square = self.state.checkers.least_sig_bit().unwrap();
@@ -259,7 +259,7 @@ impl Board {
         let occupied = self.get_all_occupancy();
         let pinned = self.state.pinned[stm as usize];
 
-        let target = if self.king_in_check(stm) {
+        let target = if self.king_in_check() {
             debug_assert!(self.state.checkers.count_bits() == 1);
             //Only moves that can block the check
             let checking_piece_square = self.state.checkers.least_sig_bit().unwrap();
@@ -302,7 +302,7 @@ impl Board {
         let occupied = self.get_all_occupancy();
         let pinned = self.state.pinned[stm as usize];
 
-        let target = if self.king_in_check(stm) {
+        let target = if self.king_in_check() {
             debug_assert!(self.state.checkers.count_bits() == 1);
             //Only moves that can block the check
             let checking_piece_square = self.state.checkers.least_sig_bit().unwrap();
@@ -338,7 +338,7 @@ impl Board {
         let occupied = self.get_all_occupancy();
         let pinned = self.state.pinned[stm as usize];
 
-        let target = if self.king_in_check(stm) {
+        let target = if self.king_in_check() {
             debug_assert!(self.state.checkers.count_bits() == 1);
             //Only moves that can block the check
             let checking_piece_square = self.state.checkers.least_sig_bit().unwrap();

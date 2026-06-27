@@ -182,7 +182,7 @@ mod tests {
         let m = data.board.parse_move("e2d1").unwrap();
 
         //Make the move
-        data.make_move(m);
+        data.make_move(m, 0);
 
         println!("Second Eval: {}", data.nnue_evaluate());
 

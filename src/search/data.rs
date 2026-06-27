@@ -4,9 +4,11 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use crate::board::Board;
 use crate::nnue::{Accumulator, NNUE};
 use crate::search::time::{TimeManager, TimeSettings};
+use crate::types::plytable::PlyTable;
 use crate::types::{
-    KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, Move, MoveKind, MoveList, NoisyHistory, Piece,
-    QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE, STARTING_FEN, Side, Square, to_file_bb,
+    ContinuationHistory, KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, MAX_PLY, Move, MoveKind,
+    MoveList, NoisyHistory, Piece, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE, STARTING_FEN,
+    Side, Square, to_file_bb,
 };
 use crate::types::{QuietHistory, TranspositionTable};
 
@@ -68,9 +70,11 @@ pub struct SearchData {
     pub board: Board,
     pub time: TimeManager,
     pub report: bool,
+    pub ply_table: Box<PlyTable>,
 
     pub quiet_history: QuietHistory,
     pub noisy_history: NoisyHistory,
+    pub conthistory: ContinuationHistory,
 
     pub white_features: Accumulator,
     pub black_features: Accumulator,
@@ -83,8 +87,11 @@ impl SearchData {
             pv: vec![MoveList::new(); 128],
             board: Board::from_fen(STARTING_FEN).unwrap(),
             time: TimeManager::new(),
+            ply_table: Box::new(PlyTable::new()),
+
             quiet_history: QuietHistory::new(),
             noisy_history: NoisyHistory::new(),
+            conthistory: ContinuationHistory::new(),
             report: true,
 
             white_features: Accumulator::new(&NNUE),
@@ -158,7 +165,7 @@ impl SearchData {
     }
 
     //Called before move is made on the board
-    pub fn make_move(&mut self, m: Move) {
+    pub fn make_move(&mut self, m: Move, ply: usize) {
         let from = m.get_from();
         let to = m.get_to();
         let kind = m.get_kind();
@@ -205,6 +212,12 @@ impl SearchData {
         } else {
             self.toggle_accumulators_off(stm, moving_piece, from);
             self.toggle_accumulators_on(stm, moving_piece, to);
+        }
+
+        if ply <= MAX_PLY as usize {
+            self.ply_table[ply].in_check = self.board.king_in_check();
+            self.ply_table[ply].m = m;
+            self.ply_table[ply].piece = Some((stm, moving_piece));
         }
 
         self.board.make_move(m)

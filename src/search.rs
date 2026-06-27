@@ -171,7 +171,7 @@ pub fn search<Node: NodeType>(
     let stm = data.board.state.side_to_move;
 
     if depth == 0 {
-        if data.board.king_in_check(stm) {
+        if data.board.king_in_check() {
             return search_checks(data, alpha, beta, ply);
         } else {
             return quiesce(data, alpha, beta, ply); //Horizon Node
@@ -221,7 +221,7 @@ pub fn search<Node: NodeType>(
         }
     }
 
-    let in_check = data.board.king_in_check(stm);
+    let in_check = data.board.king_in_check();
     let static_eval = if in_check {
         -INFINITY
     } else if let Some(e) = tt_entry {
@@ -291,7 +291,7 @@ pub fn search<Node: NodeType>(
         }
 
         //Make Move
-        data.make_move(m);
+        data.make_move(m, ply);
 
         let mut score = best_score;
 
@@ -429,7 +429,7 @@ pub fn search<Node: NodeType>(
     best_score
 }
 
-pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) -> i32 {
+pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> i32 {
     data.shared.add_nodes(1);
     let mut best_score = data.nnue_evaluate();
 
@@ -454,8 +454,8 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
             continue;
         }
 
-        data.make_move(m);
-        let score = -quiesce(data, -beta, -alpha, _ply + 1);
+        data.make_move(m, ply);
+        let score = -quiesce(data, -beta, -alpha, ply + 1);
         data.unmake_move(m);
 
         if data.over_limit() || data.shared.status.get() == Status::STOPPED {
@@ -491,7 +491,6 @@ pub fn quiesce(data: &mut SearchData, mut alpha: i32, beta: i32, _ply: usize) ->
 pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usize) -> i32 {
     let mut best_score = -INFINITY;
     let mut move_count = 0;
-    let stm = data.board.state.side_to_move;
 
     data.shared.add_nodes(1);
 
@@ -507,7 +506,7 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
         }
     }
 
-    if !data.board.king_in_check(stm) {
+    if !data.board.king_in_check() {
         return quiesce(data, alpha, beta, ply);
     }
 
@@ -521,7 +520,7 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
     while let Some(m) = move_picker.next(data, false) {
         move_count += 1;
 
-        data.make_move(m);
+        data.make_move(m, ply);
         let score = -search_checks(data, -beta, -alpha, ply + 1);
 
         data.unmake_move(m);
@@ -552,7 +551,7 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: usiz
     }
 
     if move_count == 0 {
-        if data.board.king_in_check(stm) {
+        if data.board.king_in_check() {
             return -MATE_SCORE + ply as i32;
         } else {
             return 0;
