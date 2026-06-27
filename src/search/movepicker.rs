@@ -142,7 +142,7 @@ impl MovePicker {
                 0
             };
 
-            entry.score = data.quiet_history.get(threats, side, mv) + conthistory_score; 
+            entry.score = (data.quiet_history.get(threats, side, mv) + conthistory_score) / 2; 
         }
     }
 

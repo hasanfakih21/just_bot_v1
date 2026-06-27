@@ -107,11 +107,6 @@ impl SearchData {
         self.report = true;
     }
 
-    pub fn clear_histories(&mut self) {
-        self.quiet_history = QuietHistory::new();
-        self.noisy_history = NoisyHistory::new();
-    }
-
     pub fn clear_features(&mut self) {
         self.white_features = Accumulator::new(&NNUE);
         self.black_features = Accumulator::new(&NNUE);

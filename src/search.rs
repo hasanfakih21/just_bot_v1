@@ -348,6 +348,7 @@ pub fn search<Node: NodeType>(
             let noisy_malus = (300 * depth as i32).min(1000) - 250;
 
             let cont_bonus = (250 * depth as i32).min(1000) - 250;
+            let cont_malus = (250 * depth as i32).min(1000) - 250;
 
             let threats = data.board.state.threats;
 
@@ -359,6 +360,20 @@ pub fn search<Node: NodeType>(
                     let quiet_move = e;
                     data.quiet_history
                         .update(threats, stm, *quiet_move, -quiet_malus);
+
+                    //Conthistory malus
+                    if ply >= 1 {
+                        let prev_ply = data.ply_table[ply - 1];
+                        data.conthistory.update(
+                            prev_ply.in_check, 
+                            prev_ply.m.is_capture(), 
+                            prev_ply.piece, 
+                            prev_ply.m.get_to(), 
+                            data.board.get_piece_at_square(quiet_move.get_from()), 
+                            quiet_move.get_to(), 
+                            -cont_malus
+                        );
+                    }
                 }
             } else {
                 //Add noisy bonus to history
@@ -382,6 +397,20 @@ pub fn search<Node: NodeType>(
                     .map(|e| e.1);
                 data.noisy_history
                     .update(piece, to, captured, threats, -noisy_malus);
+
+                //Conthistory malus
+                if ply >= 1 {
+                    let prev_ply = data.ply_table[ply - 1];
+                    data.conthistory.update(
+                        prev_ply.in_check, 
+                        prev_ply.m.is_capture(), 
+                        prev_ply.piece, 
+                        prev_ply.m.get_to(), 
+                        data.board.get_piece_at_square(m.get_from()), 
+                        m.get_to(), 
+                        -cont_malus
+                    );
+                }
             }
 
             //Add TT entry
@@ -399,7 +428,8 @@ pub fn search<Node: NodeType>(
                 );
             }
 
-            if ply > 1 {
+            //Conthistory Bonus
+            if ply >= 1 {
                 let prev_ply = data.ply_table[ply - 1];
                 data.conthistory.update(
                     prev_ply.in_check, 
