@@ -233,9 +233,18 @@ pub fn search<Node: NodeType>(
         data.nnue_evaluate()
     };
 
+    data.ply_table[ply].eval = static_eval;
+    let improving = if in_check {
+        false
+    } else if data.ply_table[ply - 2].eval != -INFINITY {
+        (static_eval - data.ply_table[ply - 2].eval) > 0
+    } else {
+        false
+    };
+
     //Reverse Futillity Pruning (RFP)
     if !in_check && !Node::PV && depth < 7 {
-        let margin = 150 * depth as i32;
+        let margin =  150 * depth as i32 - (100 * improving as i32);
         if static_eval >= beta + margin {
             return static_eval;
         }

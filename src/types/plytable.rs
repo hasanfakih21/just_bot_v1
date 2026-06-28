@@ -37,7 +37,8 @@ impl Default for PlyTable {
 pub struct PlyData {
     pub m: Move,
     pub piece: Option<(Side, Piece)>,
-    pub conthistory: *mut PieceToHistory<i16>
+    pub conthistory: *mut PieceToHistory<i16>,
+    pub eval: i32,
 }
 
 unsafe impl Send for PlyData {}
