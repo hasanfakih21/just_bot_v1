@@ -100,8 +100,11 @@ fn test_mate_in_four() {
     let board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36").unwrap();
     data.board = board;
 
-    search::<Root>(&mut data, 8, -INFINITY, INFINITY, 0);
-    let best_move = data.get_best_move();
+    data.get_time_settings().nodes = 4000;
+    data.time.set_nodes_limit();
+
+    let best_move = search_runner(&mut data).unwrap().mv;
+
     println!("Best Move: {}", best_move);
     assert_eq!(
         Move::new(Square::F6, Square::G4, MoveKind::QuietMove),
@@ -116,11 +119,13 @@ fn test_pv_line() {
 
     let mut data = SearchData::default();
     let board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36").unwrap();
-    data.get_time_settings().btime = 1000000;
-    data.start_time();
     data.board = board;
 
-    let score = search::<Root>(&mut data, 8, -INFINITY, INFINITY, 0);
+    data.get_time_settings().nodes = 4000;
+    data.time.set_nodes_limit();
+
+    let score = search_runner(&mut data).unwrap().score;
+
     let best_move = data.get_best_move();
     println!("PV: {}", data.get_pv());
     println!("Eval: {}", score);

@@ -263,7 +263,7 @@ pub fn search<Node: NodeType>(
         let null_move_score =
             -search::<NonPV>(data, depth.saturating_sub(r), -beta, -(beta - 1), ply + 1);
         data.board.unmake_move();
-        if null_move_score >= beta {
+        if null_move_score >= (beta - (300 * improving as i32)) {
             return null_move_score;
         }
     }
