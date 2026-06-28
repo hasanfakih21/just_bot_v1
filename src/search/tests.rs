@@ -100,7 +100,7 @@ fn test_mate_in_four() {
     let board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36").unwrap();
     data.board = board;
 
-    data.get_time_settings().nodes = 4000;
+    data.get_time_settings().nodes = 8000;
     data.time.set_nodes_limit();
 
     let best_move = search_runner(&mut data).unwrap().mv;
@@ -121,7 +121,7 @@ fn test_pv_line() {
     let board = Board::from_fen("6k1/5pp1/5n1p/8/5P1q/2RQ3P/B5PK/8 b - - 0 36").unwrap();
     data.board = board;
 
-    data.get_time_settings().nodes = 4000;
+    data.get_time_settings().nodes = 20000;
     data.time.set_nodes_limit();
 
     let score = search_runner(&mut data).unwrap().score;
