@@ -120,7 +120,7 @@ fn test_pv_line() {
     data.start_time();
     data.board = board;
 
-    let score = search::<Root>(&mut data, 7, -INFINITY, INFINITY, 0);
+    let score = search::<Root>(&mut data, 8, -INFINITY, INFINITY, 0);
     let best_move = data.get_best_move();
     println!("PV: {}", data.get_pv());
     println!("Eval: {}", score);

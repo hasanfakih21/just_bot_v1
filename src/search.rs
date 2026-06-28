@@ -289,7 +289,7 @@ pub fn search<Node: NodeType>(
             if !in_check
                 && !mating(beta)
                 && m.get_kind().is_quiet()
-                && move_count > 6 + 2 * depth as usize * depth as usize
+                && move_count > (6 * improving as usize) + 2 * depth as usize * depth as usize
             {
                 skip_quiets = true;
                 continue;
