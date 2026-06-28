@@ -256,7 +256,8 @@ pub fn search<Node: NodeType>(
     if !Node::PV
         && !in_check
         && !data.board.only_king_and_pawns()
-        && static_eval >= beta - ((150 * depth as i32) - (100 * improving as i32))
+        && static_eval >= beta - 50 * improving as i32
+        && !data.ply_table[ply - 1].m.is_null()
     {
         let r = 4;
         data.ply_table[ply].conthistory = data.ply_table.sentinel();
