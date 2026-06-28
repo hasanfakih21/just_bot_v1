@@ -204,10 +204,8 @@ pub fn search<Node: NodeType>(
     if let Some(e) = tt_entry
         && !Node::PV
         && e.get_depth() >= depth
-        && e.get_score().abs() < MATE_CUTOFF
-    //Mate scores need to be properly adjusted for cutoffs
     {
-        let tt_score = e.get_score();
+        let tt_score = adjust_tt_score(e.get_score(), ply);
         match e.get_bound() {
             Bound::Exact => return tt_score,
             Bound::Lower => {

@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicPtr, AtomicU8, AtomicUsize, Ordering};
 
-use crate::types::{MATE_CUTOFF, moves::Move};
+use crate::{evaluation::{mated, mating}, types::{MATE_CUTOFF, moves::Move}};
 
 const TT_DEFAULT_SIZE: usize = 16;
 const MEGABYTE: usize = 1024 * 1024;
@@ -241,6 +241,18 @@ impl TranspositionTable {
     pub fn len(&self) -> usize {
         self.len.load(Ordering::Relaxed)
     }
+}
+
+pub const fn adjust_tt_score(tt_score: i32, ply: isize) -> i32 {
+    if mating(tt_score) {
+        return tt_score - ply as i32
+    }
+
+    if mated(tt_score) {
+        return tt_score + ply as i32
+    }
+
+    tt_score
 }
 
 //https://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
