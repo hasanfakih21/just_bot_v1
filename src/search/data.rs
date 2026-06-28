@@ -6,9 +6,9 @@ use crate::nnue::{Accumulator, NNUE};
 use crate::search::time::{TimeManager, TimeSettings};
 use crate::types::plytable::PlyTable;
 use crate::types::{
-    ContinuationHistory, KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, Move, MoveKind,
-    MoveList, NoisyHistory, Piece, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE, STARTING_FEN,
-    Side, Square, to_file_bb,
+    ContinuationHistory, KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, Move, MoveKind, MoveList,
+    NoisyHistory, Piece, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE, STARTING_FEN, Side, Square,
+    to_file_bb,
 };
 use crate::types::{QuietHistory, TranspositionTable};
 
@@ -211,7 +211,9 @@ impl SearchData {
 
         self.ply_table[ply].m = m;
         self.ply_table[ply].piece = Some((stm, moving_piece));
-        self.ply_table[ply].conthistory = self.conthistory.subtable(Some((stm, moving_piece)), m.get_to());
+        self.ply_table[ply].conthistory = self
+            .conthistory
+            .subtable(Some((stm, moving_piece)), m.get_to());
 
         self.board.make_move(m)
     }
