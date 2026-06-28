@@ -130,9 +130,13 @@ impl MovePicker {
             let mv = entry.mv;
             let conthistory_score = 
                 unsafe {
-                    let prev_ply = data.ply_table[ply - 1];
                     data.conthistory.get(
-                        prev_ply.conthistory,
+                        data.ply_table[ply - 1].conthistory,
+                        data.board.get_piece_at_square(mv.get_from()), 
+                        mv.get_to()
+                    ) + 
+                    data.conthistory.get(
+                        data.ply_table[ply - 2].conthistory,
                         data.board.get_piece_at_square(mv.get_from()), 
                         mv.get_to()
                     )
