@@ -238,6 +238,8 @@ pub fn search<Node: NodeType>(
         false
     } else if data.ply_table[ply - 2].eval != -INFINITY {
         (static_eval - data.ply_table[ply - 2].eval) > 0
+    } else if data.ply_table[ply - 4].eval != -INFINITY {
+        (static_eval - data.ply_table[ply - 4].eval) > 0
     } else {
         false
     };
@@ -289,7 +291,7 @@ pub fn search<Node: NodeType>(
             if !in_check
                 && !mating(beta)
                 && m.get_kind().is_quiet()
-                && move_count > (6 * improving as usize) + 2 * depth as usize * depth as usize
+                && move_count > (3 + depth as usize * depth as usize) / (2 - (improving as usize))
             {
                 skip_quiets = true;
                 continue;
