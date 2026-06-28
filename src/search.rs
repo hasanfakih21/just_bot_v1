@@ -370,9 +370,9 @@ pub fn search<Node: NodeType>(
                     unsafe {
                         data.conthistory.update(
                             prev_ply.conthistory,
-                            data.board.get_piece_at_square(quiet_move.get_from()), 
-                            quiet_move.get_to(), 
-                            -cont_malus
+                            data.board.get_piece_at_square(quiet_move.get_from()),
+                            quiet_move.get_to(),
+                            -cont_malus,
                         );
                     }
                 }
@@ -404,9 +404,9 @@ pub fn search<Node: NodeType>(
                 unsafe {
                     data.conthistory.update(
                         prev_ply.conthistory,
-                        data.board.get_piece_at_square(m.get_from()), 
-                        m.get_to(), 
-                        -cont_malus
+                        data.board.get_piece_at_square(m.get_from()),
+                        m.get_to(),
+                        -cont_malus,
                     );
                 }
             }
@@ -431,9 +431,9 @@ pub fn search<Node: NodeType>(
             unsafe {
                 data.conthistory.update(
                     prev_ply.conthistory,
-                    data.board.get_piece_at_square(m.get_from()), 
-                    m.get_to(), 
-                    cont_bonus
+                    data.board.get_piece_at_square(m.get_from()),
+                    m.get_to(),
+                    cont_bonus,
                 );
             }
 
@@ -557,7 +557,7 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: isiz
     let in_check = data.board.king_in_check();
 
     if ply >= MAX_PLY as isize - 1 {
-        return if in_check {0} else {data.nnue_evaluate()};
+        return if in_check { 0 } else { data.nnue_evaluate() };
     }
 
     if !in_check {
@@ -584,6 +584,25 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: isiz
         }
 
         if score >= beta {
+            if m.get_kind().is_quiet() {
+                //Add quiet bonus to history
+                data.quiet_history.update(
+                    data.board.state.threats,
+                    data.board.state.side_to_move,
+                    m,
+                    100,
+                );
+            } else {
+                //Add noisy bonus to history
+                let piece = data.board.get_piece_at_square(m.get_from());
+                let to = m.get_to();
+                let captured = data
+                    .board
+                    .get_piece_at_square(m.get_capture_square())
+                    .map(|e| e.1);
+                data.noisy_history
+                    .update(piece, to, captured, data.board.state.threats, 100);
+            }
             return score;
         }
 
