@@ -304,10 +304,7 @@ pub fn search<Node: NodeType>(
             }
 
             //Futility Pruning (FP)
-            if !in_check
-                && is_quiet
-                && depth < 6
-                && static_eval + 100 * depth as i32 + 150 <= alpha
+            if !in_check && is_quiet && depth < 6 && static_eval + 100 * depth as i32 + 150 <= alpha
             {
                 skip_quiets = true;
                 continue;
@@ -320,13 +317,9 @@ pub fn search<Node: NodeType>(
         let mut score = best_score;
 
         //Late Move Reductions (LMR)
-        if depth > 3 && !Node::PV && move_count >= 2 {
-            let mut r = depth.ilog2() as i32 * move_count.ilog2() as i32;
-            r = 803 + 492 * r;
-            r = (r * ((is_quiet as i32 * 74) + 341)) / 1024; 
-            r = (r / 1024).max(0);
-            
-            let reduced_depth = (depth - 1).saturating_sub(r as u8);
+        if depth > 3 && !Node::PV {
+            let reduction = LMR_TABLE[is_quiet as usize][depth as usize][move_count];
+            let reduced_depth = (depth - 1).saturating_sub(reduction);
 
             score = -search::<NonPV>(data, reduced_depth, -alpha - 1, -alpha, ply + 1);
             if score > alpha && reduced_depth < depth - 1 {

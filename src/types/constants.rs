@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use crate::types::{BitBoard, Piece, Side, Square};
 
 pub const A_FILE: u64 = 0x0101010101010101;
@@ -49,6 +51,7 @@ pub const TIMEOUT_SCORE: i32 = 111111;
 
 pub const MAX_PLY: u8 = 128;
 pub const MAX_HISTORY: i32 = 8000;
+pub const MAX_MOVE_NUM: usize = 256;
 
 pub const fn to_file_bb(square: Square) -> BitBoard {
     let file = square.to_file();
@@ -61,3 +64,22 @@ pub const fn to_piece_index(piece: Option<(Side, Piece)>) -> usize {
         None => 12,
     }
 }
+
+/// `[Is Quiet][Depth][Move Count]`
+pub static LMR_TABLE: LazyLock<Box<[[[u8; MAX_MOVE_NUM]; MAX_PLY as usize]; 2]>> = {
+    LazyLock::new(|| {
+        let mut quiet_table = [[0; MAX_MOVE_NUM]; MAX_PLY as usize];
+        let mut noisy_table = [[0; MAX_MOVE_NUM]; MAX_PLY as usize];
+
+        for depth in 0..MAX_PLY {
+            for move_count in 0..MAX_MOVE_NUM {
+                let reduction = 0.7844 + f32::ln(depth as f32) * f32::ln(move_count as f32);
+
+                quiet_table[depth as usize][move_count] = (reduction / 2.4696) as u8;
+                noisy_table[depth as usize][move_count] = (reduction / 3.0) as u8;
+            }
+        }
+
+        Box::new([noisy_table, quiet_table])
+    })
+};
