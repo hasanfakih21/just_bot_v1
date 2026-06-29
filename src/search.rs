@@ -290,12 +290,13 @@ pub fn search<Node: NodeType>(
 
     while let Some(m) = move_picker.next(data, skip_quiets, ply) {
         move_count += 1;
+        let is_quiet = m.get_kind().is_quiet();
 
         if !Node::ROOT && !mated(best_score) {
             //Late Move Pruning (LMP)
             if !in_check
                 && !mating(beta)
-                && m.get_kind().is_quiet()
+                && is_quiet
                 && move_count > (3 + depth as usize * depth as usize) / (2 - (improving as usize))
             {
                 skip_quiets = true;
@@ -303,10 +304,7 @@ pub fn search<Node: NodeType>(
             }
 
             //Futility Pruning (FP)
-            if !in_check
-                && m.get_kind().is_quiet()
-                && depth < 6
-                && static_eval + 100 * depth as i32 + 150 <= alpha
+            if !in_check && is_quiet && depth < 6 && static_eval + 100 * depth as i32 + 150 <= alpha
             {
                 skip_quiets = true;
                 continue;
@@ -320,14 +318,9 @@ pub fn search<Node: NodeType>(
 
         //Late Move Reductions (LMR)
         if depth > 3 && !Node::PV {
-            //let reduction = (0.99 + f32::ln(depth as f32) * f32::ln(move_count as f32)) / PI; //https://www.chessprogramming.org/Late_Move_Reductions Obsidian formula
-            let mut reduction = 0.7844 + f32::ln(depth as f32) * f32::ln(move_count as f32);
-            if m.get_kind().is_quiet() {
-                reduction /= 2.4696;
-            } else {
-                reduction /= 3.0;
-            }
-            let reduced_depth = (depth - 1).saturating_sub(reduction as u8);
+            let reduction = LMR_TABLE[is_quiet as usize][depth as usize][move_count];
+            let reduced_depth = (depth - 1).saturating_sub(reduction);
+
             score = -search::<NonPV>(data, reduced_depth, -alpha - 1, -alpha, ply + 1);
             if score > alpha && reduced_depth < depth - 1 {
                 score = -search::<NonPV>(data, depth - 1, -alpha - 1, -alpha, ply + 1);
@@ -372,7 +365,7 @@ pub fn search<Node: NodeType>(
 
             let threats = data.board.state.threats;
 
-            if m.get_kind().is_quiet() {
+            if is_quiet {
                 //Add quiet bonus to history
                 data.quiet_history.update(threats, stm, m, quiet_bonus);
                 //Add malus to quiet moves
@@ -457,7 +450,7 @@ pub fn search<Node: NodeType>(
         }
 
         //Add searched quiet moves to list
-        if m.get_kind().is_quiet() {
+        if is_quiet {
             quiets_searched.push(m);
         } else {
             noisies_searched.push(m);
