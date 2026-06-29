@@ -284,8 +284,8 @@ pub fn search<Node: NodeType>(
         .map(|e| e.get_best_move());
 
     let mut move_picker = MovePicker::new(tt_move);
-    let mut quiets_searched = StackVec::<Move, 256>::new();
-    let mut noisies_searched = StackVec::<Move, 256>::new();
+    let mut quiets_searched = StackVec::<Move, 32>::new();
+    let mut noisies_searched = StackVec::<Move, 32>::new();
     let mut skip_quiets = false;
 
     while let Some(m) = move_picker.next(data, skip_quiets, ply) {
@@ -457,10 +457,12 @@ pub fn search<Node: NodeType>(
         }
 
         //Add searched quiet moves to list
-        if m.get_kind().is_quiet() {
-            quiets_searched.push(m);
-        } else {
-            noisies_searched.push(m);
+        if move_count < 32 {
+            if m.get_kind().is_quiet() {
+                quiets_searched.push(m);
+            } else {
+                noisies_searched.push(m);
+            }
         }
     }
 
