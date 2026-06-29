@@ -246,14 +246,19 @@ pub fn search<Node: NodeType>(
 
     //Reverse Futillity Pruning (RFP)
     if !in_check && !Node::PV && depth < 7 {
-        let margin =  150 * depth as i32 - (100 * improving as i32);
+        let margin = 150 * depth as i32 - (100 * improving as i32);
         if static_eval >= beta + margin {
             return static_eval;
         }
     }
 
     //Null Move Pruning
-    if !Node::PV && !in_check && !data.board.only_king_and_pawns() {
+    if !Node::PV
+        && !in_check
+        && !data.board.only_king_and_pawns()
+        && static_eval >= beta - 50 * improving as i32
+        && !data.ply_table[ply - 1].m.is_null()
+    {
         let r = 4;
         data.ply_table[ply].conthistory = data.ply_table.sentinel();
         data.ply_table[ply].m = Move::default();
@@ -381,9 +386,9 @@ pub fn search<Node: NodeType>(
                     unsafe {
                         data.conthistory.update(
                             prev_ply.conthistory,
-                            data.board.get_piece_at_square(quiet_move.get_from()), 
-                            quiet_move.get_to(), 
-                            -cont_malus
+                            data.board.get_piece_at_square(quiet_move.get_from()),
+                            quiet_move.get_to(),
+                            -cont_malus,
                         );
                     }
                 }
@@ -415,9 +420,9 @@ pub fn search<Node: NodeType>(
                 unsafe {
                     data.conthistory.update(
                         prev_ply.conthistory,
-                        data.board.get_piece_at_square(m.get_from()), 
-                        m.get_to(), 
-                        -cont_malus
+                        data.board.get_piece_at_square(m.get_from()),
+                        m.get_to(),
+                        -cont_malus,
                     );
                 }
             }
@@ -442,9 +447,9 @@ pub fn search<Node: NodeType>(
             unsafe {
                 data.conthistory.update(
                     prev_ply.conthistory,
-                    data.board.get_piece_at_square(m.get_from()), 
-                    m.get_to(), 
-                    cont_bonus
+                    data.board.get_piece_at_square(m.get_from()),
+                    m.get_to(),
+                    cont_bonus,
                 );
             }
 
@@ -568,7 +573,7 @@ pub fn search_checks(data: &mut SearchData, mut alpha: i32, beta: i32, ply: isiz
     let in_check = data.board.king_in_check();
 
     if ply >= MAX_PLY as isize - 1 {
-        return if in_check {0} else {data.nnue_evaluate()};
+        return if in_check { 0 } else { data.nnue_evaluate() };
     }
 
     if !in_check {

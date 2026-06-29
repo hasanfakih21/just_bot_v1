@@ -98,7 +98,11 @@ impl ContinuationHistory {
         Self(allocate_empty_history())
     }
 
-    pub fn subtable(&mut self, piece: Option<(Side, Piece)>, to: Square) -> *mut PieceToHistory<i16> {
+    pub fn subtable(
+        &mut self,
+        piece: Option<(Side, Piece)>,
+        to: Square,
+    ) -> *mut PieceToHistory<i16> {
         &raw mut self.0[to_piece_index(piece)][to as usize]
     }
 
@@ -111,7 +115,7 @@ impl ContinuationHistory {
         to: Square,
         bonus: i32,
     ) {
-        let entry = &mut unsafe {&mut *subtable}[to_piece_index(piece)][to as usize];
+        let entry = &mut unsafe { &mut *subtable }[to_piece_index(piece)][to as usize];
         update_entry(bonus, entry);
     }
 
@@ -123,7 +127,7 @@ impl ContinuationHistory {
         piece: Option<(Side, Piece)>,
         to: Square,
     ) -> i32 {
-        (unsafe {&*subtable}[to_piece_index(piece)][to as usize]) as i32
+        (unsafe { &*subtable }[to_piece_index(piece)][to as usize]) as i32
     }
 }
 
