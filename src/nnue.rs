@@ -58,7 +58,7 @@ impl Network {
         // Apply eval scale.
         output *= SCALE;
 
-        // Remove quantisation altogether.
+        // Remove quantisation altogether
         output /= i32::from(QA) * i32::from(QB);
 
         output
