@@ -323,7 +323,8 @@ pub fn search<Node: NodeType>(
         if depth > 3 && !Node::PV && move_count >= 2 {
             let mut r = depth.ilog2() as i32 * move_count.ilog2() as i32;
             r = 803 + 492 * r;
-            r = (r * ((is_quiet as i32 * 84) + 341)) / 1024; 
+            r = (r * ((is_quiet as i32 * 74) + 341)) / 1024; 
+            r = (r / 1024).max(0);
             
             let reduced_depth = (depth - 1).saturating_sub(r as u8);
 
