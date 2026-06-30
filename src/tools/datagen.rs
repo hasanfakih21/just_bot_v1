@@ -1,9 +1,10 @@
 use std::sync::Mutex;
 
+use rand::{random, random_bool};
+
 use crate::{
     board::{Board, movegen::MoveGenKind},
     search::data::SearchData,
-    tools::bench::bench,
     types::pseudo_rand,
 };
 
@@ -16,7 +17,7 @@ pub fn generate_random_openings(amount: usize, plies: isize, seed: u64) -> Vec<S
     if seed != 0 {
         *SEED.lock().unwrap() = seed;
     } else {
-        *SEED.lock().unwrap() = bench().1;
+        *SEED.lock().unwrap() = random();
     }
 
     let mut openings = Vec::new();
@@ -39,6 +40,12 @@ pub fn generate_random_openings(amount: usize, plies: isize, seed: u64) -> Vec<S
 pub fn randomize_from_startpos(plies: isize, random_number: u64) -> Result<Board, BadRandomBoard> {
     let mut data = SearchData::default();
     let mut state = random_number;
+
+    let plies = if random_bool(0.5) {
+        plies
+    } else {
+        plies + 1
+    };
 
     for ply in 0..plies {
         let move_list = data.board.generate_moves(MoveGenKind::All);
