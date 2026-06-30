@@ -1,4 +1,7 @@
-use std::{fmt::Display, ops::{Index, IndexMut}};
+use std::{
+    fmt::Display,
+    ops::{Index, IndexMut},
+};
 
 use crate::types::Square;
 
@@ -30,13 +33,13 @@ impl<T> Index<Side> for [T] {
     type Output = T;
 
     fn index(&self, index: Side) -> &Self::Output {
-       &self[index as usize] 
+        &self[index as usize]
     }
 }
 
 impl<T> IndexMut<Side> for [T] {
     fn index_mut(&mut self, index: Side) -> &mut Self::Output {
-        &mut self[index as usize]    
+        &mut self[index as usize]
     }
 }
 

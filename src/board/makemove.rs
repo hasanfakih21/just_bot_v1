@@ -1,6 +1,7 @@
 use super::Board;
 use crate::types::{
-    CASTLING_ROOK_SQAURES, Castling, Piece, Side, Square, ZOBRIST, moves::{Move, MoveKind},
+    CASTLING_ROOK_SQAURES, Castling, Piece, Side, Square, ZOBRIST,
+    moves::{Move, MoveKind},
 };
 
 impl Board {
@@ -54,7 +55,8 @@ impl Board {
             self.state.hash ^= ZOBRIST.get_enpassant_num(Square::from(to as usize ^ 8));
         }
 
-        if let Some((other_side, captured_piece)) = self.get_piece_at_square(m.get_capture_square()) {
+        if let Some((other_side, captured_piece)) = self.get_piece_at_square(m.get_capture_square())
+        {
             self.remove_piece(other_side, captured_piece, m.get_capture_square());
             if captured_piece == Piece::Rook {
                 if to == opp_king_rook_square {
@@ -72,7 +74,6 @@ impl Board {
         } else {
             self.place_piece(side, piece, to);
         }
-        
 
         //Irreversible Move
         if kind.is_capture() || piece == Piece::Pawn {
