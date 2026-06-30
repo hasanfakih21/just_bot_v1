@@ -43,6 +43,7 @@ pub const QUEEN_SIDE_ROOK_WHITE: Square = Square::A1;
 
 pub const KING_SIDE_ROOK_BLACK: Square = Square::H8;
 pub const QUEEN_SIDE_ROOK_BLACK: Square = Square::A8;
+pub const CASTLING_ROOK_SQAURES: [[Square; 2]; 2] = [[KING_SIDE_ROOK_WHITE, QUEEN_SIDE_ROOK_WHITE], [KING_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_BLACK]];
 
 pub const INFINITY: i32 = 100000;
 pub const MATE_SCORE: i32 = 9000;

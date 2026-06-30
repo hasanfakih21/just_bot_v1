@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::types::{BitBoard, Piece, Square, stackvec::StackVec};
+use crate::types::{BitBoard, Castling, Piece, Square, stackvec::StackVec};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MoveEntry {
@@ -175,8 +175,16 @@ impl Move {
         promoted_piece
     }
 
-    pub fn is_null(&self) -> bool {
+    pub const fn is_null(&self) -> bool {
         self.0 == 0
+    }
+
+    pub const fn castle_kind(&self) -> Option<usize> {
+        match self.get_kind() {
+            MoveKind::KingCastle => Some(Castling::KING_SIDE),
+            MoveKind::QueenCastle => Some(Castling::QUEEN_SIDE),
+            _ => None,
+        }
     }
 }
 

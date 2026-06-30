@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, ops::{Index, IndexMut}};
 
 use crate::types::Square;
 
@@ -26,6 +26,20 @@ impl Display for Side {
     }
 }
 
+impl<T> Index<Side> for [T] {
+    type Output = T;
+
+    fn index(&self, index: Side) -> &Self::Output {
+       &self[index as usize] 
+    }
+}
+
+impl<T> IndexMut<Side> for [T] {
+    fn index_mut(&mut self, index: Side) -> &mut Self::Output {
+        &mut self[index as usize]    
+    }
+}
+
 #[repr(u8)]
 pub enum Castling {
     WhiteKing = 0b0001,
@@ -35,6 +49,9 @@ pub enum Castling {
 }
 
 impl Castling {
+    pub const KING_SIDE: usize = 0;
+    pub const QUEEN_SIDE: usize = 1;
+
     pub const fn from(c: char) -> Self {
         match c {
             'K' => Castling::WhiteKing,
