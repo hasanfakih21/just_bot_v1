@@ -13,14 +13,13 @@ pub struct BadRandomBoard;
 
 static SEED: Mutex<u64> = Mutex::new(0);
 
-pub fn generate_random_openings(amount: usize, plies: isize, seed: u64) -> Vec<String> {
+pub fn generate_random_openings(amount: usize, plies: isize, seed: u64) {
     if seed != 0 {
         *SEED.lock().unwrap() = seed;
     } else {
         *SEED.lock().unwrap() = random();
     }
 
-    let mut openings = Vec::new();
     for _ in 0..amount {
         let mut random_number = pseudo_rand(&mut SEED.lock().unwrap());
         let mut random_board = randomize_from_startpos(plies, random_number);
@@ -31,10 +30,8 @@ pub fn generate_random_openings(amount: usize, plies: isize, seed: u64) -> Vec<S
             random_board = randomize_from_startpos(plies, random_number);
         }
 
-        openings.push(random_board.unwrap().to_fen());
+        println!("info string genfens {}", random_board.unwrap().to_fen());
     }
-
-    openings
 }
 
 pub fn randomize_from_startpos(plies: isize, random_number: u64) -> Result<Board, BadRandomBoard> {
@@ -73,9 +70,6 @@ pub mod tests {
 
     #[test]
     fn test_fengen() {
-        let book = generate_random_openings(1, 8, 0);
-        for opening in book {
-            println!("{opening}");
-        }
+        generate_random_openings(1, 8, 0);
     }
 }
