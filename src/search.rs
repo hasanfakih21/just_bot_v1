@@ -318,7 +318,10 @@ pub fn search<Node: NodeType>(
 
         //Late Move Reductions (LMR)
         if depth > 3 && !Node::PV {
-            let reduction = LMR_TABLE[is_quiet as usize][depth as usize][move_count];
+            let mut r = LMR_TABLE[is_quiet as usize][depth as usize][move_count];
+            r += 512 * (!improving as i32);
+
+            let reduction = (r / 1024) as u8;
             let reduced_depth = (depth - 1).saturating_sub(reduction);
 
             score = -search::<NonPV>(data, reduced_depth, -alpha - 1, -alpha, ply + 1);
