@@ -1,9 +1,6 @@
 use super::Board;
 use crate::types::{
-    Piece, Side, Square, ZOBRIST,
-    constants::{
-        KING_SIDE_ROOK_BLACK, KING_SIDE_ROOK_WHITE, QUEEN_SIDE_ROOK_BLACK, QUEEN_SIDE_ROOK_WHITE,
-    },
+    CASTLING_ROOK_SQAURES, Castling, Piece, Side, Square, ZOBRIST,
     moves::{Move, MoveKind},
 };
 
@@ -14,22 +11,10 @@ impl Board {
         let kind = m.get_kind();
         let (side, piece) = self.get_piece_at_square(from).unwrap();
 
-        let king_rook_square = match side {
-            Side::White => KING_SIDE_ROOK_WHITE,
-            Side::Black => KING_SIDE_ROOK_BLACK,
-        };
-        let queen_rook_square = match side {
-            Side::White => QUEEN_SIDE_ROOK_WHITE,
-            Side::Black => QUEEN_SIDE_ROOK_BLACK,
-        };
-        let opp_king_rook_square = match side {
-            Side::White => KING_SIDE_ROOK_BLACK,
-            Side::Black => KING_SIDE_ROOK_WHITE,
-        };
-        let opp_queen_rook_square = match side {
-            Side::White => QUEEN_SIDE_ROOK_BLACK,
-            Side::Black => QUEEN_SIDE_ROOK_WHITE,
-        };
+        let king_rook_square = CASTLING_ROOK_SQAURES[side][Castling::KING_SIDE];
+        let queen_rook_square = CASTLING_ROOK_SQAURES[side][Castling::QUEEN_SIDE];
+        let opp_king_rook_square = CASTLING_ROOK_SQAURES[side.other()][Castling::KING_SIDE];
+        let opp_queen_rook_square = CASTLING_ROOK_SQAURES[side.other()][Castling::QUEEN_SIDE];
 
         self.copy_state();
         self.state.hash ^= ZOBRIST.get_castling_num(self.state.castling_rights);
@@ -57,57 +42,23 @@ impl Board {
             }
         }
 
-        if kind.is_quiet() {
-            match kind {
-                MoveKind::KingCastle => {
-                    self.remove_piece(side, piece, from);
-                    self.remove_piece(side, Piece::Rook, king_rook_square);
-                    self.state.castling_rights.clear_king_side(side);
-                    self.state.castling_rights.clear_queen_side(side);
-                    self.place_piece(side, piece, to);
-                    self.place_piece(side, Piece::Rook, from.shift(1).unwrap());
-                }
-                MoveKind::QueenCastle => {
-                    self.remove_piece(side, piece, from);
-                    self.remove_piece(side, Piece::Rook, queen_rook_square);
-                    self.state.castling_rights.clear_queen_side(side);
-                    self.state.castling_rights.clear_king_side(side);
-                    self.place_piece(side, piece, to);
-                    self.place_piece(side, Piece::Rook, from.shift(-1).unwrap());
-                }
-                MoveKind::DoublePawn => {
-                    self.remove_piece(side, piece, from);
-                    self.place_piece(side, piece, to);
+        if let Some(castle_kind) = m.castle_kind() {
+            let offset = [1, -1];
+            self.remove_piece(side, Piece::Rook, CASTLING_ROOK_SQAURES[side][castle_kind]);
+            self.state.castling_rights.clear_king_side(side);
+            self.state.castling_rights.clear_queen_side(side);
+            self.place_piece(side, Piece::Rook, from.shift(offset[castle_kind]).unwrap());
+        }
 
-                    self.state.enpassant = Some(Square::from(to as usize ^ 8));
-                    self.state.hash ^= ZOBRIST.get_enpassant_num(Square::from(to as usize ^ 8));
-                }
-                _ => {
-                    self.remove_piece(side, piece, from);
-                    self.place_piece(side, piece, to);
-                }
-            }
-        } else {
-            debug_assert!(
-                if let Some((_, captured_piece)) = self.get_piece_at_square(to) {
-                    if captured_piece == Piece::King {
-                        self.unmake_move();
-                        self.unmake_move();
-                        false
-                    } else {
-                        true
-                    }
-                } else {
-                    true
-                },
-                "Tried capturing king? {}\nMove: {}",
-                self,
-                m
-            );
+        if kind == MoveKind::DoublePawn {
+            self.state.enpassant = Some(Square::from(to as usize ^ 8));
+            self.state.hash ^= ZOBRIST.get_enpassant_num(Square::from(to as usize ^ 8));
+        }
 
-            if let Some((other_side, captured_piece)) = self.get_piece_at_square(to)
-                && captured_piece == Piece::Rook
-            {
+        if let Some((other_side, captured_piece)) = self.get_piece_at_square(m.get_capture_square())
+        {
+            self.remove_piece(other_side, captured_piece, m.get_capture_square());
+            if captured_piece == Piece::Rook {
                 if to == opp_king_rook_square {
                     self.state.castling_rights.clear_king_side(other_side);
                 }
@@ -115,65 +66,13 @@ impl Board {
                     self.state.castling_rights.clear_queen_side(other_side);
                 }
             }
-            match kind {
-                MoveKind::EnPassant => {
-                    let pawn_square = Square::from(to as usize ^ 8);
-                    let (other_side, captured_piece) =
-                        self.get_piece_at_square(pawn_square).unwrap();
-                    self.remove_piece(other_side, captured_piece, pawn_square);
-                    self.remove_piece(side, piece, from);
-                    self.place_piece(side, piece, to);
-                }
-                MoveKind::BPromotion => {
-                    self.remove_piece(side, piece, from);
-                    self.place_piece(side, Piece::Bishop, to);
-                }
-                MoveKind::NPromotion => {
-                    self.remove_piece(side, piece, from);
-                    self.place_piece(side, Piece::Knight, to);
-                }
-                MoveKind::RPromotion => {
-                    self.remove_piece(side, piece, from);
-                    self.place_piece(side, Piece::Rook, to);
-                }
-                MoveKind::QPromotion => {
-                    self.remove_piece(side, piece, from);
-                    self.place_piece(side, Piece::Queen, to);
-                }
-                MoveKind::BPromCapture => {
-                    let (other_side, captured_piece) = self.get_piece_at_square(to).unwrap();
-                    self.remove_piece(other_side, captured_piece, to);
-                    self.remove_piece(side, piece, from);
-                    self.place_piece(side, Piece::Bishop, to);
-                }
-                MoveKind::NPromCapture => {
-                    let (other_side, captured_piece) = self.get_piece_at_square(to).unwrap();
-                    self.remove_piece(other_side, captured_piece, to);
-                    self.remove_piece(side, piece, from);
-                    self.place_piece(side, Piece::Knight, to);
-                }
-                MoveKind::RPromCapture => {
-                    let (other_side, captured_piece) = self.get_piece_at_square(to).unwrap();
-                    self.remove_piece(other_side, captured_piece, to);
-                    self.remove_piece(side, piece, from);
-                    self.place_piece(side, Piece::Rook, to);
-                }
-                MoveKind::QPromCapture => {
-                    let (other_side, captured_piece) = self.get_piece_at_square(to).unwrap();
-                    self.remove_piece(other_side, captured_piece, to);
-                    self.remove_piece(side, piece, from);
-                    self.place_piece(side, Piece::Queen, to);
-                }
-                _ => {
-                    let (other_side, captured_piece) =
-                        self.get_piece_at_square(to).unwrap_or_else(|| {
-                            panic!("{self}\nTried making move: {m}");
-                        });
-                    self.remove_piece(other_side, captured_piece, to);
-                    self.remove_piece(side, piece, from);
-                    self.place_piece(side, piece, to);
-                }
-            }
+        }
+
+        self.remove_piece(side, piece, from);
+        if let Some(promotion_piece) = m.get_promoted_piece() {
+            self.place_piece(side, promotion_piece, to);
+        } else {
+            self.place_piece(side, piece, to);
         }
 
         //Irreversible Move

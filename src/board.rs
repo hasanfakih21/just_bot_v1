@@ -21,11 +21,6 @@ pub struct BoardState {
     pub pinned: [BitBoard; 2],
     pub checkers: BitBoard,
 
-    pub material_value: [i32; 2],
-    pub pq_mg_value: [i32; 2],
-    pub pq_eg_value: [i32; 2],
-    pub game_phase: i32,
-
     pub half_move_clock: u8,
     pub full_move: usize,
     pub hash: u64,
@@ -43,11 +38,6 @@ impl BoardState {
             threats: BitBoard(0),
             pinned: [BitBoard(0); 2],
             checkers: BitBoard(0),
-
-            material_value: [0; 2],
-            pq_mg_value: [0; 2],
-            pq_eg_value: [0; 2],
-            game_phase: 0,
 
             half_move_clock: 0,
             full_move: 0,
