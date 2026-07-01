@@ -313,13 +313,12 @@ pub fn search<Node: NodeType>(
 
         //Make Move
         data.make_move(m, ply);
-
-        let mut score = best_score;
+        let mut score = -INFINITY;
 
         //Late Move Reductions (LMR)
         if depth > 3 && !Node::PV {
             let mut r = LMR_TABLE[is_quiet as usize][depth as usize][move_count];
-            r -= 512 * improving as i32;
+            r += 256 * !improving as i32;
 
             let reduction = (r / 1024) as u8;
             let reduced_depth = (depth - 1).saturating_sub(reduction);
